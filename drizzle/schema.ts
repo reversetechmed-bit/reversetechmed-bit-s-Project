@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,111 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/** Four warehouse classifications required by the engineering organization. */
+export const partCategoryValues = ["Medical", "Embedded", "Electronics", "Boards"] as const;
+
+/** Current on-hand inventory for each tracked engineering part. */
+export const parts = mysqlTable(
+  "parts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    partNumber: varchar("partNumber", { length: 100 }).notNull().unique(),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    category: mysqlEnum("category", partCategoryValues).notNull(),
+    quantity: int("quantity").notNull().default(0),
+    minimumStock: int("minimumStock").notNull().default(0),
+    location: varchar("location", { length: 160 }),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("parts_category_idx").on(table.category),
+    index("parts_stock_idx").on(table.quantity, table.minimumStock),
+  ],
+);
+
+export const dispensingStatusValues = ["pending", "approved", "rejected", "delivered"] as const;
+
+/** An engineer's request for one stock part and a specific business purpose. */
+export const dispensingRequests = mysqlTable(
+  "dispensingRequests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    requestedById: int("requestedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    requestedQuantity: int("requestedQuantity").notNull(),
+    purpose: text("purpose").notNull(),
+    status: mysqlEnum("status", dispensingStatusValues).notNull().default("pending"),
+    decisionNote: text("decisionNote"),
+    reviewedById: int("reviewedById").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewedAt"),
+    deliveredById: int("deliveredById").references(() => users.id, { onDelete: "set null" }),
+    deliveredAt: timestamp("deliveredAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("requests_status_idx").on(table.status),
+    index("requests_requester_idx").on(table.requestedById),
+    index("requests_part_idx").on(table.partId),
+  ],
+);
+
+export const transactionTypeValues = [
+  "part_created",
+  "part_updated",
+  "request_submitted",
+  "request_approved",
+  "request_rejected",
+  "delivery_confirmed",
+] as const;
+
+/** Immutable audit records. A delivery creates the only negative quantity movement. */
+export const inventoryTransactions = mysqlTable(
+  "inventoryTransactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    type: mysqlEnum("type", transactionTypeValues).notNull(),
+    quantityDelta: int("quantityDelta").notNull().default(0),
+    quantityBefore: int("quantityBefore"),
+    quantityAfter: int("quantityAfter"),
+    actorId: int("actorId").references(() => users.id, { onDelete: "set null" }),
+    engineerId: int("engineerId").references(() => users.id, { onDelete: "set null" }),
+    partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
+    partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    details: text("details"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("transactions_part_idx").on(table.partId),
+    index("transactions_request_idx").on(table.requestId),
+    index("transactions_date_idx").on(table.createdAt),
+  ],
+);
+
+export const alertTypeValues = ["new_request", "low_stock"] as const;
+
+/** Admin-facing in-app alerts, retained until marked as read. */
+export const warehouseAlerts = mysqlTable(
+  "warehouseAlerts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    type: mysqlEnum("type", alertTypeValues).notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    body: text("body").notNull(),
+    partId: int("partId").references(() => parts.id, { onDelete: "set null" }),
+    requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    isRead: int("isRead").notNull().default(0),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("alerts_unread_idx").on(table.isRead, table.createdAt)],
+);
+
+export type Part = typeof parts.$inferSelect;
+export type InsertPart = typeof parts.$inferInsert;
+export type DispensingRequest = typeof dispensingRequests.$inferSelect;
+export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;

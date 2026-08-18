@@ -2,15 +2,26 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Inventory from "./pages/Inventory";
+import Requests from "./pages/Requests";
+import Transactions from "./pages/Transactions";
+
+function WarehouseShell({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={() => <WarehouseShell><Home /></WarehouseShell>} />
+      <Route path={"/inventory"} component={() => <WarehouseShell><Inventory /></WarehouseShell>} />
+      <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />
+      <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

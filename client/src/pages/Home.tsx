@@ -1,33 +1,45 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { categoryMeta, formatDate, requestStatusMeta } from "@/lib/warehouse";
+import { trpc } from "@/lib/trpc";
+import { ArrowRight, Boxes, ClipboardCheck, ClipboardList, PackageOpen, TriangleAlert } from "lucide-react";
+import { useLocation } from "wouter";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const isAdmin = user?.role === "admin";
+  const { data: dashboard, isLoading: dashboardLoading } = trpc.warehouse.dashboard.useQuery(undefined, { enabled: isAdmin });
+  const { data: parts, isLoading: partsLoading } = trpc.warehouse.inventory.list.useQuery();
+  const { data: requests, isLoading: requestsLoading } = trpc.warehouse.requests.list.useQuery();
+  const activeRequests = (requests ?? []).filter(({ request }) => request.status === "pending" || request.status === "approved");
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl bg-slate-950 px-6 py-7 sm:px-8 sm:py-9 text-white">
+        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 80% 30%, rgba(34,211,238,.35), transparent 22%), linear-gradient(130deg, transparent 55%, rgba(255,255,255,.07) 55%, transparent 56%)" }} />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-cyan-300">Engineering supply control</p><h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-[-0.035em]">{isAdmin ? "Warehouse control centre" : `Welcome back, ${user?.name?.split(" ")[0] || "Engineer"}`}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">{isAdmin ? "A clear view of requests, stock health, and warehouse movements across every engineering discipline." : "Find parts, request controlled dispensing, and track every handover from the warehouse."}</p></div><Button onClick={() => setLocation(isAdmin ? "/requests" : "/requests")} className="bg-white text-slate-950 hover:bg-cyan-50 gap-2 shrink-0">{isAdmin ? "Review requests" : "Request a part"}<ArrowRight className="h-4 w-4" /></Button></div>
+      </section>
+
+      {isAdmin ? <AdminOverview dashboard={dashboard} loading={dashboardLoading} requests={requests} requestsLoading={requestsLoading} setLocation={setLocation} /> : <EngineerOverview parts={parts} partsLoading={partsLoading} activeRequests={activeRequests} requestsLoading={requestsLoading} setLocation={setLocation} />}
     </div>
   );
+}
+
+function AdminOverview({ dashboard, loading, requests, requestsLoading, setLocation }: { dashboard: any; loading: boolean; requests: any; requestsLoading: boolean; setLocation: (to: string) => void }) {
+  const cards = [
+    { label: "Tracked parts", value: dashboard?.partCount ?? 0, note: "Active inventory records", icon: Boxes, color: "text-cyan-700 bg-cyan-50" },
+    { label: "Units on hand", value: dashboard?.totalUnits ?? 0, note: "Across all categories", icon: PackageOpen, color: "text-violet-700 bg-violet-50" },
+    { label: "Pending review", value: dashboard?.pendingRequests ?? 0, note: "Awaiting admin decision", icon: ClipboardList, color: "text-amber-700 bg-amber-50" },
+    { label: "Low stock", value: dashboard?.lowStockParts.length ?? 0, note: "Below defined thresholds", icon: TriangleAlert, color: "text-rose-700 bg-rose-50" },
+  ];
+  const recent = (requests ?? []).slice(0, 4);
+  return <><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(card => <div key={card.label} className="panel p-5"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold text-slate-500">{card.label}</p>{loading ? <Skeleton className="h-9 w-16 mt-3" /> : <p className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-slate-950">{card.value}</p>}<p className="mt-2 text-xs text-slate-400">{card.note}</p></div><div className={`h-10 w-10 rounded-xl grid place-items-center ${card.color}`}><card.icon className="h-5 w-5" /></div></div></div>)}</section><section className="grid gap-6 xl:grid-cols-[1.4fr_.8fr]"><div className="panel overflow-hidden"><div className="p-6 flex items-center justify-between border-b border-slate-100"><div><p className="eyebrow">Request queue</p><h2 className="mt-1 text-lg font-bold tracking-[-0.02em] text-slate-950">Latest engineering demand</h2></div><Button variant="ghost" size="sm" onClick={() => setLocation("/requests")} className="text-slate-600">View all <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></div><div className="divide-y divide-slate-100">{requestsLoading && <div className="p-6"><Skeleton className="h-14 w-full" /></div>}{!requestsLoading && recent.map(({ request, part, engineer }: any) => { const status = requestStatusMeta[request.status]; return <div key={request.id} className="p-5 flex items-center gap-4"><div className="h-10 w-10 rounded-xl bg-slate-100 grid place-items-center"><ClipboardCheck className="h-4 w-4 text-slate-600" /></div><div className="min-w-0 flex-1"><p className="font-semibold text-sm text-slate-900 truncate">{part.name} <span className="font-normal text-slate-500">× {request.requestedQuantity}</span></p><p className="text-xs text-slate-500 mt-1 truncate">{engineer.name || engineer.email || "Engineer"} · {formatDate(request.createdAt, false)}</p></div><Badge variant="outline" className={status.className}>{status.label}</Badge></div>;})}{!requestsLoading && !recent.length && <div className="p-10 text-center text-sm text-slate-500">No requests have been submitted.</div>}</div></div><div className="panel overflow-hidden"><div className="p-6 border-b border-slate-100"><p className="eyebrow">Stock health</p><h2 className="mt-1 text-lg font-bold tracking-[-0.02em] text-slate-950">Attention required</h2></div><div className="p-5 space-y-3">{loading && <Skeleton className="h-16 w-full" />}{!loading && dashboard?.lowStockParts.map((part: any) => <div key={part.id} className="rounded-xl border border-rose-100 bg-rose-50/50 p-3.5"><div className="flex items-start gap-3"><TriangleAlert className="h-4 w-4 text-rose-600 mt-0.5" /><div><p className="text-sm font-semibold text-rose-950">{part.name}</p><p className="text-xs text-rose-700 mt-1">{part.quantity} units remain · minimum is {part.minimumStock}</p></div></div></div>)}{!loading && !dashboard?.lowStockParts.length && <div className="py-7 text-center"><div className="h-10 w-10 rounded-xl bg-emerald-50 grid place-items-center mx-auto"><ClipboardCheck className="h-5 w-5 text-emerald-600" /></div><p className="mt-3 text-sm font-semibold text-slate-800">Stock levels are healthy</p><p className="mt-1 text-xs text-slate-500">No part is below its threshold.</p></div>}</div></div></section></>;
+}
+
+function EngineerOverview({ parts, partsLoading, activeRequests, requestsLoading, setLocation }: { parts: any; partsLoading: boolean; activeRequests: any[]; requestsLoading: boolean; setLocation: (to: string) => void }) {
+  const availableParts = (parts ?? []).filter((part: any) => part.quantity > 0);
+  return <><section className="grid gap-4 sm:grid-cols-3"><div className="panel p-5"><p className="text-xs font-semibold text-slate-500">Parts available</p><p className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-slate-950">{partsLoading ? "—" : availableParts.length}</p><p className="mt-2 text-xs text-slate-400">Ready to request</p></div><div className="panel p-5"><p className="text-xs font-semibold text-slate-500">Active requests</p><p className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-slate-950">{requestsLoading ? "—" : activeRequests.length}</p><p className="mt-2 text-xs text-slate-400">Pending or approved</p></div><div className="panel p-5 flex flex-col justify-between"><p className="text-xs font-semibold text-slate-500">Need a component?</p><Button onClick={() => setLocation("/requests")} className="mt-4 bg-slate-950 hover:bg-slate-800 text-white">Create dispensing request</Button></div></section><section className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]"><div className="panel overflow-hidden"><div className="p-6 flex items-center justify-between border-b border-slate-100"><div><p className="eyebrow">Part catalogue</p><h2 className="mt-1 text-lg font-bold tracking-[-0.02em] text-slate-950">Available to request</h2></div><Button variant="ghost" size="sm" onClick={() => setLocation("/inventory")}>Explore catalogue <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></div><div className="divide-y divide-slate-100">{partsLoading && <div className="p-6"><Skeleton className="h-12 w-full" /></div>}{!partsLoading && availableParts.slice(0, 4).map((part: any) => { const meta = categoryMeta[part.category]; return <div key={part.id} className="p-5 flex items-center gap-3"><div className={`h-9 w-9 rounded-lg grid place-items-center ${meta.soft}`}><PackageOpen className={`h-4 w-4 ${meta.accent}`} /></div><div className="min-w-0 flex-1"><p className="font-semibold text-sm text-slate-900">{part.name}</p><p className="text-xs text-slate-500 mt-1 font-mono">{part.partNumber}</p></div><div className="text-right"><p className="text-sm font-bold text-slate-900">{part.quantity}</p><p className="text-[10px] uppercase tracking-wider text-slate-400">units</p></div></div>;})}{!partsLoading && !availableParts.length && <div className="p-10 text-center text-sm text-slate-500">No parts are currently available.</div>}</div></div><div className="panel overflow-hidden"><div className="p-6 border-b border-slate-100"><p className="eyebrow">My requests</p><h2 className="mt-1 text-lg font-bold tracking-[-0.02em] text-slate-950">Current progress</h2></div><div className="divide-y divide-slate-100">{requestsLoading && <div className="p-6"><Skeleton className="h-12 w-full" /></div>}{!requestsLoading && activeRequests.map(({ request, part }: any) => <div key={request.id} className="p-5"><div className="flex items-center justify-between gap-2"><p className="font-semibold text-sm text-slate-900 truncate">{part.name} × {request.requestedQuantity}</p><Badge variant="outline" className={requestStatusMeta[request.status].className}>{requestStatusMeta[request.status].label}</Badge></div><p className="text-xs text-slate-500 mt-2">Submitted {formatDate(request.createdAt, false)}</p></div>)}{!requestsLoading && !activeRequests.length && <div className="p-10 text-center"><p className="text-sm text-slate-500">No active requests.</p><Button variant="outline" size="sm" onClick={() => setLocation("/requests")} className="mt-3">Request a part</Button></div>}</div></div></section></>;
 }

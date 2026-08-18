@@ -21,15 +21,23 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { BellRing, Boxes, ClipboardList, History, LayoutDashboard, LogOut, PanelLeft, Warehouse } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+const adminMenuItems = [
+  { icon: LayoutDashboard, label: "Control centre", path: "/" },
+  { icon: Boxes, label: "Inventory", path: "/inventory" },
+  { icon: ClipboardList, label: "Requests", path: "/requests" },
+  { icon: History, label: "Audit ledger", path: "/transactions" },
+];
+
+const engineerMenuItems = [
+  { icon: LayoutDashboard, label: "My workspace", path: "/" },
+  { icon: Boxes, label: "Part catalogue", path: "/inventory" },
+  { icon: ClipboardList, label: "My requests", path: "/requests" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -110,6 +118,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const menuItems = user?.role === "admin" ? adminMenuItems : engineerMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -154,30 +163,28 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r-0"
+          className="border-r-0 bg-slate-950 text-slate-200"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
+          <SidebarHeader className="h-20 justify-center border-b border-white/10">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                className="h-8 w-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 shrink-0"
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                  <PanelLeft className="h-4 w-4 text-slate-400" />
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
+                  <div className="min-w-0"><span className="font-semibold tracking-tight text-white truncate block">NEXUS SUPPLY</span><span className="text-[10px] tracking-[0.16em] text-slate-500 uppercase">Engineering warehouse</span></div>
                 </div>
               ) : null}
             </div>
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
+            <SidebarMenu className="px-3 py-5 gap-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
                 return (
@@ -186,10 +193,10 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-11 transition-all font-medium text-slate-400 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/10 data-[active=true]:text-white`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-4 w-4 ${isActive ? "text-cyan-300" : ""}`}
                       />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -199,21 +206,21 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3">
+          <SidebarFooter className="p-3 border-t border-white/10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
+                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-white/10 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                  <Avatar className="h-9 w-9 border border-white/10 shrink-0">
+                    <AvatarFallback className="text-xs font-medium bg-slate-800 text-white">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
+                    <p className="text-sm font-medium truncate leading-none text-white">
                       {user?.name || "-"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
+                    <p className="text-xs text-slate-500 truncate mt-1.5 capitalize">
+                      {user?.role === "admin" ? "Warehouse admin" : "Engineering user"}
                     </p>
                   </div>
                 </button>
@@ -240,22 +247,12 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <main className="flex-1 p-4">{children}</main>
+      <SidebarInset className="bg-[#f6f8fb]">
+        <header className="flex border-b border-slate-200/80 h-16 items-center justify-between bg-white/80 px-4 sm:px-7 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex items-center gap-3"><SidebarTrigger className={`h-9 w-9 rounded-lg bg-white border border-slate-200 ${isMobile ? "" : "hidden"}`} /><div><p className="text-sm font-semibold text-slate-900">{activeMenuItem?.label ?? "Workspace"}</p><p className="text-[11px] text-slate-500">Live warehouse operations</p></div></div>
+          <div className="flex items-center gap-2"><span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />System active</span><button onClick={() => setLocation("/requests")} className="h-9 w-9 rounded-lg border border-slate-200 bg-white grid place-items-center text-slate-500 hover:text-slate-900 hover:border-slate-300" aria-label="View requests"><BellRing className="h-4 w-4" /></button></div>
+        </header>
+        <main className="flex-1 p-4 sm:p-7">{children}</main>
       </SidebarInset>
     </>
   );
