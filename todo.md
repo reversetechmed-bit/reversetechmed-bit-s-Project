@@ -45,4 +45,27 @@
 - [x] Add Vitest coverage for request decision/handover notification generation and dashboard activity outputs.
 - [x] Add searchable filtering to the remaining Admin management tables: departments, employees, component types, and invoices.
 - [x] Add Vitest coverage for approval/rejection/handover notification creation and dashboard activity/recent-access query outputs.
-- [ ] Save a new REVERSE TECH checkpoint after the completed search, notifications, invoices, and activity enhancements.
+- [x] Save a new REVERSE TECH checkpoint after the completed search, notifications, invoices, and activity enhancements.
+- [x] Create and validate a reusable REVERSE TECH warehouse-management skill package based on the implementation workflow.
+- [x] Add Admin export actions for current inventory reports and handover invoices in PDF and Excel formats.
+- [x] Generate downloadable, branded PDF and Excel files containing the selected inventory or invoice data.
+- [x] Strengthen low-stock alerts so the Admin receives clear notifications whenever any item meets or drops below its configured minimum quantity.
+- [x] Add a dedicated My Requests page for normal users with historical and active request status, decision details, and handover information.
+- [x] Add and run tests for export dataset preparation, low-stock notification behavior, and user request-history access control.
+- [x] Verify the updated export, alert, and My Requests experience, then save a new project checkpoint.
+- [x] Add procedure-level Vitest coverage proving request-list scoping and handover-invoice ownership for normal users.
+- [x] Perform explicit desktop/mobile verification of export actions, low-stock alerts, and the My Requests page.
+- [ ] Save a new REVERSE TECH checkpoint after final export, alert, and My Requests verification.
+- [x] Create a test account for abmena333@gmail.com and verify that it has Admin permissions in the application.
+- [x] Upload and integrate Basseet Free Bold and Bree Ara Thin as the Arabic typography system for REVERSE TECH.
+- [x] Translate the application shell, authentication, navigation, inventory, requests, invoices, alerts, and dashboard UI into Arabic with RTL support.
+- [x] Review the codebase for duplicated pages, routes, queries, report logic, and overlapping UI controls; consolidate where appropriate.
+- [ ] Run authentication, Admin-access, Arabic-RTL, and duplication-regression checks, then save a new project checkpoint.
+- [x] Verify /my-requests, /inventory, and /invoices at the mobile breakpoint after the latest changes.
+- [x] Verify that Admin export controls and low-stock alert surfaces are rendered and usable in the authenticated UI.
+- [x] Restore and verify the visible dispensing-request action for normal users from Components and Products catalogue rows.
+- [ ] Verify the Admin account in authenticated UI and confirm access to Admin-only routes and actions.
+- [x] Translate backend-generated alert and warehouse-activity messages plus report/export metadata to Arabic.
+- [x] Verify the authenticated normal-user request action and dialog in both Components and Products catalogues.
+- [x] Translate remaining export titles, column labels, PDF metadata, and section labels to Arabic.
+- [ ] Verify the row-level request action and dialog for an available Component as a normal user.

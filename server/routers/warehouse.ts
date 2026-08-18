@@ -16,7 +16,7 @@ import { notifyOwner } from "../_core/notification";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { executeConfirmedDelivery } from "../warehouseDelivery";
 import { buildDecisionNotification, buildHandoverNotification } from "../warehouseNotifications";
-import { canDecideRequest, canEngineerSubmit, isLowStock } from "../warehouseRules";
+import { canDecideRequest, canEngineerSubmit, isLowStock, mustScopeRequestsToRequester } from "../warehouseRules";
 import { z } from "zod";
 
 const partInput = z.object({
@@ -42,7 +42,7 @@ async function requireDb() {
   if (!db) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Warehouse data is temporarily unavailable.",
+      message: "بيانات المخزن غير متاحة مؤقتًا.",
     });
   }
   return db;
@@ -53,12 +53,12 @@ function optionalText(value?: string) {
 }
 
 function warehouseSectionLabel(section: "components" | "products") {
-  return section === "products" ? "Products" : "Components";
+  return section === "products" ? "المنتجات" : "المكونات";
 }
 
 const engineerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (!canEngineerSubmit(ctx.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Only engineers can submit dispensing requests." });
+    throw new TRPCError({ code: "FORBIDDEN", message: "المهندسون والمستخدمون فقط يمكنهم إرسال طلبات الصرف." });
   }
   return next({ ctx });
 });
@@ -76,7 +76,7 @@ export const warehouseRouter = router({
     lowStock: adminProcedure.query(async () => {
       const db = await requireDb();
       const allParts = await db.select().from(parts).orderBy(desc(parts.updatedAt));
-      return allParts.filter(part => part.quantity < part.minimumStock);
+      return allParts.filter(part => part.quantity <= part.minimumStock);
     }),
 
     create: adminProcedure.input(partInput).mutation(async ({ ctx, input }) => {
@@ -96,7 +96,7 @@ export const warehouseRouter = router({
             .where(eq(parts.partNumber, input.partNumber))
             .limit(1);
 
-          if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Part creation failed." });
+          if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر إنشاء القطعة." });
 
           await tx.insert(inventoryTransactions).values({
             partId: created.id,
@@ -108,15 +108,15 @@ export const warehouseRouter = router({
             partNumberSnapshot: created.partNumber,
             partNameSnapshot: created.name,
             warehouseSectionSnapshot: created.warehouseSection,
-            details: "Part added to inventory.",
+            details: "تمت إضافة قطعة إلى المخزون.",
           });
-          await tx.insert(warehouseActivities).values({ type: "inventory_created", actorId: ctx.user.id, title: "Inventory record created", detail: `${created.name} added to ${warehouseSectionLabel(created.warehouseSection)}.`, partId: created.id });
+          await tx.insert(warehouseActivities).values({ type: "inventory_created", actorId: ctx.user.id, title: "إضافة سجل مخزون", detail: `تمت إضافة ${created.name} إلى ${warehouseSectionLabel(created.warehouseSection)}.`, partId: created.id });
 
           if (isLowStock(created.quantity, created.minimumStock)) {
             await tx.insert(warehouseAlerts).values({
               type: "low_stock",
-              title: `${warehouseSectionLabel(created.warehouseSection)}: low stock warning`,
-              body: `${created.name} in ${warehouseSectionLabel(created.warehouseSection)} is below its minimum stock threshold.`,
+              title: `${warehouseSectionLabel(created.warehouseSection)}: تنبيه مخزون منخفض`,
+              body: `وصلت كمية ${created.name} في ${warehouseSectionLabel(created.warehouseSection)} إلى الحد الأدنى أو انخفضت عنه.`,
               partId: created.id,
             });
           }
@@ -124,7 +124,7 @@ export const warehouseRouter = router({
         });
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        throw new TRPCError({ code: "CONFLICT", message: "A part with this part number already exists." });
+        throw new TRPCError({ code: "CONFLICT", message: "توجد بالفعل قطعة بهذا الكود." });
       }
     }),
 
@@ -135,10 +135,10 @@ export const warehouseRouter = router({
         const { id, ...values } = input;
         return db.transaction(async tx => {
           const [existing] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
-          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Part not found." });
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
           if (existing.partNumber !== values.partNumber) {
             const [duplicate] = await tx.select({ id: parts.id }).from(parts).where(eq(parts.partNumber, values.partNumber)).limit(1);
-            if (duplicate) throw new TRPCError({ code: "CONFLICT", message: "A part with this part number already exists." });
+            if (duplicate) throw new TRPCError({ code: "CONFLICT", message: "توجد بالفعل قطعة بهذا الكود." });
           }
 
           await tx
@@ -151,7 +151,7 @@ export const warehouseRouter = router({
             })
             .where(eq(parts.id, id));
           const [updated] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
-          if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Part update failed." });
+          if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر تحديث القطعة." });
 
           await tx.insert(inventoryTransactions).values({
             partId: updated.id,
@@ -163,9 +163,9 @@ export const warehouseRouter = router({
             partNumberSnapshot: updated.partNumber,
             partNameSnapshot: updated.name,
             warehouseSectionSnapshot: updated.warehouseSection,
-            details: "Part record updated by warehouse admin.",
+            details: "تم تحديث سجل القطعة بواسطة أدمن المخزن.",
           });
-          await tx.insert(warehouseActivities).values({ type: "inventory_updated", actorId: ctx.user.id, title: "Inventory record updated", detail: `${updated.name} updated in ${warehouseSectionLabel(updated.warehouseSection)}.`, partId: updated.id });
+          await tx.insert(warehouseActivities).values({ type: "inventory_updated", actorId: ctx.user.id, title: "تحديث سجل مخزون", detail: `تم تحديث ${updated.name} في ${warehouseSectionLabel(updated.warehouseSection)}.`, partId: updated.id });
 
           if (isLowStock(updated.quantity, updated.minimumStock)) {
             const [existingAlert] = await tx
@@ -176,8 +176,8 @@ export const warehouseRouter = router({
             if (!existingAlert) {
               await tx.insert(warehouseAlerts).values({
                 type: "low_stock",
-                title: `${warehouseSectionLabel(updated.warehouseSection)}: low stock warning`,
-                body: `${updated.name} in ${warehouseSectionLabel(updated.warehouseSection)} is below its minimum stock threshold.`,
+                title: `${warehouseSectionLabel(updated.warehouseSection)}: تنبيه مخزون منخفض`,
+                body: `وصلت كمية ${updated.name} في ${warehouseSectionLabel(updated.warehouseSection)} إلى الحد الأدنى أو انخفضت عنه.`,
                 partId: updated.id,
               });
             }
@@ -189,13 +189,13 @@ export const warehouseRouter = router({
     remove: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       const [existing] = await db.select().from(parts).where(eq(parts.id, input.id)).limit(1);
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Part not found." });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
       const [request] = await db.select({ id: dispensingRequests.id }).from(dispensingRequests).where(eq(dispensingRequests.partId, input.id)).limit(1);
       const [transaction] = await db.select({ id: inventoryTransactions.id }).from(inventoryTransactions).where(eq(inventoryTransactions.partId, input.id)).limit(1);
       if (request || transaction) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Parts with recorded requests or movements cannot be deleted; this preserves the audit history.",
+          message: "لا يمكن حذف القطع ذات الطلبات أو الحركات المسجلة، حفاظًا على سجل التدقيق.",
         });
       }
       await db.delete(parts).where(eq(parts.id, input.id));
@@ -216,18 +216,18 @@ export const warehouseRouter = router({
         .innerJoin(parts, eq(dispensingRequests.partId, parts.id))
         .innerJoin(users, eq(dispensingRequests.requestedById, users.id));
 
-      return ctx.user.role === "admin"
-        ? baseQuery.orderBy(desc(dispensingRequests.createdAt))
-        : baseQuery.where(eq(dispensingRequests.requestedById, ctx.user.id)).orderBy(desc(dispensingRequests.createdAt));
+      return mustScopeRequestsToRequester(ctx.user.role)
+        ? baseQuery.where(eq(dispensingRequests.requestedById, ctx.user.id)).orderBy(desc(dispensingRequests.createdAt))
+        : baseQuery.orderBy(desc(dispensingRequests.createdAt));
     }),
 
     create: engineerProcedure.input(requestInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const result = await db.transaction(async tx => {
         const [part] = await tx.select().from(parts).where(eq(parts.id, input.partId)).limit(1);
-        if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "The requested part no longer exists." });
+        if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة المطلوبة لم تعد موجودة." });
         if (part.quantity < input.requestedQuantity) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "The requested quantity exceeds the available inventory." });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "الكمية المطلوبة تتجاوز المخزون المتاح." });
         }
 
         const insertedIds = await tx
@@ -240,7 +240,7 @@ export const warehouseRouter = router({
           })
           .$returningId();
         const requestId = insertedIds[0]?.id;
-        if (!requestId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Request creation failed." });
+        if (!requestId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر إنشاء طلب الصرف." });
 
         await tx.insert(inventoryTransactions).values({
           partId: part.id,
@@ -254,22 +254,22 @@ export const warehouseRouter = router({
           partNumberSnapshot: part.partNumber,
           partNameSnapshot: part.name,
           warehouseSectionSnapshot: part.warehouseSection,
-          details: `Requested ${input.requestedQuantity} unit(s). Purpose: ${input.purpose}`,
+          details: `تم طلب ${input.requestedQuantity} وحدة. الغرض: ${input.purpose}`,
         });
         await tx.insert(warehouseAlerts).values({
           type: "new_request",
-          title: `${warehouseSectionLabel(part.warehouseSection)}: new dispensing request`,
-          body: `${ctx.user.name || "An engineer"} requested ${input.requestedQuantity} × ${part.name} from ${warehouseSectionLabel(part.warehouseSection)}.`,
+          title: `${warehouseSectionLabel(part.warehouseSection)}: طلب صرف جديد`,
+          body: `طلب ${ctx.user.name || "مهندس"} عدد ${input.requestedQuantity} × ${part.name} من ${warehouseSectionLabel(part.warehouseSection)}.`,
           partId: part.id,
           requestId,
         });
-        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "Warehouse request submitted", detail: `${input.requestedQuantity} × ${part.name} requested from ${warehouseSectionLabel(part.warehouseSection)}.`, requestId, partId: part.id });
+        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "إرسال طلب صرف", detail: `تم طلب ${input.requestedQuantity} × ${part.name} من ${warehouseSectionLabel(part.warehouseSection)}.`, requestId, partId: part.id });
         return { requestId, partName: part.name };
       });
 
       const notificationSent = await notifyOwner({
-        title: "New warehouse dispensing request",
-        content: `${ctx.user.name || "An engineer"} requested ${input.requestedQuantity} × ${result.partName}.`,
+        title: "طلب صرف جديد من المخزن",
+        content: `طلب ${ctx.user.name || "مهندس"} عدد ${input.requestedQuantity} × ${result.partName}.`,
       });
       return { ...result, notificationSent };
     }),
@@ -285,9 +285,9 @@ export const warehouseRouter = router({
             .innerJoin(parts, eq(dispensingRequests.partId, parts.id))
             .where(eq(dispensingRequests.id, input.id))
             .limit(1);
-          if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Request not found." });
+          if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الصرف غير موجود." });
           if (!canDecideRequest(record.request.status)) {
-            throw new TRPCError({ code: "CONFLICT", message: "Only pending requests can be approved or rejected." });
+            throw new TRPCError({ code: "CONFLICT", message: "يمكن اعتماد أو رفض الطلبات المنتظرة فقط." });
           }
 
           await tx
@@ -306,9 +306,9 @@ export const warehouseRouter = router({
             partNumberSnapshot: record.part.partNumber,
             partNameSnapshot: record.part.name,
             warehouseSectionSnapshot: record.part.warehouseSection,
-            details: input.decision === "approved" ? "Request approved; awaiting physical handover." : `Request rejected.${input.decisionNote ? ` Reason: ${input.decisionNote}` : ""}`,
+            details: input.decision === "approved" ? "تم اعتماد الطلب بانتظار التسليم الفعلي." : `تم رفض الطلب.${input.decisionNote ? ` السبب: ${input.decisionNote}` : ""}`,
           });
-          await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? "Request approved" : "Request rejected", detail: `${record.part.name} request ${input.decision}.`, requestId: record.request.id, partId: record.part.id });
+          await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? "اعتماد طلب صرف" : "رفض طلب صرف", detail: `تم ${input.decision === "approved" ? "اعتماد" : "رفض"} طلب ${record.part.name}.`, requestId: record.request.id, partId: record.part.id });
           await tx.insert(warehouseAlerts).values(buildDecisionNotification({ decision: input.decision, decisionNote: input.decisionNote, partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById }));
           return { success: true, status: input.decision } as const;
         });
@@ -328,7 +328,7 @@ export const warehouseRouter = router({
           .innerJoin(users, eq(dispensingRequests.requestedById, users.id))
           .where(eq(dispensingRequests.id, input.id))
           .limit(1);
-        if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Request not found." });
+        if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الصرف غير موجود." });
         const deliveryMovement = await executeConfirmedDelivery(record, ctx.user.id, {
           updatePartQuantity: async (partId, quantity) => {
             await tx.update(parts).set({ quantity }).where(eq(parts.id, partId));
@@ -404,6 +404,16 @@ export const warehouseRouter = router({
         .orderBy(desc(handoverInvoices.issuedAt))
         .limit(100);
     }),
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      return db
+        .select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } })
+        .from(handoverInvoices)
+        .innerJoin(users, eq(handoverInvoices.receivedById, users.id))
+        .where(eq(handoverInvoices.receivedById, ctx.user.id))
+        .orderBy(desc(handoverInvoices.issuedAt))
+        .limit(100);
+    }),
     byRequest: protectedProcedure.input(z.object({ requestId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = await requireDb();
       const [result] = await db
@@ -412,8 +422,8 @@ export const warehouseRouter = router({
         .innerJoin(users, eq(handoverInvoices.receivedById, users.id))
         .where(eq(handoverInvoices.requestId, input.requestId))
         .limit(1);
-      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Handover invoice not found." });
-      if (ctx.user.role !== "admin" && result.invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot access this invoice." });
+      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة التسليم غير موجودة." });
+      if (ctx.user.role !== "admin" && result.invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك الوصول إلى هذه الفاتورة." });
       return result;
     }),
   }),
@@ -441,8 +451,8 @@ export const warehouseRouter = router({
     markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [alert] = await db.select().from(warehouseAlerts).where(eq(warehouseAlerts.id, input.id)).limit(1);
-      if (!alert) throw new TRPCError({ code: "NOT_FOUND", message: "Notification not found." });
-      if (ctx.user.role !== "admin" && alert.recipientUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot update this notification." });
+      if (!alert) throw new TRPCError({ code: "NOT_FOUND", message: "التنبيه غير موجود." });
+      if (ctx.user.role !== "admin" && alert.recipientUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث هذا التنبيه." });
       await db.update(warehouseAlerts).set({ isRead: 1 }).where(eq(warehouseAlerts.id, input.id));
       return { success: true } as const;
     }),

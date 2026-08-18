@@ -90,7 +90,7 @@ describe("confirmed delivery persistence plan", () => {
         partNumberSnapshot: "EC-555",
         partNameSnapshot: "Precision regulator",
         warehouseSectionSnapshot: "components",
-        details: "Physically handed over 4 unit(s) to Mariam Hassan.",
+        details: "تم التسليم الفعلي لعدد 4 وحدة إلى Mariam Hassan.",
       },
     });
   });
@@ -119,7 +119,7 @@ describe("confirmed delivery persistence plan", () => {
       { operation: "createHandoverInvoice", payload: expect.objectContaining({ invoiceNumber: "RT-HO-20260818-00031", requestId: 31, partId: 9, receivedById: 7, quantity: 3, purposeSnapshot: "Pressure calibration" }) },
       { operation: "recordActivity", payload: expect.objectContaining({ type: "handover_completed", actorId: 1, requestId: 31, partId: 9 }) },
       { operation: "hasUnreadLowStockAlert", payload: 9 },
-      { operation: "createLowStockAlert", payload: { type: "low_stock", title: "Products: low stock warning", body: "Pressure sensor in Products is below its minimum stock threshold after delivery.", partId: 9, requestId: 31 } },
+      { operation: "createLowStockAlert", payload: { type: "low_stock", title: "المنتجات: تنبيه مخزون منخفض", body: "وصلت كمية Pressure sensor في المنتجات إلى الحد الأدنى أو انخفضت عنه بعد التسليم.", partId: 9, requestId: 31 } },
     ]);
   });
 });

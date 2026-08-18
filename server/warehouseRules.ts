@@ -2,12 +2,16 @@ export function canEngineerSubmit(role: string) {
   return role === "user";
 }
 
+export function mustScopeRequestsToRequester(role: string) {
+  return role !== "admin";
+}
+
 export function canDecideRequest(status: string) {
   return status === "pending";
 }
 
 export function isLowStock(quantity: number, minimumStock: number) {
-  return quantity < minimumStock;
+  return quantity <= minimumStock;
 }
 
 export function validateDelivery(status: string, availableQuantity: number, requestedQuantity: number) {

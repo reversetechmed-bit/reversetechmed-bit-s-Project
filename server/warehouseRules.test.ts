@@ -4,6 +4,7 @@ import {
   canEngineerSubmit,
   formatDeliveryDetails,
   isLowStock,
+  mustScopeRequestsToRequester,
   validateDelivery,
 } from "./warehouseRules";
 
@@ -18,6 +19,11 @@ describe("warehouse role rules", () => {
     expect(canDecideRequest("approved")).toBe(false);
     expect(canDecideRequest("rejected")).toBe(false);
     expect(canDecideRequest("delivered")).toBe(false);
+  });
+
+  it("scopes the My Requests feed to the signed-in requester unless the account is an admin", () => {
+    expect(mustScopeRequestsToRequester("user")).toBe(true);
+    expect(mustScopeRequestsToRequester("admin")).toBe(false);
   });
 });
 
@@ -40,9 +46,9 @@ describe("warehouse delivery rules", () => {
     });
   });
 
-  it("detects a low stock condition only when quantity is below the threshold", () => {
+  it("detects a low stock condition when quantity reaches or falls below the threshold", () => {
     expect(isLowStock(4, 5)).toBe(true);
-    expect(isLowStock(5, 5)).toBe(false);
+    expect(isLowStock(5, 5)).toBe(true);
     expect(isLowStock(8, 5)).toBe(false);
   });
 

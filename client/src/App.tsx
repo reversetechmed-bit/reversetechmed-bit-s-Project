@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ComponentTypes from "./pages/ComponentTypes";
 import Invoices from "./pages/Invoices";
+import MyRequests from "./pages/MyRequests";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/products"} component={() => <WarehouseShell><Inventory section="products" /></WarehouseShell>} />
       <Route path={"/component-types"} component={() => <WarehouseShell><ComponentTypes /></WarehouseShell>} />
       <Route path={"/invoices"} component={() => <WarehouseShell><Invoices /></WarehouseShell>} />
+      <Route path={"/my-requests"} component={() => <WarehouseShell><MyRequests /></WarehouseShell>} />
       <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />
       <Route path={"/departments"} component={() => <WarehouseShell><Organization initialTab="departments" /></WarehouseShell>} />
       <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />

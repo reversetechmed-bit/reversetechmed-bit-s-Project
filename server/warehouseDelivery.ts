@@ -53,7 +53,7 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
       partNumberSnapshot: record.part.partNumber,
       partNameSnapshot: record.part.name,
       warehouseSectionSnapshot: record.part.warehouseSection,
-      details: `Physically handed over ${record.request.requestedQuantity} unit(s) to ${record.engineer.name || "the requesting engineer"}.`,
+      details: `تم التسليم الفعلي لعدد ${record.request.requestedQuantity} وحدة إلى ${record.engineer.name || "المهندس الطالب"}.`,
     } satisfies DeliveryTransaction,
     invoice: {
       invoiceNumber,
@@ -83,17 +83,17 @@ export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: 
   await persistence.recordActivity({
     type: "handover_completed",
     actorId: adminId,
-    title: "Manual handover completed",
-    detail: `${record.request.requestedQuantity} × ${record.part.name} handed to ${record.engineer.name || "the requesting engineer"}. Invoice ${plan.invoice.invoiceNumber}.`,
+    title: "اكتمل التسليم اليدوي",
+    detail: `تم تسليم ${record.request.requestedQuantity} × ${record.part.name} إلى ${record.engineer.name || "المهندس الطالب"}. الفاتورة ${plan.invoice.invoiceNumber}.`,
     requestId: record.request.id,
     partId: record.part.id,
   });
   if (plan.shouldCreateLowStockAlert && !(await persistence.hasUnreadLowStockAlert(record.part.id))) {
-    const sectionLabel = record.part.warehouseSection === "products" ? "Products" : "Components";
+    const sectionLabel = record.part.warehouseSection === "products" ? "المنتجات" : "المكونات";
     await persistence.createLowStockAlert({
       type: "low_stock",
-      title: `${sectionLabel}: low stock warning`,
-      body: `${record.part.name} in ${sectionLabel} is below its minimum stock threshold after delivery.`,
+      title: `${sectionLabel}: تنبيه مخزون منخفض`,
+      body: `وصلت كمية ${record.part.name} في ${sectionLabel} إلى الحد الأدنى أو انخفضت عنه بعد التسليم.`,
       partId: record.part.id,
       requestId: record.request.id,
     });
