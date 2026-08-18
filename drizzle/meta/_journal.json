@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1787057116091,
+      "tag": "0000_sharp_vector",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1787057289775,
+      "tag": "0001_safe_lord_hawal",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787058713284,
+      "tag": "0002_soft_human_torch",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787060893857,
+      "tag": "0003_misty_maximus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787061417319,
+      "tag": "0004_organic_zuras",
+      "breakpoints": true
+    }
+  ]
+}

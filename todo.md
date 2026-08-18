@@ -1,0 +1,74 @@
+# Project TODO
+
+- [x] Define inventory, dispensing request, transaction, and notification data models with the four required categories: Medical (طبي), Embedded (إمبيديد), Electronics (إلكترونيات), and Boards (لوحات).
+- [x] Enforce Admin and Engineer permissions across all protected workflows and views.
+- [x] Build the polished dashboard shell, responsive navigation, Arabic/English category presentation, and role-aware home views.
+- [x] Implement Admin inventory management: create, edit, search, filter, and delete parts with quantity, category, description, and minimum stock threshold.
+- [x] Implement Engineer part discovery and dispensing request form with requested quantity and purpose.
+- [x] Send an owner notification immediately whenever an Engineer submits a dispensing request.
+- [x] Implement Admin request queue with approval and rejection actions, request status, and decision metadata.
+- [x] Implement delivery confirmation that atomically deducts delivered quantity from inventory without a separate manual inventory update.
+- [x] Record an immutable transaction history for requests, approvals, rejections, and deliveries, including date, engineer name, part name/details, and quantities.
+- [x] Display actionable low-stock warnings whenever available quantity is below a part's defined minimum threshold.
+- [x] Write and run Vitest coverage for permissions, approval/delivery stock rules, transaction logging, and low-stock detection.
+- [x] Verify core desktop and mobile layouts, inspect runtime logs, and save the final project checkpoint.
+- [x] Add UI support to capture and display request decision metadata, including an optional rejection note and review timestamp.
+- [x] Add Vitest coverage for procedure-level permissions and transactional delivery, transaction recording, and low-stock alert behavior.
+- [x] Save the verified final webdev project checkpoint.
+- [x] Test the delivery service used by the router to verify inventory deduction, transaction insertion, and low-stock alert creation together.
+- [x] Upload and apply the REVERSE TECH logo and the supplied brand palette across the full interface.
+- [x] Add Admin management for company departments, including create, edit, and archive controls.
+- [x] Add Admin employee management with employee identity, department assignment, job title, and warehouse access role.
+- [x] Split warehouse records into Components and Products, retaining the existing engineering categories under Components.
+- [x] Add dedicated Admin product management with product code, name, quantity, minimum stock, and product details.
+- [x] Update dashboards, catalogue filters, requests, delivery, alerts, and audit records to show the appropriate warehouse section.
+- [x] Configure Supabase credentials and implement sign in, sign up, and session-aware access control.
+- [x] Add and run tests for department/employee management, warehouse section validation, and authentication behavior.
+- [x] Verify the new desktop and mobile interface, then save an updated project checkpoint.
+- [x] Update stock alerts and remaining dashboard widgets to surface Components versus Products clearly.
+- [x] Add CRUD-focused Vitest coverage for Admin department and employee procedures.
+- [x] Add Supabase session-authentication coverage beyond public credential configuration.
+- [x] Add Vitest coverage for the Supabase-backed context flow, including bearer validation, user mapping, and null-session behavior.
+- [x] Save the updated REVERSE TECH project checkpoint after the verified implementation.
+- [x] Add secure account-role selection for Admin or User at sign-up, while retaining a protected bootstrap Admin workflow.
+- [x] Enforce Admin-only create, edit, delete, global table search, approval, manual handover, employee, department, and inventory management permissions.
+- [x] Add user-facing component/product search and request tracking with pending, approved, rejected, and delivered states.
+- [x] Add a configurable component-type directory, including 3D Printing and general-purpose categories such as company supplies, fasteners, soap, and adhesives.
+- [x] Add component-type assignment and filtering across the Components inventory experience.
+- [x] Add manual handover invoices with invoice number, receiving user, item details, quantity, date/time, and print-ready presentation.
+- [x] Add in-app notification bell with unread count and Admin alerts for requests, decisions, and stock events.
+- [x] Record warehouse activity and display the most recent people and actions in the Admin dashboard.
+- [x] Add and run tests for role selection, permissions, invoice creation, notifications, component types, and activity history.
+- [x] Verify the updated desktop/mobile interface and save a new project checkpoint.
+- [x] Add and verify searchable tables across Admin management views and explicit user catalogue search for Components and Products.
+- [x] Display and filter Components inventory by assigned component type.
+- [x] Add Vitest coverage for request decision/handover notification generation and dashboard activity outputs.
+- [x] Add searchable filtering to the remaining Admin management tables: departments, employees, component types, and invoices.
+- [x] Add Vitest coverage for approval/rejection/handover notification creation and dashboard activity/recent-access query outputs.
+- [x] Save a new REVERSE TECH checkpoint after the completed search, notifications, invoices, and activity enhancements.
+- [x] Create and validate a reusable REVERSE TECH warehouse-management skill package based on the implementation workflow.
+- [x] Add Admin export actions for current inventory reports and handover invoices in PDF and Excel formats.
+- [x] Generate downloadable, branded PDF and Excel files containing the selected inventory or invoice data.
+- [x] Strengthen low-stock alerts so the Admin receives clear notifications whenever any item meets or drops below its configured minimum quantity.
+- [x] Add a dedicated My Requests page for normal users with historical and active request status, decision details, and handover information.
+- [x] Add and run tests for export dataset preparation, low-stock notification behavior, and user request-history access control.
+- [x] Verify the updated export, alert, and My Requests experience, then save a new project checkpoint.
+- [x] Add procedure-level Vitest coverage proving request-list scoping and handover-invoice ownership for normal users.
+- [x] Perform explicit desktop/mobile verification of export actions, low-stock alerts, and the My Requests page.
+- [x] Save a new REVERSE TECH checkpoint after final export, alert, and My Requests verification.
+- [x] Create a test account for abmena333@gmail.com and verify that it has Admin permissions in the application.
+- [x] Upload and integrate Basseet Free Bold and Bree Ara Thin as the Arabic typography system for REVERSE TECH.
+- [x] Translate the application shell, authentication, navigation, inventory, requests, invoices, alerts, and dashboard UI into Arabic with RTL support.
+- [x] Review the codebase for duplicated pages, routes, queries, report logic, and overlapping UI controls; consolidate where appropriate.
+- [x] Run authentication, Admin-access, Arabic-RTL, and duplication-regression checks, then save a new project checkpoint.
+- [x] Verify /my-requests, /inventory, and /invoices at the mobile breakpoint after the latest changes.
+- [x] Verify that Admin export controls and low-stock alert surfaces are rendered and usable in the authenticated UI.
+- [x] Restore and verify the visible dispensing-request action for normal users from Components and Products catalogue rows.
+- [x] Verify the Admin account entitlement through the authenticated role-mapping data and application user role; live menu verification remains available after the account signs in with its confirmed session.
+- [x] Translate backend-generated alert and warehouse-activity messages plus report/export metadata to Arabic.
+- [x] Verify the authenticated normal-user request action and dialog in both Components and Products catalogues.
+- [x] Translate remaining export titles, column labels, PDF metadata, and section labels to Arabic.
+- [x] Verify the Components request-action implementation and table column; the current user dataset contains no available Component row to open the dialog, while the identical shared dialog was exercised successfully from an available Product row.
+- [ ] Sign in with the Admin account in the app UI and verify access to admin-only pages and actions, then save the final checkpoint.
+- [ ] Verify the target GitHub repository access and synchronize the current project source safely.
+- [ ] Assess compatible hosting for the full-stack application and prepare deployment instructions for reverselab.web.app.
