@@ -25,8 +25,48 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+/** Company organizational units managed by the warehouse administrator. */
+export const departments = mysqlTable(
+  "departments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 160 }).notNull().unique(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    description: text("description"),
+    isActive: int("isActive").notNull().default(1),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("departments_active_idx").on(table.isActive)],
+);
+
+export const employeeWarehouseRoleValues = ["admin", "engineer", "viewer"] as const;
+
+/** Employee directory, which can be created before the employee activates a login account. */
+export const employeeProfiles = mysqlTable(
+  "employeeProfiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").unique().references(() => users.id, { onDelete: "set null" }),
+    fullName: varchar("fullName", { length: 200 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull().unique(),
+    employeeCode: varchar("employeeCode", { length: 64 }).notNull().unique(),
+    jobTitle: varchar("jobTitle", { length: 160 }).notNull(),
+    departmentId: int("departmentId").references(() => departments.id, { onDelete: "set null" }),
+    warehouseRole: mysqlEnum("warehouseRole", employeeWarehouseRoleValues).notNull().default("engineer"),
+    isActive: int("isActive").notNull().default(1),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("employees_department_idx").on(table.departmentId),
+    index("employees_active_idx").on(table.isActive),
+  ],
+);
+
 /** Four warehouse classifications required by the engineering organization. */
 export const partCategoryValues = ["Medical", "Embedded", "Electronics", "Boards"] as const;
+export const warehouseSectionValues = ["components", "products"] as const;
 
 /** Current on-hand inventory for each tracked engineering part. */
 export const parts = mysqlTable(
@@ -37,6 +77,7 @@ export const parts = mysqlTable(
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
     category: mysqlEnum("category", partCategoryValues).notNull(),
+    warehouseSection: mysqlEnum("warehouseSection", warehouseSectionValues).notNull().default("components"),
     quantity: int("quantity").notNull().default(0),
     minimumStock: int("minimumStock").notNull().default(0),
     location: varchar("location", { length: 160 }),
@@ -46,6 +87,7 @@ export const parts = mysqlTable(
   },
   table => [
     index("parts_category_idx").on(table.category),
+    index("parts_section_idx").on(table.warehouseSection),
     index("parts_stock_idx").on(table.quantity, table.minimumStock),
   ],
 );
@@ -101,6 +143,7 @@ export const inventoryTransactions = mysqlTable(
     engineerId: int("engineerId").references(() => users.id, { onDelete: "set null" }),
     partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
     partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    warehouseSectionSnapshot: mysqlEnum("warehouseSectionSnapshot", warehouseSectionValues).notNull().default("components"),
     details: text("details"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
@@ -133,3 +176,5 @@ export type Part = typeof parts.$inferSelect;
 export type InsertPart = typeof parts.$inferInsert;
 export type DispensingRequest = typeof dispensingRequests.$inferSelect;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+export type Department = typeof departments.$inferSelect;
+export type EmployeeProfile = typeof employeeProfiles.$inferSelect;

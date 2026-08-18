@@ -2,7 +2,7 @@ import { isLowStock, validateDelivery } from "./warehouseRules";
 
 export type DeliveryRecord = {
   request: { id: number; status: string; requestedQuantity: number; requestedById: number };
-  part: { id: number; partNumber: string; name: string; quantity: number; minimumStock: number };
+  part: { id: number; partNumber: string; name: string; quantity: number; minimumStock: number; warehouseSection: "components" | "products" };
   engineer: { id: number; name: string | null };
 };
 
@@ -17,6 +17,7 @@ export type DeliveryTransaction = {
   engineerId: number;
   partNumberSnapshot: string;
   partNameSnapshot: string;
+  warehouseSectionSnapshot: "components" | "products";
   details: string;
 };
 
@@ -48,6 +49,7 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
       engineerId: record.engineer.id,
       partNumberSnapshot: record.part.partNumber,
       partNameSnapshot: record.part.name,
+      warehouseSectionSnapshot: record.part.warehouseSection,
       details: `Physically handed over ${record.request.requestedQuantity} unit(s) to ${record.engineer.name || "the requesting engineer"}.`,
     } satisfies DeliveryTransaction,
   };
@@ -62,10 +64,11 @@ export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: 
   await persistence.markRequestDelivered(record.request.id, adminId, plan.deliveredAt);
   await persistence.insertTransaction(plan.transaction);
   if (plan.shouldCreateLowStockAlert && !(await persistence.hasUnreadLowStockAlert(record.part.id))) {
+    const sectionLabel = record.part.warehouseSection === "products" ? "Products" : "Components";
     await persistence.createLowStockAlert({
       type: "low_stock",
-      title: "Low stock warning",
-      body: `${record.part.name} is below its minimum stock threshold after delivery.`,
+      title: `${sectionLabel}: low stock warning`,
+      body: `${record.part.name} in ${sectionLabel} is below its minimum stock threshold after delivery.`,
       partId: record.part.id,
       requestId: record.request.id,
     });

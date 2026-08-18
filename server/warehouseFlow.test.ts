@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { departmentInput, employeeInput, organizationRouter } from "./routers/organization";
 import { warehouseRouter } from "./routers/warehouse";
 import { executeConfirmedDelivery, prepareConfirmedDelivery } from "./warehouseDelivery";
 import type { TrpcContext } from "./_core/context";
@@ -33,9 +34,33 @@ describe("warehouse procedure permissions", () => {
       partNumber: "TEST-001",
       name: "Protected Part",
       category: "Electronics",
+      warehouseSection: "components",
       quantity: 3,
       minimumStock: 1,
     })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects an engineer attempting to access the company departments directory", async () => {
+    const caller = organizationRouter.createCaller(contextFor("user"));
+    await expect(caller.departments.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects any warehouse section other than components or products before a database write", async () => {
+    const caller = warehouseRouter.createCaller(contextFor("admin"));
+    await expect(caller.inventory.create({
+      partNumber: "TEST-SECTION-01",
+      name: "Section validation sample",
+      category: "Electronics",
+      warehouseSection: "invalid" as never,
+      quantity: 3,
+      minimumStock: 1,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("validates the department and employee data required for directory creation", () => {
+    expect(departmentInput.parse({ name: "Embedded Systems", code: "EMB-01", description: "Firmware and hardware design" })).toMatchObject({ code: "EMB-01" });
+    expect(employeeInput.parse({ fullName: "Rana Salem", email: "rana@example.com", employeeCode: "RT-102", jobTitle: "Embedded Engineer", departmentId: null, warehouseRole: "engineer" })).toMatchObject({ warehouseRole: "engineer" });
+    expect(() => employeeInput.parse({ fullName: "Rana Salem", email: "invalid-email", employeeCode: "RT-102", jobTitle: "Embedded Engineer", warehouseRole: "engineer" })).toThrow();
   });
 });
 
@@ -44,7 +69,7 @@ describe("confirmed delivery persistence plan", () => {
     const deliveryTime = new Date("2026-08-18T12:00:00.000Z");
     const movement = prepareConfirmedDelivery({
       request: { id: 21, status: "approved", requestedQuantity: 4, requestedById: 8 },
-      part: { id: 5, partNumber: "EC-555", name: "Precision regulator", quantity: 6, minimumStock: 3 },
+      part: { id: 5, partNumber: "EC-555", name: "Precision regulator", warehouseSection: "components", quantity: 6, minimumStock: 3 },
       engineer: { id: 8, name: "Mariam Hassan" },
     }, 2, deliveryTime);
 
@@ -64,6 +89,7 @@ describe("confirmed delivery persistence plan", () => {
         engineerId: 8,
         partNumberSnapshot: "EC-555",
         partNameSnapshot: "Precision regulator",
+        warehouseSectionSnapshot: "components",
         details: "Physically handed over 4 unit(s) to Mariam Hassan.",
       },
     });
@@ -73,7 +99,7 @@ describe("confirmed delivery persistence plan", () => {
     const calls: Array<{ operation: string; payload: unknown }> = [];
     const outcome = await executeConfirmedDelivery({
       request: { id: 31, status: "approved", requestedQuantity: 3, requestedById: 7 },
-      part: { id: 9, partNumber: "MD-009", name: "Pressure sensor", quantity: 5, minimumStock: 4 },
+      part: { id: 9, partNumber: "MD-009", name: "Pressure sensor", warehouseSection: "products", quantity: 5, minimumStock: 4 },
       engineer: { id: 7, name: "Omar Adel" },
     }, 1, {
       updatePartQuantity: async (partId, quantity) => { calls.push({ operation: "updatePartQuantity", payload: { partId, quantity } }); },
@@ -89,7 +115,7 @@ describe("confirmed delivery persistence plan", () => {
       { operation: "markRequestDelivered", payload: { requestId: 31, adminId: 1, deliveredAt: new Date("2026-08-18T12:00:00.000Z") } },
       { operation: "insertTransaction", payload: expect.objectContaining({ type: "delivery_confirmed", quantityDelta: -3, quantityBefore: 5, quantityAfter: 2, engineerId: 7 }) },
       { operation: "hasUnreadLowStockAlert", payload: 9 },
-      { operation: "createLowStockAlert", payload: { type: "low_stock", title: "Low stock warning", body: "Pressure sensor is below its minimum stock threshold after delivery.", partId: 9, requestId: 31 } },
+      { operation: "createLowStockAlert", payload: { type: "low_stock", title: "Products: low stock warning", body: "Pressure sensor in Products is below its minimum stock threshold after delivery.", partId: 9, requestId: 31 } },
     ]);
   });
 });

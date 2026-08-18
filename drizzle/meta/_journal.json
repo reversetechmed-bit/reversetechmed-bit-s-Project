@@ -15,6 +15,13 @@
       "when": 1787057289775,
       "tag": "0001_safe_lord_hawal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787058713284,
+      "tag": "0002_soft_human_torch",
+      "breakpoints": true
     }
   ]
 }

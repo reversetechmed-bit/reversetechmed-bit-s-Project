@@ -3,6 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import {
   dispensingRequests,
   partCategoryValues,
+  warehouseSectionValues,
   parts,
   inventoryTransactions,
   users,
@@ -20,6 +21,7 @@ const partInput = z.object({
   name: z.string().trim().min(2).max(200),
   description: z.string().trim().max(2000).optional(),
   category: z.enum(partCategoryValues),
+  warehouseSection: z.enum(warehouseSectionValues).default("components"),
   quantity: z.number().int().min(0),
   minimumStock: z.number().int().min(0),
   location: z.string().trim().max(160).optional(),
@@ -46,6 +48,10 @@ function optionalText(value?: string) {
   return value?.trim() ? value.trim() : null;
 }
 
+function warehouseSectionLabel(section: "components" | "products") {
+  return section === "products" ? "Products" : "Components";
+}
+
 const engineerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (!canEngineerSubmit(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Only engineers can submit dispensing requests." });
@@ -55,9 +61,12 @@ const engineerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 export const warehouseRouter = router({
   inventory: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.input(z.object({ section: z.enum(warehouseSectionValues).optional() }).optional()).query(async ({ input }) => {
       const db = await requireDb();
-      return db.select().from(parts).orderBy(desc(parts.updatedAt));
+      const query = db.select().from(parts);
+      return input?.section
+        ? query.where(eq(parts.warehouseSection, input.section)).orderBy(desc(parts.updatedAt))
+        : query.orderBy(desc(parts.updatedAt));
     }),
 
     lowStock: adminProcedure.query(async () => {
@@ -93,14 +102,15 @@ export const warehouseRouter = router({
             actorId: ctx.user.id,
             partNumberSnapshot: created.partNumber,
             partNameSnapshot: created.name,
+            warehouseSectionSnapshot: created.warehouseSection,
             details: "Part added to inventory.",
           });
 
           if (isLowStock(created.quantity, created.minimumStock)) {
             await tx.insert(warehouseAlerts).values({
               type: "low_stock",
-              title: "Low stock warning",
-              body: `${created.name} is below its minimum stock threshold.`,
+              title: `${warehouseSectionLabel(created.warehouseSection)}: low stock warning`,
+              body: `${created.name} in ${warehouseSectionLabel(created.warehouseSection)} is below its minimum stock threshold.`,
               partId: created.id,
             });
           }
@@ -145,6 +155,7 @@ export const warehouseRouter = router({
             actorId: ctx.user.id,
             partNumberSnapshot: updated.partNumber,
             partNameSnapshot: updated.name,
+            warehouseSectionSnapshot: updated.warehouseSection,
             details: "Part record updated by warehouse admin.",
           });
 
@@ -157,8 +168,8 @@ export const warehouseRouter = router({
             if (!existingAlert) {
               await tx.insert(warehouseAlerts).values({
                 type: "low_stock",
-                title: "Low stock warning",
-                body: `${updated.name} is below its minimum stock threshold.`,
+                title: `${warehouseSectionLabel(updated.warehouseSection)}: low stock warning`,
+                body: `${updated.name} in ${warehouseSectionLabel(updated.warehouseSection)} is below its minimum stock threshold.`,
                 partId: updated.id,
               });
             }
@@ -234,12 +245,13 @@ export const warehouseRouter = router({
           engineerId: ctx.user.id,
           partNumberSnapshot: part.partNumber,
           partNameSnapshot: part.name,
+          warehouseSectionSnapshot: part.warehouseSection,
           details: `Requested ${input.requestedQuantity} unit(s). Purpose: ${input.purpose}`,
         });
         await tx.insert(warehouseAlerts).values({
           type: "new_request",
-          title: "New dispensing request",
-          body: `${ctx.user.name || "An engineer"} requested ${input.requestedQuantity} × ${part.name}.`,
+          title: `${warehouseSectionLabel(part.warehouseSection)}: new dispensing request`,
+          body: `${ctx.user.name || "An engineer"} requested ${input.requestedQuantity} × ${part.name} from ${warehouseSectionLabel(part.warehouseSection)}.`,
           partId: part.id,
           requestId,
         });
@@ -284,6 +296,7 @@ export const warehouseRouter = router({
             engineerId: record.request.requestedById,
             partNumberSnapshot: record.part.partNumber,
             partNameSnapshot: record.part.name,
+            warehouseSectionSnapshot: record.part.warehouseSection,
             details: input.decision === "approved" ? "Request approved; awaiting physical handover." : `Request rejected.${input.decisionNote ? ` Reason: ${input.decisionNote}` : ""}`,
           });
           return { success: true, status: input.decision } as const;
@@ -349,6 +362,10 @@ export const warehouseRouter = router({
     return {
       partCount: allParts.length,
       totalUnits: allParts.reduce((sum, part) => sum + part.quantity, 0),
+      componentCount: allParts.filter(part => part.warehouseSection === "components").length,
+      componentUnits: allParts.filter(part => part.warehouseSection === "components").reduce((sum, part) => sum + part.quantity, 0),
+      productCount: allParts.filter(part => part.warehouseSection === "products").length,
+      productUnits: allParts.filter(part => part.warehouseSection === "products").reduce((sum, part) => sum + part.quantity, 0),
       pendingRequests: allRequests.filter(request => request.status === "pending").length,
       lowStockParts: allParts.filter(part => part.quantity < part.minimumStock),
       unreadAlerts,

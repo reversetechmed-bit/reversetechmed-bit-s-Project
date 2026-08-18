@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { hasSupabaseConfiguration, supabase } from "@/lib/supabase";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,22 +22,28 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BellRing, Boxes, ClipboardList, History, LayoutDashboard, LogOut, PanelLeft, Warehouse } from "lucide-react";
+import { BellRing, Boxes, Building2, ClipboardList, History, LayoutDashboard, LogOut, Package, PanelLeft, UsersRound } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 const adminMenuItems = [
-  { icon: LayoutDashboard, label: "Control centre", path: "/" },
-  { icon: Boxes, label: "Inventory", path: "/inventory" },
+  { icon: LayoutDashboard, label: "Supply command", path: "/" },
+  { icon: Boxes, label: "Components", path: "/inventory" },
+  { icon: Package, label: "Products", path: "/products" },
   { icon: ClipboardList, label: "Requests", path: "/requests" },
+  { icon: Building2, label: "Departments", path: "/departments" },
+  { icon: UsersRound, label: "Employees", path: "/employees" },
   { icon: History, label: "Audit ledger", path: "/transactions" },
 ];
 
 const engineerMenuItems = [
   { icon: LayoutDashboard, label: "My workspace", path: "/" },
-  { icon: Boxes, label: "Part catalogue", path: "/inventory" },
+  { icon: Boxes, label: "Components", path: "/inventory" },
+  { icon: Package, label: "Products", path: "/products" },
   { icon: ClipboardList, label: "My requests", path: "/requests" },
 ];
 
@@ -64,29 +71,7 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return <SupabaseAuthScreen />;
 
   return (
     <SidebarProvider
@@ -101,6 +86,25 @@ export default function DashboardLayout({
       </DashboardLayoutContent>
     </SidebarProvider>
   );
+}
+
+function SupabaseAuthScreen() {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setSubmitting(true); setMessage("");
+    const result = mode === "signin"
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: window.location.origin } });
+    setSubmitting(false);
+    if (result.error) { setMessage(result.error.message); return; }
+    setMessage(mode === "signup" && !result.data.session ? "Check your email to confirm the new account, then sign in." : "Authentication successful. Loading your workspace…");
+  };
+  return <div className="min-h-screen bg-[#F4F9FD] grid place-items-center p-5"><div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#DCEAF7] bg-white shadow-[0_18px_50px_rgba(11,46,78,.12)]"><div className="bg-[#0B2E4E] p-7"><div className="inline-flex rounded-md bg-white p-2"><img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="Reverse Tech" className="h-8 w-auto" /></div><p className="mt-5 text-[10px] font-bold tracking-[.18em] uppercase text-[#5FB6F2]">Analyze · Design · Manufacture</p><h1 className="mt-2 text-2xl font-extrabold text-white">{mode === "signin" ? "Sign in to supply control" : "Create your workspace account"}</h1><p className="mt-2 text-sm leading-6 text-[#CDE8FA]">Secure access for Reverse Tech warehouse operations.</p></div><form onSubmit={submit} className="p-7 space-y-4">{mode === "signup" && <div className="space-y-2"><Label htmlFor="auth-name">Full name</Label><Input id="auth-name" value={name} onChange={event => setName(event.target.value)} required /></div>}<div className="space-y-2"><Label htmlFor="auth-email">Email address</Label><Input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="auth-password">Password</Label><Input id="auth-password" type="password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required /></div>{message && <p className="rounded-lg border border-[#B9DAF7] bg-[#F1F8FE] px-3 py-2 text-sm text-[#0B5798]">{message}</p>}<Button type="submit" disabled={submitting || !hasSupabaseConfiguration} className="w-full bg-[#0178D4] hover:bg-[#0065B3] text-white">{submitting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button><p className="text-center text-sm text-slate-500">{mode === "signin" ? "New to Reverse Tech?" : "Already have an account?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(""); }} className="font-semibold text-[#0178D4] hover:underline">{mode === "signin" ? "Create account" : "Sign in"}</button></p></form></div></div>;
 }
 
 type DashboardLayoutContentProps = {
@@ -163,7 +167,7 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r-0 bg-slate-950 text-slate-200"
+          className="border-r-0 bg-[#0B2E4E] text-slate-200"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-20 justify-center border-b border-white/10">
@@ -177,7 +181,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="min-w-0"><span className="font-semibold tracking-tight text-white truncate block">NEXUS SUPPLY</span><span className="text-[10px] tracking-[0.16em] text-slate-500 uppercase">Engineering warehouse</span></div>
+                  <div className="min-w-0"><div className="rounded-md bg-white px-2 py-1"><img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="Reverse Tech" className="h-5 w-auto object-contain" /></div><span className="mt-1 text-[9px] tracking-[0.14em] text-[#9ECDF2] uppercase block">Supply & inventory</span></div>
                 </div>
               ) : null}
             </div>
@@ -196,7 +200,7 @@ function DashboardLayoutContent({
                       className={`h-11 transition-all font-medium text-slate-400 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/10 data-[active=true]:text-white`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-cyan-300" : ""}`}
+                        className={`h-4 w-4 ${isActive ? "text-[#5FB6F2]" : ""}`}
                       />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -220,7 +224,7 @@ function DashboardLayoutContent({
                       {user?.name || "-"}
                     </p>
                     <p className="text-xs text-slate-500 truncate mt-1.5 capitalize">
-                      {user?.role === "admin" ? "Warehouse admin" : "Engineering user"}
+                      {user?.role === "admin" ? "Reverse Tech admin" : "Engineering user"}
                     </p>
                   </div>
                 </button>
@@ -247,10 +251,10 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="bg-[#f6f8fb]">
-        <header className="flex border-b border-slate-200/80 h-16 items-center justify-between bg-white/80 px-4 sm:px-7 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-          <div className="flex items-center gap-3"><SidebarTrigger className={`h-9 w-9 rounded-lg bg-white border border-slate-200 ${isMobile ? "" : "hidden"}`} /><div><p className="text-sm font-semibold text-slate-900">{activeMenuItem?.label ?? "Workspace"}</p><p className="text-[11px] text-slate-500">Live warehouse operations</p></div></div>
-          <div className="flex items-center gap-2"><span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />System active</span><button onClick={() => setLocation("/requests")} className="h-9 w-9 rounded-lg border border-slate-200 bg-white grid place-items-center text-slate-500 hover:text-slate-900 hover:border-slate-300" aria-label="View requests"><BellRing className="h-4 w-4" /></button></div>
+      <SidebarInset className="bg-[#F4F9FD]">
+        <header className="flex border-b border-[#DCEAF7] h-16 items-center justify-between bg-white/85 px-4 sm:px-7 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex items-center gap-3"><SidebarTrigger className={`h-9 w-9 rounded-lg bg-white border border-[#DCEAF7] ${isMobile ? "" : "hidden"}`} /><div><p className="text-sm font-semibold text-[#0B2E4E]">{activeMenuItem?.label ?? "Workspace"}</p><p className="text-[11px] text-slate-500">REVERSE TECH supply operations</p></div></div>
+          <div className="flex items-center gap-2"><span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#BEECDD] bg-[#E7F8F4] px-2.5 py-1 text-[11px] font-semibold text-[#008E7A]"><span className="h-1.5 w-1.5 rounded-full bg-[#00B39A]" />System active</span><button onClick={() => setLocation("/requests")} className="h-9 w-9 rounded-lg border border-[#DCEAF7] bg-white grid place-items-center text-[#0178D4] hover:text-[#0B2E4E]" aria-label="View requests"><BellRing className="h-4 w-4" /></button></div>
         </header>
         <main className="flex-1 p-4 sm:p-7">{children}</main>
       </SidebarInset>

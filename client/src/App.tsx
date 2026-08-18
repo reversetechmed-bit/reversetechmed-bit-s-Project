@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Inventory from "./pages/Inventory";
+import Organization from "./pages/Organization";
 import Requests from "./pages/Requests";
 import Transactions from "./pages/Transactions";
 
@@ -20,7 +21,10 @@ function Router() {
     <Switch>
       <Route path={"/"} component={() => <WarehouseShell><Home /></WarehouseShell>} />
       <Route path={"/inventory"} component={() => <WarehouseShell><Inventory /></WarehouseShell>} />
+      <Route path={"/products"} component={() => <WarehouseShell><Inventory section="products" /></WarehouseShell>} />
       <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />
+      <Route path={"/departments"} component={() => <WarehouseShell><Organization initialTab="departments" /></WarehouseShell>} />
+      <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />
       <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

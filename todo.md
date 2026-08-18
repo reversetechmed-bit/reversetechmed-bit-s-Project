@@ -14,5 +14,19 @@
 - [x] Verify core desktop and mobile layouts, inspect runtime logs, and save the final project checkpoint.
 - [x] Add UI support to capture and display request decision metadata, including an optional rejection note and review timestamp.
 - [x] Add Vitest coverage for procedure-level permissions and transactional delivery, transaction recording, and low-stock alert behavior.
-- [ ] Save the verified final webdev project checkpoint.
+- [x] Save the verified final webdev project checkpoint.
 - [x] Test the delivery service used by the router to verify inventory deduction, transaction insertion, and low-stock alert creation together.
+- [x] Upload and apply the REVERSE TECH logo and the supplied brand palette across the full interface.
+- [x] Add Admin management for company departments, including create, edit, and archive controls.
+- [x] Add Admin employee management with employee identity, department assignment, job title, and warehouse access role.
+- [x] Split warehouse records into Components and Products, retaining the existing engineering categories under Components.
+- [x] Add dedicated Admin product management with product code, name, quantity, minimum stock, and product details.
+- [x] Update dashboards, catalogue filters, requests, delivery, alerts, and audit records to show the appropriate warehouse section.
+- [x] Configure Supabase credentials and implement sign in, sign up, and session-aware access control.
+- [x] Add and run tests for department/employee management, warehouse section validation, and authentication behavior.
+- [x] Verify the new desktop and mobile interface, then save an updated project checkpoint.
+- [x] Update stock alerts and remaining dashboard widgets to surface Components versus Products clearly.
+- [x] Add CRUD-focused Vitest coverage for Admin department and employee procedures.
+- [x] Add Supabase session-authentication coverage beyond public credential configuration.
+- [x] Add Vitest coverage for the Supabase-backed context flow, including bearer validation, user mapping, and null-session behavior.
+- [ ] Save the updated REVERSE TECH project checkpoint after the verified implementation.
