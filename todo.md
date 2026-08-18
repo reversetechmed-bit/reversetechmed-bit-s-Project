@@ -29,4 +29,20 @@
 - [x] Add CRUD-focused Vitest coverage for Admin department and employee procedures.
 - [x] Add Supabase session-authentication coverage beyond public credential configuration.
 - [x] Add Vitest coverage for the Supabase-backed context flow, including bearer validation, user mapping, and null-session behavior.
-- [ ] Save the updated REVERSE TECH project checkpoint after the verified implementation.
+- [x] Save the updated REVERSE TECH project checkpoint after the verified implementation.
+- [x] Add secure account-role selection for Admin or User at sign-up, while retaining a protected bootstrap Admin workflow.
+- [x] Enforce Admin-only create, edit, delete, global table search, approval, manual handover, employee, department, and inventory management permissions.
+- [x] Add user-facing component/product search and request tracking with pending, approved, rejected, and delivered states.
+- [x] Add a configurable component-type directory, including 3D Printing and general-purpose categories such as company supplies, fasteners, soap, and adhesives.
+- [x] Add component-type assignment and filtering across the Components inventory experience.
+- [x] Add manual handover invoices with invoice number, receiving user, item details, quantity, date/time, and print-ready presentation.
+- [x] Add in-app notification bell with unread count and Admin alerts for requests, decisions, and stock events.
+- [x] Record warehouse activity and display the most recent people and actions in the Admin dashboard.
+- [x] Add and run tests for role selection, permissions, invoice creation, notifications, component types, and activity history.
+- [x] Verify the updated desktop/mobile interface and save a new project checkpoint.
+- [x] Add and verify searchable tables across Admin management views and explicit user catalogue search for Components and Products.
+- [x] Display and filter Components inventory by assigned component type.
+- [x] Add Vitest coverage for request decision/handover notification generation and dashboard activity outputs.
+- [x] Add searchable filtering to the remaining Admin management tables: departments, employees, component types, and invoices.
+- [x] Add Vitest coverage for approval/rejection/handover notification creation and dashboard activity/recent-access query outputs.
+- [ ] Save a new REVERSE TECH checkpoint after the completed search, notifications, invoices, and activity enhancements.

@@ -44,14 +44,15 @@ describe("Supabase-backed tRPC context", () => {
       [{ id: 23, openId: "supabase-user-id", name: "Reverse Admin", email: "admin@reversetech.com", loginMethod: "supabase", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }],
     );
     const update = vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) }));
-    const insert = vi.fn(() => ({ values: vi.fn(async () => undefined) }));
+    const insertValues = vi.fn(async () => undefined);
+    const insert = vi.fn(() => ({ values: insertValues }));
     mocks.getDb.mockResolvedValue({ select, update, insert });
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ id: "supabase-user-id", email: "admin@reversetech.com", user_metadata: { full_name: "Reverse Admin" } }) })));
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ id: "supabase-user-id", email: "admin@reversetech.com", user_metadata: { full_name: "Reverse Admin", requested_role: "admin" } }) })));
 
     const context = await createContext({ req: { headers: { authorization: "Bearer signed-session-token" } }, res: {} } as never);
 
     expect(context.user).toMatchObject({ id: 23, role: "admin", email: "admin@reversetech.com" });
-    expect(insert).toHaveBeenCalled();
+    expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ requestedRole: "admin", role: "admin" }));
     expect(update).toHaveBeenCalled();
     expect(mocks.authenticateRequest).not.toHaveBeenCalled();
   });

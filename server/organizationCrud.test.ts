@@ -34,4 +34,13 @@ describe("organization CRUD procedures", () => {
     expect(db.insert).toHaveBeenCalled();
     expect(db.update).toHaveBeenCalled();
   });
+
+  it("executes create, update, and archive mutations for general component types", async () => {
+    const caller = organizationRouter.createCaller(adminContext());
+    await caller.componentTypes.create({ name: "3D Printing", description: "Filaments and print-lab materials" });
+    await caller.componentTypes.update({ id: 1, name: "3D Printing", description: "Filaments, resin, and print-lab materials" });
+    await caller.componentTypes.archive({ id: 1 });
+    expect(db.insert).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
+  });
 });

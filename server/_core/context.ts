@@ -22,7 +22,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
       headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${token}` },
     });
     if (!response.ok) return null;
-    const account = await response.json() as { id: string; email?: string; user_metadata?: { full_name?: string; name?: string } };
+    const account = await response.json() as { id: string; email?: string; user_metadata?: { full_name?: string; name?: string; requested_role?: unknown } };
     if (!isSupabaseAccount(account)) return null;
 
     const db = await getDb();
@@ -42,6 +42,9 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
 
     const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
     const [firstSupabaseAccount] = await db.select({ id: users.id }).from(users).where(eq(users.loginMethod, "supabase")).limit(1);
+    const requestedRole = account.user_metadata?.requested_role === "admin" ? "admin" : "user";
+    // A requester may select Admin at registration, but actual admin access is only granted
+    // to the bootstrap account or to an employee profile approved by an existing Admin.
     const role = employee?.warehouseRole === "admin" || !firstSupabaseAccount ? "admin" : "user";
     await db.insert(users).values({
       openId: account.id,
@@ -49,6 +52,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
       email: account.email,
       loginMethod: "supabase",
       role,
+      requestedRole,
       lastSignedIn: new Date(),
     });
     const [created] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);

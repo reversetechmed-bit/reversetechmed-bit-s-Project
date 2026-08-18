@@ -1,7 +1,7 @@
 import { isLowStock, validateDelivery } from "./warehouseRules";
 
 export type DeliveryRecord = {
-  request: { id: number; status: string; requestedQuantity: number; requestedById: number };
+  request: { id: number; status: string; requestedQuantity: number; requestedById: number; purpose: string };
   part: { id: number; partNumber: string; name: string; quantity: number; minimumStock: number; warehouseSection: "components" | "products" };
   engineer: { id: number; name: string | null };
 };
@@ -25,6 +25,8 @@ export type DeliveryPersistence = {
   updatePartQuantity: (partId: number, quantity: number) => Promise<void>;
   markRequestDelivered: (requestId: number, adminId: number, deliveredAt: Date) => Promise<void>;
   insertTransaction: (transaction: DeliveryTransaction) => Promise<void>;
+  createHandoverInvoice: (invoice: { invoiceNumber: string; requestId: number; partId: number; issuedById: number; receivedById: number; partNumberSnapshot: string; partNameSnapshot: string; warehouseSectionSnapshot: "components" | "products"; quantity: number; purposeSnapshot: string; issuedAt: Date }) => Promise<void>;
+  recordActivity: (activity: { type: "handover_completed"; actorId: number; title: string; detail: string; requestId: number; partId: number }) => Promise<void>;
   hasUnreadLowStockAlert: (partId: number) => Promise<boolean>;
   createLowStockAlert: (input: { type: "low_stock"; title: string; body: string; partId: number; requestId: number }) => Promise<void>;
 };
@@ -33,6 +35,7 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
   const delivery = validateDelivery(record.request.status, record.part.quantity, record.request.requestedQuantity);
   if (!delivery.ok) return delivery;
 
+  const invoiceNumber = `RT-HO-${deliveredAt.toISOString().slice(0, 10).replaceAll("-", "")}-${String(record.request.id).padStart(5, "0")}`;
   return {
     ok: true as const,
     quantityAfter: delivery.quantityAfter,
@@ -52,6 +55,19 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
       warehouseSectionSnapshot: record.part.warehouseSection,
       details: `Physically handed over ${record.request.requestedQuantity} unit(s) to ${record.engineer.name || "the requesting engineer"}.`,
     } satisfies DeliveryTransaction,
+    invoice: {
+      invoiceNumber,
+      requestId: record.request.id,
+      partId: record.part.id,
+      issuedById: adminId,
+      receivedById: record.request.requestedById,
+      partNumberSnapshot: record.part.partNumber,
+      partNameSnapshot: record.part.name,
+      warehouseSectionSnapshot: record.part.warehouseSection,
+      quantity: record.request.requestedQuantity,
+      purposeSnapshot: record.request.purpose,
+      issuedAt: deliveredAt,
+    },
   };
 }
 
@@ -63,6 +79,15 @@ export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: 
   await persistence.updatePartQuantity(record.part.id, plan.quantityAfter);
   await persistence.markRequestDelivered(record.request.id, adminId, plan.deliveredAt);
   await persistence.insertTransaction(plan.transaction);
+  await persistence.createHandoverInvoice(plan.invoice);
+  await persistence.recordActivity({
+    type: "handover_completed",
+    actorId: adminId,
+    title: "Manual handover completed",
+    detail: `${record.request.requestedQuantity} × ${record.part.name} handed to ${record.engineer.name || "the requesting engineer"}. Invoice ${plan.invoice.invoiceNumber}.`,
+    requestId: record.request.id,
+    partId: record.part.id,
+  });
   if (plan.shouldCreateLowStockAlert && !(await persistence.hasUnreadLowStockAlert(record.part.id))) {
     const sectionLabel = record.part.warehouseSection === "products" ? "Products" : "Components";
     await persistence.createLowStockAlert({

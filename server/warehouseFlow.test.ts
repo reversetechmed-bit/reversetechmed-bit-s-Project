@@ -68,7 +68,7 @@ describe("confirmed delivery persistence plan", () => {
   it("produces stock deduction, immutable transaction data, and a low-stock alert flag together", () => {
     const deliveryTime = new Date("2026-08-18T12:00:00.000Z");
     const movement = prepareConfirmedDelivery({
-      request: { id: 21, status: "approved", requestedQuantity: 4, requestedById: 8 },
+      request: { id: 21, status: "approved", requestedQuantity: 4, requestedById: 8, purpose: "Prototype verification" },
       part: { id: 5, partNumber: "EC-555", name: "Precision regulator", warehouseSection: "components", quantity: 6, minimumStock: 3 },
       engineer: { id: 8, name: "Mariam Hassan" },
     }, 2, deliveryTime);
@@ -98,13 +98,15 @@ describe("confirmed delivery persistence plan", () => {
   it("executes the same delivery service used by the router to deduct stock, log the movement, and create a low-stock alert", async () => {
     const calls: Array<{ operation: string; payload: unknown }> = [];
     const outcome = await executeConfirmedDelivery({
-      request: { id: 31, status: "approved", requestedQuantity: 3, requestedById: 7 },
+      request: { id: 31, status: "approved", requestedQuantity: 3, requestedById: 7, purpose: "Pressure calibration" },
       part: { id: 9, partNumber: "MD-009", name: "Pressure sensor", warehouseSection: "products", quantity: 5, minimumStock: 4 },
       engineer: { id: 7, name: "Omar Adel" },
     }, 1, {
       updatePartQuantity: async (partId, quantity) => { calls.push({ operation: "updatePartQuantity", payload: { partId, quantity } }); },
       markRequestDelivered: async (requestId, adminId, deliveredAt) => { calls.push({ operation: "markRequestDelivered", payload: { requestId, adminId, deliveredAt } }); },
       insertTransaction: async transaction => { calls.push({ operation: "insertTransaction", payload: transaction }); },
+      createHandoverInvoice: async invoice => { calls.push({ operation: "createHandoverInvoice", payload: invoice }); },
+      recordActivity: async activity => { calls.push({ operation: "recordActivity", payload: activity }); },
       hasUnreadLowStockAlert: async partId => { calls.push({ operation: "hasUnreadLowStockAlert", payload: partId }); return false; },
       createLowStockAlert: async alert => { calls.push({ operation: "createLowStockAlert", payload: alert }); },
     }, new Date("2026-08-18T12:00:00.000Z"));
@@ -114,6 +116,8 @@ describe("confirmed delivery persistence plan", () => {
       { operation: "updatePartQuantity", payload: { partId: 9, quantity: 2 } },
       { operation: "markRequestDelivered", payload: { requestId: 31, adminId: 1, deliveredAt: new Date("2026-08-18T12:00:00.000Z") } },
       { operation: "insertTransaction", payload: expect.objectContaining({ type: "delivery_confirmed", quantityDelta: -3, quantityBefore: 5, quantityAfter: 2, engineerId: 7 }) },
+      { operation: "createHandoverInvoice", payload: expect.objectContaining({ invoiceNumber: "RT-HO-20260818-00031", requestId: 31, partId: 9, receivedById: 7, quantity: 3, purposeSnapshot: "Pressure calibration" }) },
+      { operation: "recordActivity", payload: expect.objectContaining({ type: "handover_completed", actorId: 1, requestId: 31, partId: 9 }) },
       { operation: "hasUnreadLowStockAlert", payload: 9 },
       { operation: "createLowStockAlert", payload: { type: "low_stock", title: "Products: low stock warning", body: "Pressure sensor in Products is below its minimum stock threshold after delivery.", partId: 9, requestId: 31 } },
     ]);

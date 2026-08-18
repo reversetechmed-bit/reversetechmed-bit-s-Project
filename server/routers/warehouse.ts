@@ -2,17 +2,20 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import {
   dispensingRequests,
+  handoverInvoices,
   partCategoryValues,
   warehouseSectionValues,
   parts,
   inventoryTransactions,
   users,
   warehouseAlerts,
+  warehouseActivities,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { notifyOwner } from "../_core/notification";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { executeConfirmedDelivery } from "../warehouseDelivery";
+import { buildDecisionNotification, buildHandoverNotification } from "../warehouseNotifications";
 import { canDecideRequest, canEngineerSubmit, isLowStock } from "../warehouseRules";
 import { z } from "zod";
 
@@ -22,6 +25,7 @@ const partInput = z.object({
   description: z.string().trim().max(2000).optional(),
   category: z.enum(partCategoryValues),
   warehouseSection: z.enum(warehouseSectionValues).default("components"),
+  componentTypeId: z.number().int().positive().nullable().optional(),
   quantity: z.number().int().min(0),
   minimumStock: z.number().int().min(0),
   location: z.string().trim().max(160).optional(),
@@ -83,6 +87,7 @@ export const warehouseRouter = router({
             ...input,
             description: optionalText(input.description),
             location: optionalText(input.location),
+            componentTypeId: input.warehouseSection === "components" ? input.componentTypeId ?? null : null,
             createdById: ctx.user.id,
           });
           const [created] = await tx
@@ -105,6 +110,7 @@ export const warehouseRouter = router({
             warehouseSectionSnapshot: created.warehouseSection,
             details: "Part added to inventory.",
           });
+          await tx.insert(warehouseActivities).values({ type: "inventory_created", actorId: ctx.user.id, title: "Inventory record created", detail: `${created.name} added to ${warehouseSectionLabel(created.warehouseSection)}.`, partId: created.id });
 
           if (isLowStock(created.quantity, created.minimumStock)) {
             await tx.insert(warehouseAlerts).values({
@@ -141,6 +147,7 @@ export const warehouseRouter = router({
               ...values,
               description: optionalText(values.description),
               location: optionalText(values.location),
+              componentTypeId: values.warehouseSection === "components" ? values.componentTypeId ?? null : null,
             })
             .where(eq(parts.id, id));
           const [updated] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
@@ -158,6 +165,7 @@ export const warehouseRouter = router({
             warehouseSectionSnapshot: updated.warehouseSection,
             details: "Part record updated by warehouse admin.",
           });
+          await tx.insert(warehouseActivities).values({ type: "inventory_updated", actorId: ctx.user.id, title: "Inventory record updated", detail: `${updated.name} updated in ${warehouseSectionLabel(updated.warehouseSection)}.`, partId: updated.id });
 
           if (isLowStock(updated.quantity, updated.minimumStock)) {
             const [existingAlert] = await tx
@@ -255,6 +263,7 @@ export const warehouseRouter = router({
           partId: part.id,
           requestId,
         });
+        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "Warehouse request submitted", detail: `${input.requestedQuantity} × ${part.name} requested from ${warehouseSectionLabel(part.warehouseSection)}.`, requestId, partId: part.id });
         return { requestId, partName: part.name };
       });
 
@@ -299,6 +308,8 @@ export const warehouseRouter = router({
             warehouseSectionSnapshot: record.part.warehouseSection,
             details: input.decision === "approved" ? "Request approved; awaiting physical handover." : `Request rejected.${input.decisionNote ? ` Reason: ${input.decisionNote}` : ""}`,
           });
+          await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? "Request approved" : "Request rejected", detail: `${record.part.name} request ${input.decision}.`, requestId: record.request.id, partId: record.part.id });
+          await tx.insert(warehouseAlerts).values(buildDecisionNotification({ decision: input.decision, decisionNote: input.decisionNote, partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById }));
           return { success: true, status: input.decision } as const;
         });
       }),
@@ -331,6 +342,12 @@ export const warehouseRouter = router({
           insertTransaction: async transaction => {
             await tx.insert(inventoryTransactions).values(transaction);
           },
+          createHandoverInvoice: async invoice => {
+            await tx.insert(handoverInvoices).values(invoice);
+          },
+          recordActivity: async activity => {
+            await tx.insert(warehouseActivities).values(activity);
+          },
           hasUnreadLowStockAlert: async partId => {
             const [existingAlert] = await tx
               .select({ id: warehouseAlerts.id })
@@ -346,18 +363,21 @@ export const warehouseRouter = router({
         if (!deliveryMovement.ok) {
           throw new TRPCError({ code: "CONFLICT", message: deliveryMovement.reason });
         }
+        await tx.insert(warehouseAlerts).values(buildHandoverNotification({ partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById, invoiceNumber: deliveryMovement.invoice.invoiceNumber }));
         const { quantityAfter } = deliveryMovement;
-        return { success: true, quantityAfter } as const;
+        return { success: true, quantityAfter, invoiceNumber: deliveryMovement.invoice.invoiceNumber } as const;
       });
     }),
   }),
 
   dashboard: adminProcedure.query(async () => {
     const db = await requireDb();
-    const [allParts, allRequests, unreadAlerts] = await Promise.all([
+    const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess] = await Promise.all([
       db.select().from(parts).orderBy(desc(parts.updatedAt)),
       db.select().from(dispensingRequests).orderBy(desc(dispensingRequests.createdAt)),
       db.select().from(warehouseAlerts).where(eq(warehouseAlerts.isRead, 0)).orderBy(desc(warehouseAlerts.createdAt)),
+      db.select({ activity: warehouseActivities, actor: { id: users.id, name: users.name, email: users.email } }).from(warehouseActivities).leftJoin(users, eq(warehouseActivities.actorId, users.id)).orderBy(desc(warehouseActivities.createdAt)).limit(8),
+      db.select({ id: users.id, name: users.name, email: users.email, lastSignedIn: users.lastSignedIn, role: users.role }).from(users).orderBy(desc(users.lastSignedIn)).limit(6),
     ]);
     return {
       partCount: allParts.length,
@@ -369,7 +389,33 @@ export const warehouseRouter = router({
       pendingRequests: allRequests.filter(request => request.status === "pending").length,
       lowStockParts: allParts.filter(part => part.quantity < part.minimumStock),
       unreadAlerts,
+      recentActivities,
+      recentAccess,
     };
+  }),
+
+  invoices: router({
+    list: adminProcedure.query(async () => {
+      const db = await requireDb();
+      return db
+        .select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } })
+        .from(handoverInvoices)
+        .innerJoin(users, eq(handoverInvoices.receivedById, users.id))
+        .orderBy(desc(handoverInvoices.issuedAt))
+        .limit(100);
+    }),
+    byRequest: protectedProcedure.input(z.object({ requestId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const [result] = await db
+        .select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } })
+        .from(handoverInvoices)
+        .innerJoin(users, eq(handoverInvoices.receivedById, users.id))
+        .where(eq(handoverInvoices.requestId, input.requestId))
+        .limit(1);
+      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Handover invoice not found." });
+      if (ctx.user.role !== "admin" && result.invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot access this invoice." });
+      return result;
+    }),
   }),
 
   transactions: adminProcedure.query(async () => {
@@ -386,12 +432,17 @@ export const warehouseRouter = router({
   }),
 
   alerts: router({
-    list: adminProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = await requireDb();
-      return db.select().from(warehouseAlerts).orderBy(desc(warehouseAlerts.createdAt)).limit(100);
+      return ctx.user.role === "admin"
+        ? db.select().from(warehouseAlerts).orderBy(desc(warehouseAlerts.createdAt)).limit(100)
+        : db.select().from(warehouseAlerts).where(eq(warehouseAlerts.recipientUserId, ctx.user.id)).orderBy(desc(warehouseAlerts.createdAt)).limit(100);
     }),
-    markRead: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+    markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
+      const [alert] = await db.select().from(warehouseAlerts).where(eq(warehouseAlerts.id, input.id)).limit(1);
+      if (!alert) throw new TRPCError({ code: "NOT_FOUND", message: "Notification not found." });
+      if (ctx.user.role !== "admin" && alert.recipientUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot update this notification." });
       await db.update(warehouseAlerts).set({ isRead: 1 }).where(eq(warehouseAlerts.id, input.id));
       return { success: true } as const;
     }),

@@ -24,6 +24,7 @@ export default function Requests() {
   const [purpose, setPurpose] = useState("");
   const [rejectionTarget, setRejectionTarget] = useState<{ id: number; partName: string } | null>(null);
   const [rejectionNote, setRejectionNote] = useState("");
+  const [search, setSearch] = useState("");
 
   const refresh = async () => {
     await Promise.all([utils.warehouse.requests.list.invalidate(), utils.warehouse.dashboard.invalidate(), utils.warehouse.inventory.list.invalidate(), utils.warehouse.transactions.invalidate(), utils.warehouse.alerts.list.invalidate()]);
@@ -33,9 +34,10 @@ export default function Requests() {
     onError: error => toast.error(error.message),
   });
   const decide = trpc.warehouse.requests.decide.useMutation({ onSuccess: async result => { toast.success(`Request ${result.status}.`); setRejectionTarget(null); setRejectionNote(""); await refresh(); }, onError: error => toast.error(error.message) });
-  const deliver = trpc.warehouse.requests.confirmDelivery.useMutation({ onSuccess: async result => { toast.success(`Delivery confirmed. ${result.quantityAfter} units remain in stock.`); await refresh(); }, onError: error => toast.error(error.message) });
+  const deliver = trpc.warehouse.requests.confirmDelivery.useMutation({ onSuccess: async result => { toast.success(`Delivery confirmed. Invoice ${result.invoiceNumber} created; ${result.quantityAfter} units remain in stock.`); await refresh(); }, onError: error => toast.error(error.message) });
 
   const requestableParts = useMemo(() => (parts ?? []).filter(part => part.quantity > 0), [parts]);
+  const filteredRequests = useMemo(() => (requests ?? []).filter(({ request, part, engineer }) => `${part.name} ${part.partNumber} ${request.purpose} ${request.status} ${engineer.name ?? ""} ${engineer.email ?? ""}`.toLowerCase().includes(search.toLowerCase())), [requests, search]);
   const selectedPart = requestableParts.find(part => String(part.id) === partId);
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -50,9 +52,10 @@ export default function Requests() {
         {!isAdmin && <Button onClick={() => setRequestOpen(true)} className="bg-slate-950 hover:bg-slate-800 text-white gap-2"><ClipboardPlus className="h-4 w-4" />New request</Button>}
       </section>
       <section className="panel overflow-hidden">
+        <div className="p-4 border-b border-[#E8EEF3] bg-[#F7FBFF]"><Input value={search} onChange={event => setSearch(event.target.value)} placeholder={isAdmin ? "Search by person, item, code, status, or purpose…" : "Search your requests by item, code, status, or purpose…"} className="bg-white" /></div>
         <div className="divide-y divide-slate-100">
           {isLoading && Array.from({ length: 5 }).map((_, index) => <div key={index} className="p-6 animate-pulse"><div className="h-5 bg-slate-100 rounded w-1/3" /><div className="h-4 bg-slate-100 rounded w-2/3 mt-3" /></div>)}
-          {!isLoading && (requests ?? []).map(({ request, part, engineer }) => {
+          {!isLoading && filteredRequests.map(({ request, part, engineer }) => {
             const status = requestStatusMeta[request.status];
             const category = categoryMeta[part.category];
             return <article key={request.id} className="p-5 sm:p-6 hover:bg-slate-50/60 transition-colors">
@@ -65,7 +68,7 @@ export default function Requests() {
             </article>;
           })}
         </div>
-        {!isLoading && !requests?.length && <div className="py-16 text-center"><div className="mx-auto h-11 w-11 rounded-xl bg-slate-100 grid place-items-center"><UserRound className="h-5 w-5 text-slate-500" /></div><h2 className="mt-4 font-semibold text-slate-900">No requests yet</h2><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Incoming engineering requests will appear here." : "Create a request when you need a warehouse part."}</p>{!isAdmin && <Button variant="outline" onClick={() => setRequestOpen(true)} className="mt-5">Create request</Button>}</div>}
+        {!isLoading && !filteredRequests.length && <div className="py-16 text-center"><div className="mx-auto h-11 w-11 rounded-xl bg-slate-100 grid place-items-center"><UserRound className="h-5 w-5 text-slate-500" /></div><h2 className="mt-4 font-semibold text-slate-900">{search ? "No matching requests" : "No requests yet"}</h2><p className="mt-1 text-sm text-slate-500">{search ? "Try another search term." : isAdmin ? "Incoming engineering requests will appear here." : "Create a request when you need a warehouse part."}</p>{!search && !isAdmin && <Button variant="outline" onClick={() => setRequestOpen(true)} className="mt-5">Create request</Button>}</div>}
       </section>
       <Dialog open={Boolean(rejectionTarget)} onOpenChange={open => !open && setRejectionTarget(null)}>
         <DialogContent className="max-w-lg"><DialogHeader><p className="eyebrow">Request decision</p><DialogTitle>Reject {rejectionTarget?.partName}?</DialogTitle><DialogDescription>Add an optional note so the engineer understands why the request could not be approved.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="rejection-note">Rejection note <span className="text-slate-400">(optional)</span></Label><Textarea id="rejection-note" value={rejectionNote} onChange={event => setRejectionNote(event.target.value)} placeholder="e.g. quantity is reserved for a critical repair" rows={4} /></div><DialogFooter><Button type="button" variant="outline" onClick={() => setRejectionTarget(null)}>Cancel</Button><Button type="button" disabled={decide.isPending} onClick={() => rejectionTarget && decide.mutate({ id: rejectionTarget.id, decision: "rejected", decisionNote: rejectionNote.trim() || undefined })} className="bg-rose-600 hover:bg-rose-700 text-white">{decide.isPending ? "Rejecting…" : "Confirm rejection"}</Button></DialogFooter></DialogContent>

@@ -1,7 +1,7 @@
 export type SupabaseAccount = {
   id?: unknown;
   email?: unknown;
-  user_metadata?: { full_name?: string; name?: string };
+  user_metadata?: { full_name?: string; name?: string; requested_role?: unknown };
 };
 
 export function getSupabaseAccessToken(authorization: string | string[] | undefined) {
