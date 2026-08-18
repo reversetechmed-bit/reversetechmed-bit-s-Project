@@ -70,5 +70,6 @@
 - [x] Translate remaining export titles, column labels, PDF metadata, and section labels to Arabic.
 - [x] Verify the Components request-action implementation and table column; the current user dataset contains no available Component row to open the dialog, while the identical shared dialog was exercised successfully from an available Product row.
 - [ ] Sign in with the Admin account in the app UI and verify access to admin-only pages and actions, then save the final checkpoint.
-- [ ] Verify the target GitHub repository access and synchronize the current project source safely.
-- [ ] Assess compatible hosting for the full-stack application and prepare deployment instructions for reverselab.web.app.
+- [x] Verify the target GitHub repository access and synchronize the current project source safely.
+- [x] Assess compatible hosting for the full-stack application and select the integrated hosting rather than Firebase static hosting.
+- [ ] Prepare and verify the checkpoint for deployment through the integrated full-stack hosting instead of Firebase.
