@@ -76,3 +76,5 @@
 - [ ] Verify the Admin account in the authenticated app UI on admin-only routes and actions, then re-run readiness checks.
 - [ ] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
 - [x] Replace the current Arabic typography with a clear commercial font pairing suited to warehouse dashboards and validate RTL readability.
+- [x] Add an always-discoverable logout and account-switch action for both desktop and mobile dashboard navigation.
+- [ ] Refine the sidebar logout and account-switch button with stronger visual hierarchy, hover, focus, and collapsed-navigation states.
