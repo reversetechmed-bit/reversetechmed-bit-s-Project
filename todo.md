@@ -108,3 +108,5 @@
 - [x] Add reliable visible-client notification refresh so new alerts are detected while the application is open.
 - [x] Add runtime coverage for Admin operational alert filtering and user personal-alert scoping.
 - [ ] Verify the notification bell and sound control with authenticated Admin and User sessions.
+- [x] Enlarge and refine the REVERSE TECH logo presentation on the sign-in screen and dashboard sidebar across desktop and mobile layouts.
+- [ ] Verify the updated REVERSE TECH logo inside the authenticated sidebar in expanded, collapsed, and mobile drawer states.

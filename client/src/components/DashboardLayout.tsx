@@ -168,12 +168,14 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   return (
     <div className="grid min-h-screen place-items-center bg-[#F4F9FD] p-5">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#DCEAF7] bg-white shadow-[0_18px_50px_rgba(11,46,78,.12)]">
-        <div className="bg-[#0B2E4E] p-7">
-          <div className="inline-flex rounded-md bg-white p-2">
-            <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-8 w-auto" />
+        <div className="relative overflow-hidden bg-[#0B2E4E] p-7 sm:p-8">
+          <div className="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-[#0178D4]/20 blur-2xl" />
+          <div className="absolute -bottom-16 right-1 h-32 w-32 rounded-full bg-[#5FB6F2]/10 blur-2xl" />
+          <div className="relative inline-flex rounded-2xl border border-white/25 bg-white px-5 py-3 shadow-[0_10px_26px_rgba(0,0,0,.18)]">
+            <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-12 w-auto object-contain sm:h-14" />
           </div>
-          <p className="mt-5 text-[10px] font-bold tracking-[.12em] text-[#5FB6F2]">تحليل · تصميم · تصنيع</p>
-          <h1 className="mt-2 text-2xl font-extrabold text-white">{title}</h1>
+          <p className="relative mt-6 text-[10px] font-bold tracking-[.16em] text-[#7CC8F7]">تحليل · تصميم · تصنيع</p>
+          <h1 className="relative mt-2 text-[1.7rem] font-extrabold leading-tight text-white sm:text-3xl">{title}</h1>
           <p className="mt-2 text-sm leading-6 text-[#CDE8FA]">{subtitle}</p>
         </div>
         <form onSubmit={recoveryMode ? submitPasswordRecovery : submit} className="space-y-4 p-7">
@@ -313,19 +315,17 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
     <>
       <div className="relative" ref={sidebarRef}>
         <Sidebar side="right" collapsible="icon" className="border-l-0 bg-[#0B2E4E] text-slate-200" disableTransition={isResizing}>
-          <SidebarHeader className="h-20 justify-center border-b border-white/10">
+          <SidebarHeader className="h-24 justify-center border-b border-white/10 bg-gradient-to-l from-[#0B2E4E] to-[#0C3F68]">
             <div className="flex w-full items-center gap-3 px-2">
               <button onClick={toggleSidebar} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" aria-label="طي أو توسيع التنقل">
                 <PanelRight className="h-4 w-4 text-slate-400" />
               </button>
-              {!isCollapsed && (
-                <div className="min-w-0">
-                  <div className="rounded-md bg-white px-2 py-1">
-                    <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-5 w-auto object-contain" />
-                  </div>
-                  <span className="mt-1 block text-[9px] tracking-[0.1em] text-[#9ECDF2]">المخزون والطلبات</span>
+              <div className={`flex min-w-0 items-center gap-3 ${isCollapsed ? "mx-auto" : ""}`}>
+                <div className="grid h-12 w-16 shrink-0 place-items-center rounded-xl border border-white/25 bg-white px-2 shadow-[0_8px_18px_rgba(0,0,0,.16)] group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11">
+                  <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-7 w-full object-contain group-data-[collapsible=icon]:h-5" />
                 </div>
-              )}
+                {!isCollapsed && <div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[.08em] text-white">REVERSE TECH</p><span className="mt-1 block text-[9px] font-bold tracking-[.12em] text-[#9ECDF2]">المخزون والطلبات</span></div>}
+              </div>
             </div>
           </SidebarHeader>
           <SidebarContent className="gap-0">
