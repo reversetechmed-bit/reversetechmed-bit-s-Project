@@ -23,10 +23,11 @@ export function useAuth(options?: UseAuthOptions) {
 
   const meQuery = trpc.auth.me.useQuery(undefined, { enabled: sessionReady && hasSession, retry: false, refetchOnWindowFocus: false });
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    const result = await supabase.auth.signOut({ scope: "local" });
     setHasSession(false);
     utils.auth.me.setData(undefined, null);
     await utils.auth.me.invalidate();
+    return result;
   }, [utils]);
 
   const state = useMemo(() => ({

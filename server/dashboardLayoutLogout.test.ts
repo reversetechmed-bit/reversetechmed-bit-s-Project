@@ -6,7 +6,8 @@ describe("dashboard account switch controls", () => {
 
   it("renders a direct logout and account-switch action in the desktop sidebar", () => {
     expect(source).toContain("تسجيل الخروج وتبديل الحساب");
-    expect(source).toContain('onClick={logout}');
+    expect(source).toContain('onClick={switchAccount}');
+    expect(source).toContain('window.location.assign("/")');
   });
 
   it("keeps a visible mobile logout action when sidebar navigation is unavailable", () => {

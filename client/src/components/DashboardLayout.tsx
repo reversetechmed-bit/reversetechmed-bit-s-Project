@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { hasSupabaseConfiguration, supabase } from "@/lib/supabase";
+import { hasSupabaseConfiguration, isPasswordRecoveryLink, supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -63,11 +63,24 @@ const MAX_WIDTH = 480;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || `${DEFAULT_WIDTH}`, 10));
+  const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(isPasswordRecoveryLink);
   const { loading, user } = useAuth();
 
   useEffect(() => localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString()), [sidebarWidth]);
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(event => {
+      if (event === "PASSWORD_RECOVERY") setPasswordRecoveryActive(true);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const completePasswordRecovery = () => {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setPasswordRecoveryActive(false);
+  };
 
   if (loading) return <DashboardLayoutSkeleton />;
+  if (passwordRecoveryActive) return <SupabaseAuthScreen recoveryMode onRecoveryComplete={completePasswordRecovery} />;
   if (!user) return <SupabaseAuthScreen />;
 
   return (
@@ -77,11 +90,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-function SupabaseAuthScreen() {
+function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { recoveryMode?: boolean; onRecoveryComplete?: () => void }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [requestedRole, setRequestedRole] = useState<"admin" | "user">("user");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -102,6 +116,23 @@ function SupabaseAuthScreen() {
     setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم التحقق من الحساب. يجري فتح مساحة العمل…");
   };
 
+  const submitPasswordRecovery = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 6) return setMessage("يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.");
+    if (password !== passwordConfirmation) return setMessage("تأكيد كلمة المرور غير مطابق.");
+    setSubmitting(true);
+    setMessage("");
+    const result = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
+    if (result.error) return setMessage("تعذر تحديث كلمة المرور. افتح أحدث رابط استعادة من البريد ثم أعد المحاولة.");
+    setMessage("تم تحديث كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.");
+    await supabase.auth.signOut({ scope: "local" });
+    onRecoveryComplete?.();
+  };
+
+  const title = recoveryMode ? "تعيين كلمة مرور جديدة" : mode === "signin" ? "تسجيل الدخول إلى إدارة المخزن" : "إنشاء حساب مساحة العمل";
+  const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "دخول آمن لعمليات مخزن REVERSE TECH.";
+
   return (
     <div className="grid min-h-screen place-items-center bg-[#F4F9FD] p-5">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#DCEAF7] bg-white shadow-[0_18px_50px_rgba(11,46,78,.12)]">
@@ -110,10 +141,23 @@ function SupabaseAuthScreen() {
             <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-8 w-auto" />
           </div>
           <p className="mt-5 text-[10px] font-bold tracking-[.12em] text-[#5FB6F2]">تحليل · تصميم · تصنيع</p>
-          <h1 className="mt-2 text-2xl font-extrabold text-white">{mode === "signin" ? "تسجيل الدخول إلى إدارة المخزن" : "إنشاء حساب مساحة العمل"}</h1>
-          <p className="mt-2 text-sm leading-6 text-[#CDE8FA]">دخول آمن لعمليات مخزن REVERSE TECH.</p>
+          <h1 className="mt-2 text-2xl font-extrabold text-white">{title}</h1>
+          <p className="mt-2 text-sm leading-6 text-[#CDE8FA]">{subtitle}</p>
         </div>
-        <form onSubmit={submit} className="space-y-4 p-7">
+        <form onSubmit={recoveryMode ? submitPasswordRecovery : submit} className="space-y-4 p-7">
+          {recoveryMode ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="recovery-password">كلمة المرور الجديدة</Label>
+                <Input id="recovery-password" type="password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recovery-password-confirmation">تأكيد كلمة المرور الجديدة</Label>
+                <Input id="recovery-password-confirmation" type="password" minLength={6} value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} required />
+              </div>
+            </>
+          ) : (
+            <>
           {mode === "signup" && (
             <>
               <div className="space-y-2">
@@ -144,16 +188,18 @@ function SupabaseAuthScreen() {
             <Label htmlFor="auth-password">كلمة المرور</Label>
             <Input id="auth-password" type="password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required />
           </div>
+            </>
+          )}
           {message && <p className="rounded-lg border border-[#B9DAF7] bg-[#F1F8FE] px-3 py-2 text-sm text-[#0B5798]">{message}</p>}
           <Button type="submit" disabled={submitting || !hasSupabaseConfiguration} className="w-full bg-[#0178D4] text-white hover:bg-[#0065B3]">
-            {submitting ? "يرجى الانتظار…" : mode === "signin" ? "تسجيل الدخول" : "إنشاء الحساب"}
+            {submitting ? "يرجى الانتظار…" : recoveryMode ? "حفظ كلمة المرور الجديدة" : mode === "signin" ? "تسجيل الدخول" : "إنشاء الحساب"}
           </Button>
-          <p className="text-center text-sm text-slate-500">
+          {!recoveryMode && <p className="text-center text-sm text-slate-500">
             {mode === "signin" ? "جديد في REVERSE TECH؟" : "لدي حساب بالفعل؟"}{" "}
             <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(""); }} className="font-semibold text-[#0178D4] hover:underline">
               {mode === "signin" ? "إنشاء حساب" : "تسجيل الدخول"}
             </button>
-          </p>
+          </p>}
         </form>
       </div>
     </div>
@@ -174,6 +220,17 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   const { data: alerts } = trpc.warehouse.alerts.list.useQuery();
   const markAlertRead = trpc.warehouse.alerts.markRead.useMutation({ onSuccess: () => utils.warehouse.alerts.list.invalidate() });
   const unreadAlerts = alerts?.filter(alert => !alert.isRead) ?? [];
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const switchAccount = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await logout();
+    } finally {
+      window.location.assign("/");
+    }
+  };
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -242,11 +299,11 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
                 <p className="mt-1.5 truncate text-xs text-slate-500">{user?.role === "admin" ? "أدمن REVERSE TECH" : "مستخدم هندسي"}</p>
               </div>
             </div>
-            <button onClick={logout} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#5FB6F2]/35 bg-gradient-to-l from-[#0178D4] to-[#0B5798] px-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(1,120,212,.22)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#1598EB] hover:to-[#0C6FAF] hover:shadow-[0_12px_28px_rgba(1,120,212,.32)] active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5FB6F2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2E4E] group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:px-0">
+            <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#5FB6F2]/35 bg-gradient-to-l from-[#0178D4] to-[#0B5798] px-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(1,120,212,.22)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#1598EB] hover:to-[#0C6FAF] hover:shadow-[0_12px_28px_rgba(1,120,212,.32)] active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5FB6F2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2E4E] disabled:cursor-wait disabled:opacity-75 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:px-0">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/15 ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
                 <LogOut className="h-4 w-4" />
               </span>
-              <span className="group-data-[collapsible=icon]:hidden">تسجيل الخروج وتبديل الحساب</span>
+              <span className="group-data-[collapsible=icon]:hidden">{isSigningOut ? "يتم تبديل الحساب…" : "تسجيل الخروج وتبديل الحساب"}</span>
             </button>
           </SidebarFooter>
         </Sidebar>
@@ -265,7 +322,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
             <span className="hidden items-center gap-1.5 rounded-full border border-[#BEECDD] bg-[#E7F8F4] px-2.5 py-1 text-[11px] font-semibold text-[#008E7A] sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00B39A]" />النظام يعمل
             </span>
-            <button onClick={logout} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="grid h-9 w-9 place-items-center rounded-lg border border-[#5FB6F2]/35 bg-[#0178D4] text-white shadow-[0_4px_12px_rgba(1,120,212,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#0B70B5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0178D4] focus-visible:ring-offset-2 md:hidden">
+            <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="grid h-9 w-9 place-items-center rounded-lg border border-[#5FB6F2]/35 bg-[#0178D4] text-white shadow-[0_4px_12px_rgba(1,120,212,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#0B70B5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0178D4] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-75 md:hidden">
               <LogOut className="h-4 w-4" />
             </button>
             <DropdownMenu>

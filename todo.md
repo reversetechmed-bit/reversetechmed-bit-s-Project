@@ -91,3 +91,8 @@
 - [x] Verify the final Noto PDF artifact includes rendered Latin item codes and complete Arabic metadata alongside the table and footer.
 - [x] Add a generated-PDF extraction regression test that asserts mixed Arabic and Latin report content from the artifact itself.
 - [x] Render PDF creation date and time as clear separate Arabic metadata lines, then verify them in the final artifact and rerun readiness checks.
+- [x] Diagnose and fix the reported logout/account-switch action that is not working for the normal-user session.
+- [ ] Re-test the visible logout/account-switch control with direct desktop and mobile UI interaction and document reliable transition to the sign-in screen.
+- [ ] Diagnose the Invalid login credentials error for the designated Admin account and restore access through a verified password-reset flow.
+- [x] Add an Arabic Supabase password-recovery screen so the reset link allows the Admin to set a new password inside the app.
+- [x] Preserve Supabase password-recovery link detection before session initialization so the recovery screen always opens from the email link.
