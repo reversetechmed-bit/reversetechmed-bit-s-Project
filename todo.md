@@ -72,4 +72,7 @@
 - [ ] Sign in with the Admin account in the app UI and verify access to admin-only pages and actions, then save the final checkpoint.
 - [x] Verify the target GitHub repository access and synchronize the current project source safely.
 - [x] Assess compatible hosting for the full-stack application and select the integrated hosting rather than Firebase static hosting.
-- [ ] Prepare and verify the checkpoint for deployment through the integrated full-stack hosting instead of Firebase.
+- [x] Prepare and verify the checkpoint for deployment through the integrated full-stack hosting instead of Firebase.
+- [ ] Verify the Admin account in the authenticated app UI on admin-only routes and actions, then re-run readiness checks.
+- [ ] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
+- [x] Replace the current Arabic typography with a clear commercial font pairing suited to warehouse dashboards and validate RTL readability.
