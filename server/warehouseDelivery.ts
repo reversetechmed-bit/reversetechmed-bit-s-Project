@@ -2,7 +2,7 @@ import { isLowStock, validateDelivery } from "./warehouseRules";
 
 export type DeliveryRecord = {
   request: { id: number; status: string; requestedQuantity: number; requestedById: number; purpose: string };
-  part: { id: number; partNumber: string; name: string; quantity: number; minimumStock: number; warehouseSection: "components" | "products" };
+  part: { id: number; partNumber: string; name: string; quantity: number; reservedQuantity: number; minimumStock: number; warehouseSection: "components" | "products" };
   engineer: { id: number; name: string | null };
 };
 
@@ -22,7 +22,7 @@ export type DeliveryTransaction = {
 };
 
 export type DeliveryPersistence = {
-  updatePartQuantity: (partId: number, quantity: number) => Promise<void>;
+  updatePartInventory: (partId: number, inventory: { quantity: number; reservedQuantity: number }) => Promise<void>;
   markRequestDelivered: (requestId: number, adminId: number, deliveredAt: Date) => Promise<void>;
   insertTransaction: (transaction: DeliveryTransaction) => Promise<void>;
   createHandoverInvoice: (invoice: { invoiceNumber: string; requestId: number; partId: number; issuedById: number; receivedById: number; partNumberSnapshot: string; partNameSnapshot: string; warehouseSectionSnapshot: "components" | "products"; quantity: number; purposeSnapshot: string; issuedAt: Date }) => Promise<void>;
@@ -39,8 +39,9 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
   return {
     ok: true as const,
     quantityAfter: delivery.quantityAfter,
+    reservedQuantityAfter: Math.max(0, record.part.reservedQuantity - record.request.requestedQuantity),
     deliveredAt,
-    shouldCreateLowStockAlert: isLowStock(delivery.quantityAfter, record.part.minimumStock),
+    shouldCreateLowStockAlert: isLowStock(delivery.quantityAfter - Math.max(0, record.part.reservedQuantity - record.request.requestedQuantity), record.part.minimumStock),
     transaction: {
       partId: record.part.id,
       requestId: record.request.id,
@@ -76,7 +77,7 @@ export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: 
   const plan = prepareConfirmedDelivery(record, adminId, deliveredAt);
   if (!plan.ok) return plan;
 
-  await persistence.updatePartQuantity(record.part.id, plan.quantityAfter);
+  await persistence.updatePartInventory(record.part.id, { quantity: plan.quantityAfter, reservedQuantity: plan.reservedQuantityAfter });
   await persistence.markRequestDelivered(record.request.id, adminId, plan.deliveredAt);
   await persistence.insertTransaction(plan.transaction);
   await persistence.createHandoverInvoice(plan.invoice);

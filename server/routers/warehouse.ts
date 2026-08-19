@@ -14,6 +14,7 @@ import {
 import { getDb } from "../db";
 import { notifyOwner } from "../_core/notification";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { storagePut } from "../storage";
 import { executeConfirmedDelivery } from "../warehouseDelivery";
 import { buildDecisionNotification, buildHandoverNotification } from "../warehouseNotifications";
 import { canDecideRequest, canEngineerSubmit, isLowStock, mustScopeRequestsToRequester } from "../warehouseRules";
@@ -29,6 +30,11 @@ const partInput = z.object({
   quantity: z.number().int().min(0),
   minimumStock: z.number().int().min(0),
   location: z.string().trim().max(160).optional(),
+  storageShelf: z.string().trim().max(80).optional(),
+  storageDrawer: z.string().trim().max(80).optional(),
+  storageBox: z.string().trim().max(80).optional(),
+  imageUrl: z.string().trim().max(500).optional(),
+  specifications: z.string().trim().max(4000).optional(),
 });
 
 const requestInput = z.object({
@@ -76,7 +82,16 @@ export const warehouseRouter = router({
     lowStock: adminProcedure.query(async () => {
       const db = await requireDb();
       const allParts = await db.select().from(parts).orderBy(desc(parts.updatedAt));
-      return allParts.filter(part => part.quantity <= part.minimumStock);
+      return allParts.filter(part => part.quantity - part.reservedQuantity <= part.minimumStock);
+    }),
+
+    uploadImage: adminProcedure.input(z.object({ fileName: z.string().trim().min(1).max(120), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(4).max(7_000_000) })).mutation(async ({ ctx, input }) => {
+      const bytes = Buffer.from(input.base64, "base64");
+      if (!bytes.length || bytes.length > 5 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب ألا يتجاوز حجم الصورة 5 ميغابايت." });
+      const extension = input.contentType === "image/jpeg" ? "jpg" : input.contentType === "image/png" ? "png" : "webp";
+      const safeName = input.fileName.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || "part";
+      const stored = await storagePut(`warehouse-parts/${ctx.user.id}/${safeName}.${extension}`, bytes, input.contentType);
+      return { url: stored.url } as const;
     }),
 
     create: adminProcedure.input(partInput).mutation(async ({ ctx, input }) => {
@@ -87,6 +102,11 @@ export const warehouseRouter = router({
             ...input,
             description: optionalText(input.description),
             location: optionalText(input.location),
+            storageShelf: optionalText(input.storageShelf),
+            storageDrawer: optionalText(input.storageDrawer),
+            storageBox: optionalText(input.storageBox),
+            imageUrl: optionalText(input.imageUrl),
+            specifications: optionalText(input.specifications),
             componentTypeId: input.warehouseSection === "components" ? input.componentTypeId ?? null : null,
             createdById: ctx.user.id,
           });
@@ -136,6 +156,9 @@ export const warehouseRouter = router({
         return db.transaction(async tx => {
           const [existing] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
           if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
+          if (values.quantity < existing.reservedQuantity) {
+            throw new TRPCError({ code: "CONFLICT", message: `لا يمكن خفض الكمية الفعلية إلى أقل من الكمية المحجوزة (${existing.reservedQuantity}).` });
+          }
           if (existing.partNumber !== values.partNumber) {
             const [duplicate] = await tx.select({ id: parts.id }).from(parts).where(eq(parts.partNumber, values.partNumber)).limit(1);
             if (duplicate) throw new TRPCError({ code: "CONFLICT", message: "توجد بالفعل قطعة بهذا الكود." });
@@ -147,6 +170,11 @@ export const warehouseRouter = router({
               ...values,
               description: optionalText(values.description),
               location: optionalText(values.location),
+              storageShelf: optionalText(values.storageShelf),
+              storageDrawer: optionalText(values.storageDrawer),
+              storageBox: optionalText(values.storageBox),
+              imageUrl: optionalText(values.imageUrl),
+              specifications: optionalText(values.specifications),
               componentTypeId: values.warehouseSection === "components" ? values.componentTypeId ?? null : null,
             })
             .where(eq(parts.id, id));
@@ -167,7 +195,7 @@ export const warehouseRouter = router({
           });
           await tx.insert(warehouseActivities).values({ type: "inventory_updated", actorId: ctx.user.id, title: "تحديث سجل مخزون", detail: `تم تحديث ${updated.name} في ${warehouseSectionLabel(updated.warehouseSection)}.`, partId: updated.id });
 
-          if (isLowStock(updated.quantity, updated.minimumStock)) {
+          if (isLowStock(updated.quantity - updated.reservedQuantity, updated.minimumStock)) {
             const [existingAlert] = await tx
               .select({ id: warehouseAlerts.id })
               .from(warehouseAlerts)
@@ -226,7 +254,8 @@ export const warehouseRouter = router({
       const result = await db.transaction(async tx => {
         const [part] = await tx.select().from(parts).where(eq(parts.id, input.partId)).limit(1);
         if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة المطلوبة لم تعد موجودة." });
-        if (part.quantity < input.requestedQuantity) {
+        const availableQuantity = part.quantity - part.reservedQuantity;
+        if (availableQuantity < input.requestedQuantity) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "الكمية المطلوبة تتجاوز المخزون المتاح." });
         }
 
@@ -289,11 +318,18 @@ export const warehouseRouter = router({
           if (!canDecideRequest(record.request.status)) {
             throw new TRPCError({ code: "CONFLICT", message: "يمكن اعتماد أو رفض الطلبات المنتظرة فقط." });
           }
+          const availableQuantity = record.part.quantity - record.part.reservedQuantity;
+          if (input.decision === "approved" && record.request.requestedQuantity > availableQuantity) {
+            throw new TRPCError({ code: "CONFLICT", message: `الكمية المتاحة للحجز هي ${availableQuantity} فقط، بينما الطلب يحتاج ${record.request.requestedQuantity}.` });
+          }
 
           await tx
             .update(dispensingRequests)
             .set({ status: input.decision, decisionNote: optionalText(input.decisionNote), reviewedById: ctx.user.id, reviewedAt: new Date() })
             .where(eq(dispensingRequests.id, input.id));
+          if (input.decision === "approved") {
+            await tx.update(parts).set({ reservedQuantity: record.part.reservedQuantity + record.request.requestedQuantity }).where(eq(parts.id, record.part.id));
+          }
           await tx.insert(inventoryTransactions).values({
             partId: record.part.id,
             requestId: record.request.id,
@@ -306,11 +342,11 @@ export const warehouseRouter = router({
             partNumberSnapshot: record.part.partNumber,
             partNameSnapshot: record.part.name,
             warehouseSectionSnapshot: record.part.warehouseSection,
-            details: input.decision === "approved" ? "تم اعتماد الطلب بانتظار التسليم الفعلي." : `تم رفض الطلب.${input.decisionNote ? ` السبب: ${input.decisionNote}` : ""}`,
+            details: input.decision === "approved" ? `تم اعتماد الطلب وحجز ${record.request.requestedQuantity} وحدة بانتظار التسليم الفعلي.` : `تم رفض الطلب.${input.decisionNote ? ` السبب: ${input.decisionNote}` : ""}`,
           });
           await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? "اعتماد طلب صرف" : "رفض طلب صرف", detail: `تم ${input.decision === "approved" ? "اعتماد" : "رفض"} طلب ${record.part.name}.`, requestId: record.request.id, partId: record.part.id });
           await tx.insert(warehouseAlerts).values(buildDecisionNotification({ decision: input.decision, decisionNote: input.decisionNote, partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById }));
-          return { success: true, status: input.decision } as const;
+          return { success: true, status: input.decision, reservedQuantity: input.decision === "approved" ? record.part.reservedQuantity + record.request.requestedQuantity : record.part.reservedQuantity, availableQuantity: input.decision === "approved" ? availableQuantity - record.request.requestedQuantity : availableQuantity } as const;
         });
       }),
 
@@ -330,8 +366,8 @@ export const warehouseRouter = router({
           .limit(1);
         if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الصرف غير موجود." });
         const deliveryMovement = await executeConfirmedDelivery(record, ctx.user.id, {
-          updatePartQuantity: async (partId, quantity) => {
-            await tx.update(parts).set({ quantity }).where(eq(parts.id, partId));
+          updatePartInventory: async (partId, inventory) => {
+            await tx.update(parts).set(inventory).where(eq(parts.id, partId));
           },
           markRequestDelivered: async (requestId, adminId, deliveredAt) => {
             await tx
@@ -372,22 +408,37 @@ export const warehouseRouter = router({
 
   dashboard: adminProcedure.query(async () => {
     const db = await requireDb();
-    const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess] = await Promise.all([
+    const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess, deliveryTransactions, recentHandovers] = await Promise.all([
       db.select().from(parts).orderBy(desc(parts.updatedAt)),
       db.select().from(dispensingRequests).orderBy(desc(dispensingRequests.createdAt)),
       db.select().from(warehouseAlerts).where(and(eq(warehouseAlerts.isRead, 0), isNull(warehouseAlerts.recipientUserId))).orderBy(desc(warehouseAlerts.createdAt)),
       db.select({ activity: warehouseActivities, actor: { id: users.id, name: users.name, email: users.email } }).from(warehouseActivities).leftJoin(users, eq(warehouseActivities.actorId, users.id)).orderBy(desc(warehouseActivities.createdAt)).limit(8),
       db.select({ id: users.id, name: users.name, email: users.email, lastSignedIn: users.lastSignedIn, role: users.role }).from(users).orderBy(desc(users.lastSignedIn)).limit(6),
+      db.select().from(inventoryTransactions).where(eq(inventoryTransactions.type, "delivery_confirmed")).orderBy(desc(inventoryTransactions.createdAt)).limit(500),
+      db.select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } }).from(handoverInvoices).innerJoin(users, eq(handoverInvoices.receivedById, users.id)).orderBy(desc(handoverInvoices.issuedAt)).limit(6),
     ]);
+    const topDispensedByPart = new Map<number, { partId: number; partName: string; partNumber: string; quantity: number }>();
+    for (const transaction of deliveryTransactions) {
+      const current = topDispensedByPart.get(transaction.partId) ?? { partId: transaction.partId, partName: transaction.partNameSnapshot, partNumber: transaction.partNumberSnapshot, quantity: 0 };
+      current.quantity += Math.abs(transaction.quantityDelta);
+      topDispensedByPart.set(transaction.partId, current);
+    }
+    const overdueThreshold = Date.now() - 48 * 60 * 60 * 1000;
+    const overdueRequests = allRequests.filter(request => (request.status === "pending" || request.status === "approved") && request.createdAt.getTime() < overdueThreshold);
     return {
       partCount: allParts.length,
       totalUnits: allParts.reduce((sum, part) => sum + part.quantity, 0),
+      reservedUnits: allParts.reduce((sum, part) => sum + part.reservedQuantity, 0),
+      availableUnits: allParts.reduce((sum, part) => sum + Math.max(0, part.quantity - part.reservedQuantity), 0),
       componentCount: allParts.filter(part => part.warehouseSection === "components").length,
       componentUnits: allParts.filter(part => part.warehouseSection === "components").reduce((sum, part) => sum + part.quantity, 0),
       productCount: allParts.filter(part => part.warehouseSection === "products").length,
       productUnits: allParts.filter(part => part.warehouseSection === "products").reduce((sum, part) => sum + part.quantity, 0),
       pendingRequests: allRequests.filter(request => request.status === "pending").length,
-      lowStockParts: allParts.filter(part => part.quantity < part.minimumStock),
+      overdueRequests,
+      lowStockParts: allParts.filter(part => part.quantity - part.reservedQuantity <= part.minimumStock),
+      topDispensedParts: Array.from(topDispensedByPart.values()).sort((left, right) => right.quantity - left.quantity).slice(0, 5),
+      recentHandovers,
       unreadAlerts,
       recentActivities,
       recentAccess,
@@ -425,6 +476,19 @@ export const warehouseRouter = router({
       if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة التسليم غير موجودة." });
       if (ctx.user.role !== "admin" && result.invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك الوصول إلى هذه الفاتورة." });
       return result;
+    }),
+    confirmReceipt: protectedProcedure.input(z.object({ invoiceId: z.number().int().positive(), confirmationName: z.string().trim().min(2).max(160), receiptNote: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      return db.transaction(async tx => {
+        const [invoice] = await tx.select().from(handoverInvoices).where(eq(handoverInvoices.id, input.invoiceId)).limit(1);
+        if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة التسليم غير موجودة." });
+        if (invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "تأكيد الاستلام متاح للمستلم المسجل فقط." });
+        if (invoice.receiptConfirmedAt) throw new TRPCError({ code: "CONFLICT", message: "تم تأكيد استلام هذه الفاتورة مسبقًا." });
+        const confirmedAt = new Date();
+        await tx.update(handoverInvoices).set({ receiptConfirmedAt: confirmedAt, receiptConfirmationName: input.confirmationName.trim(), receiptNote: optionalText(input.receiptNote) }).where(eq(handoverInvoices.id, invoice.id));
+        await tx.insert(warehouseActivities).values({ type: "handover_receipt_confirmed", actorId: ctx.user.id, title: "تأكيد استلام رقمي", detail: `أكد ${input.confirmationName.trim()} استلام الفاتورة ${invoice.invoiceNumber}.`, requestId: invoice.requestId, partId: invoice.partId });
+        return { success: true, receiptConfirmedAt: confirmedAt } as const;
+      });
     }),
   }),
 

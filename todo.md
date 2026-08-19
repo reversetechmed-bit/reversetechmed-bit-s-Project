@@ -110,3 +110,8 @@
 - [ ] Verify the notification bell and sound control with authenticated Admin and User sessions.
 - [x] Enlarge and refine the REVERSE TECH logo presentation on the sign-in screen and dashboard sidebar across desktop and mobile layouts.
 - [ ] Verify the updated REVERSE TECH logo inside the authenticated sidebar in expanded, collapsed, and mobile drawer states.
+- [x] Reserve requested quantities when an Admin approves a dispensing request, and show available, reserved, and physical quantities consistently.
+- [x] Add an Admin operations dashboard for low-stock items, overdue requests, most-dispensed items, and recent handovers.
+- [x] Add an authenticated digital-receipt confirmation to handover invoices and preserve the confirmation in the audit trail.
+- [x] Add optional component and product fields for image upload or URL, specifications, and a structured storage location (shelf, drawer, box).
+- [ ] Verify the complete approve → reserve → handover → digital-receipt sequence with authenticated Admin and User sessions.

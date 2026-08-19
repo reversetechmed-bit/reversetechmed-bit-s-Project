@@ -96,8 +96,14 @@ export const parts = mysqlTable(
     warehouseSection: mysqlEnum("warehouseSection", warehouseSectionValues).notNull().default("components"),
     componentTypeId: int("componentTypeId").references(() => componentTypes.id, { onDelete: "set null" }),
     quantity: int("quantity").notNull().default(0),
+    reservedQuantity: int("reservedQuantity").notNull().default(0),
     minimumStock: int("minimumStock").notNull().default(0),
     location: varchar("location", { length: 160 }),
+    storageShelf: varchar("storageShelf", { length: 80 }),
+    storageDrawer: varchar("storageDrawer", { length: 80 }),
+    storageBox: varchar("storageBox", { length: 80 }),
+    imageUrl: varchar("imageUrl", { length: 500 }),
+    specifications: text("specifications"),
     createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -207,12 +213,15 @@ export const handoverInvoices = mysqlTable(
     quantity: int("quantity").notNull(),
     purposeSnapshot: text("purposeSnapshot").notNull(),
     issuedAt: timestamp("issuedAt").notNull(),
+    receiptConfirmedAt: timestamp("receiptConfirmedAt"),
+    receiptConfirmationName: varchar("receiptConfirmationName", { length: 160 }),
+    receiptNote: text("receiptNote"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => [index("invoices_issued_at_idx").on(table.issuedAt)],
 );
 
-export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed"] as const;
+export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed"] as const;
 
 /** Recent warehouse events shown to the Admin on the control dashboard. */
 export const warehouseActivities = mysqlTable(
