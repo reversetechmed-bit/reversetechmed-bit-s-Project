@@ -59,7 +59,9 @@ describe("warehouse procedure permissions", () => {
 
   it("validates the department and employee data required for directory creation", () => {
     expect(departmentInput.parse({ name: "Embedded Systems", code: "EMB-01", description: "Firmware and hardware design" })).toMatchObject({ code: "EMB-01" });
+    expect(departmentInput.parse({ name: "معمل الطباعة", code: "طباعة 3D" })).toMatchObject({ code: "طباعة 3D" });
     expect(employeeInput.parse({ fullName: "Rana Salem", email: "rana@example.com", employeeCode: "RT-102", jobTitle: "Embedded Engineer", departmentId: null, warehouseRole: "engineer" })).toMatchObject({ warehouseRole: "engineer" });
+    expect(employeeInput.parse({ fullName: "سارة أحمد", email: "sara@example.com", employeeCode: "موظف ١", jobTitle: "مهندسة", departmentId: null, warehouseRole: "engineer" })).toMatchObject({ employeeCode: "موظف ١" });
     expect(() => employeeInput.parse({ fullName: "Rana Salem", email: "invalid-email", employeeCode: "RT-102", jobTitle: "Embedded Engineer", warehouseRole: "engineer" })).toThrow();
   });
 });

@@ -7,14 +7,14 @@ import { z } from "zod";
 
 export const departmentInput = z.object({
   name: z.string().trim().min(2).max(160),
-  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]+$/).min(2).max(32),
+  code: z.string().trim().toUpperCase().regex(/^[- A-Z0-9\u0621-\u064A\u0660-\u0669\u0670-\u06FF]+$/, "رمز القسم يقبل الحروف والأرقام والمسافات والشرطة فقط.").min(2).max(32),
   description: z.string().trim().max(1000).optional(),
 });
 
 export const employeeInput = z.object({
   fullName: z.string().trim().min(2).max(200),
   email: z.string().trim().email().max(320),
-  employeeCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]+$/).min(2).max(64),
+  employeeCode: z.string().trim().toUpperCase().regex(/^[- A-Z0-9\u0621-\u064A\u0660-\u0669\u0670-\u06FF]+$/, "كود الموظف يقبل الحروف والأرقام والمسافات والشرطة فقط.").min(2).max(64),
   jobTitle: z.string().trim().min(2).max(160),
   departmentId: z.number().int().positive().nullable().optional(),
   warehouseRole: z.enum(employeeWarehouseRoleValues),

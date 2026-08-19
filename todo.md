@@ -100,3 +100,7 @@
 - [ ] Remove the previous account associated with abmena333@gmail.com from Supabase Auth; this requires a Supabase service-role credential or direct dashboard access.
 - [x] Allow any new registrant to choose the Admin role without an email-specific allowlist, while preserving Admin-only permissions after sign-in.
 - [ ] Verify Admin registration and role mapping using a newly created account, then save an updated checkpoint.
+- [x] Support Arabic department codes and add regression coverage for the department form validation.
+- [ ] Reproduce the new-Admin signup flow end to end and identify the exact request that produced the code validation error.
+- [ ] Fix any confirmed signup blocker and add regression coverage for the actual registration path.
+- [ ] Fix Admin department and employee creation so Arabic and Latin identifiers save correctly and validation errors are shown in Arabic.
