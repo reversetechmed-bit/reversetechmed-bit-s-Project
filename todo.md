@@ -77,4 +77,17 @@
 - [ ] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
 - [x] Replace the current Arabic typography with a clear commercial font pairing suited to warehouse dashboards and validate RTL readability.
 - [x] Add an always-discoverable logout and account-switch action for both desktop and mobile dashboard navigation.
-- [ ] Refine the sidebar logout and account-switch button with stronger visual hierarchy, hover, focus, and collapsed-navigation states.
+- [x] Refine the sidebar logout and account-switch button with stronger visual hierarchy, hover, focus, and collapsed-navigation states.
+- [x] Redesign Arabic inventory-report and handover-invoice Excel exports with professional headings, column widths, RTL alignment, and readable typography.
+- [x] Rebuild Arabic PDF exports with an embedded Arabic-capable font, clear invoice/report hierarchy, and print-ready layout.
+- [x] Reopen and verify the final Arabic PDF export after the direction fix, including Arabic phrases, Latin item codes, header, table cells, and footer.
+- [x] Add a regression check that preserves the corrected mixed Arabic and Latin PDF direction behavior.
+- [x] Generate and inspect a final PDF sample with explicit header, date, table, Latin code, and footer verification after the bidi fix.
+- [x] Add output-oriented regression coverage for the mixed Arabic and Latin PDF rendering path, then re-run final export readiness checks.
+- [x] Produce one final PDF after the Noto font fix and verify the header, full Arabic date line, table cells, Latin codes, and footer from the generated file.
+- [x] Add an export-path regression test that validates the generated mixed Arabic and Latin PDF content beyond source-code assertions, then re-run readiness checks.
+- [x] Generate and inspect the final Noto PDF artifact with explicit confirmation of its header, date, table values, Latin codes, and footer.
+- [x] Add an artifact-level PDF export regression test for mixed Arabic and Latin content, then re-run the export readiness suite.
+- [x] Verify the final Noto PDF artifact includes rendered Latin item codes and complete Arabic metadata alongside the table and footer.
+- [x] Add a generated-PDF extraction regression test that asserts mixed Arabic and Latin report content from the artifact itself.
+- [x] Render PDF creation date and time as clear separate Arabic metadata lines, then verify them in the final artifact and rerun readiness checks.
