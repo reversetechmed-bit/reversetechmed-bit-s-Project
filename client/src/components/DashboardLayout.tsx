@@ -176,7 +176,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
                     <span className="text-[11px] text-slate-500">إدارة المخزن كاملة</span>
                   </button>
                 </div>
-                <p className="text-xs leading-5 text-slate-500">تُفعّل صلاحية الأدمن للحساب الأول فقط أو بعد اعتمادها من أدمن حالي عبر دليل الموظفين.</p>
+                <p className="text-xs leading-5 text-slate-500">صلاحية الأدمن تمنح إدارة كاملة للمخزن، والطلبات، والموظفين، والتقارير.</p>
               </div>
             </>
           )}

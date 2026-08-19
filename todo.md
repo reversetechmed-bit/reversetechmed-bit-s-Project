@@ -96,3 +96,7 @@
 - [ ] Diagnose the Invalid login credentials error for the designated Admin account and restore access through a verified password-reset flow.
 - [x] Add an Arabic Supabase password-recovery screen so the reset link allows the Admin to set a new password inside the app.
 - [x] Preserve Supabase password-recovery link detection before session initialization so the recovery screen always opens from the email link.
+- [x] Remove the previous Admin account associated with abmena333@gmail.com from the application database and employee directory while preserving warehouse records.
+- [ ] Remove the previous account associated with abmena333@gmail.com from Supabase Auth; this requires a Supabase service-role credential or direct dashboard access.
+- [x] Allow any new registrant to choose the Admin role without an email-specific allowlist, while preserving Admin-only permissions after sign-in.
+- [ ] Verify Admin registration and role mapping using a newly created account, then save an updated checkpoint.
