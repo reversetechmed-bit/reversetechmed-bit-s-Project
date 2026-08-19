@@ -1,27 +1,12 @@
-export const categoryMeta: Record<string, { label: string; arabic: string; accent: string; soft: string }> = {
-  Medical: { label: "طبي", arabic: "طبي", accent: "text-sky-700", soft: "bg-sky-50 border-sky-100" },
-  Embedded: { label: "إمبيديد", arabic: "إمبيديد", accent: "text-violet-700", soft: "bg-violet-50 border-violet-100" },
-  Electronics: { label: "إلكترونيات", arabic: "إلكترونيات", accent: "text-amber-700", soft: "bg-amber-50 border-amber-100" },
-  Boards: { label: "لوحات", arabic: "لوحات", accent: "text-emerald-700", soft: "bg-emerald-50 border-emerald-100" },
+type CategoryMeta = { label: string; arabic: string; accent: string; soft: string };
+const baseCategoryMeta: Record<string, CategoryMeta> = {
+  Medical: { label: "طبي", arabic: "طبي", accent: "text-sky-700", soft: "bg-sky-50 border-sky-100" }, Embedded: { label: "إمبيديد", arabic: "إمبيديد", accent: "text-violet-700", soft: "bg-violet-50 border-violet-100" }, Electronics: { label: "إلكترونيات", arabic: "إلكترونيات", accent: "text-amber-700", soft: "bg-amber-50 border-amber-100" }, Boards: { label: "لوحات", arabic: "لوحات", accent: "text-emerald-700", soft: "bg-emerald-50 border-emerald-100" }, "طبي": { label: "طبي", arabic: "طبي", accent: "text-sky-700", soft: "bg-sky-50 border-sky-100" }, "إمبيديد": { label: "إمبيديد", arabic: "إمبيديد", accent: "text-violet-700", soft: "bg-violet-50 border-violet-100" }, "إلكترونيات": { label: "إلكترونيات", arabic: "إلكترونيات", accent: "text-amber-700", soft: "bg-amber-50 border-amber-100" }, "لوحات": { label: "لوحات", arabic: "لوحات", accent: "text-emerald-700", soft: "bg-emerald-50 border-emerald-100" },
 };
-
-export const requestStatusMeta: Record<string, { label: string; className: string }> = {
-  pending: { label: "بانتظار المراجعة", className: "bg-amber-50 text-amber-800 border-amber-200" },
-  approved: { label: "مُعتمد", className: "bg-sky-50 text-sky-800 border-sky-200" },
-  rejected: { label: "مرفوض", className: "bg-rose-50 text-rose-800 border-rose-200" },
-  delivered: { label: "تم التسليم", className: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-};
-
-export function formatDate(value: Date | string | null | undefined, includeTime = true) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("ar-EG", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    ...(includeTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-  }).format(new Date(value));
-}
-
-export function initials(name?: string | null) {
-  return name?.split(" ").filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase() || "م";
-}
+const dynamicCategoryTones = [{ accent: "text-[#0178D4]", soft: "bg-[#E7F3FE] border-[#B9DAF7]" }, { accent: "text-violet-700", soft: "bg-violet-50 border-violet-100" }, { accent: "text-amber-700", soft: "bg-amber-50 border-amber-100" }, { accent: "text-emerald-700", soft: "bg-emerald-50 border-emerald-100" }, { accent: "text-rose-700", soft: "bg-rose-50 border-rose-100" }];
+const categoryToneByKey: Record<string, Pick<CategoryMeta, "accent" | "soft">> = { blue: dynamicCategoryTones[0], sky: { accent: "text-sky-700", soft: "bg-sky-50 border-sky-100" }, violet: dynamicCategoryTones[1], amber: dynamicCategoryTones[2], emerald: dynamicCategoryTones[3], rose: dynamicCategoryTones[4], slate: { accent: "text-slate-700", soft: "bg-slate-50 border-slate-200" } };
+function createDynamicCategoryMeta(name?: string | null, colorKey?: string | null): CategoryMeta { const normalized = name?.trim() || "غير مصنف"; const tone = (colorKey && categoryToneByKey[colorKey]) || dynamicCategoryTones[Array.from(normalized).reduce((sum, character) => sum + character.codePointAt(0)!, 0) % dynamicCategoryTones.length]; return { label: normalized, arabic: normalized, ...tone }; }
+export const categoryMeta: Record<string, CategoryMeta> = new Proxy(baseCategoryMeta, { get(target, property: string | symbol) { return typeof property === "string" ? target[property] ?? createDynamicCategoryMeta(property) : undefined; } });
+export function getCategoryMeta(name?: string | null, colorKey?: string | null) { return name && baseCategoryMeta[name] ? baseCategoryMeta[name] : createDynamicCategoryMeta(name, colorKey); }
+export const requestStatusMeta: Record<string, { label: string; className: string }> = { pending: { label: "بانتظار المراجعة", className: "bg-amber-50 text-amber-800 border-amber-200" }, approved: { label: "مُعتمد", className: "bg-sky-50 text-sky-800 border-sky-200" }, rejected: { label: "مرفوض", className: "bg-rose-50 text-rose-800 border-rose-200" }, delivered: { label: "تم التسليم", className: "bg-emerald-50 text-emerald-800 border-emerald-200" } };
+export function formatDate(value: Date | string | null | undefined, includeTime = true) { if (!value) return "—"; return new Intl.DateTimeFormat("ar-EG", { day: "2-digit", month: "short", year: "numeric", ...(includeTime ? { hour: "2-digit", minute: "2-digit" } : {}) }).format(new Date(value)); }
+export function initials(name?: string | null) { return name?.split(" ").filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase() || "م"; }

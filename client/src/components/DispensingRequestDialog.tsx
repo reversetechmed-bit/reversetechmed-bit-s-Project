@@ -24,7 +24,7 @@ export default function DispensingRequestDialog({ part, open, onOpenChange }: { 
   useEffect(() => { if (open) { setQuantity(1); setPurpose(""); } }, [open, part?.id]);
   const createRequest = trpc.warehouse.requests.create.useMutation({
     onSuccess: async result => {
-      toast.success(result.notificationSent ? "تم إرسال الطلب وإشعار مسؤول المخزن." : "تم إرسال طلب الصرف بنجاح.");
+      toast.success(result.notificationSent ? "تم تسجيل الطلب وإشعار مسؤول المخزن." : "تم تسجيل طلب الصرف.");
       onOpenChange(false);
       await Promise.all([utils.warehouse.requests.list.invalidate(), utils.warehouse.dashboard.invalidate(), utils.warehouse.alerts.list.invalidate()]);
     },

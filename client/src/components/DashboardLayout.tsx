@@ -15,6 +15,7 @@ import {
   Package,
   PanelRight,
   Shapes,
+  Tags,
   UsersRound,
   Volume2,
   VolumeX,
@@ -43,6 +44,7 @@ const adminMenuItems = [
   { icon: LayoutDashboard, label: "لوحة المتابعة", path: "/" },
   { icon: Boxes, label: "المكونات", path: "/inventory" },
   { icon: Shapes, label: "أنواع المكونات", path: "/component-types" },
+  { icon: Tags, label: "تصنيفات المخزون", path: "/inventory-categories" },
   { icon: Package, label: "المنتجات", path: "/products" },
   { icon: ClipboardList, label: "طلبات الصرف", path: "/requests" },
   { icon: FileText, label: "الفواتير", path: "/invoices" },
@@ -145,7 +147,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
         });
     setSubmitting(false);
     if (result.error) return setMessage(result.error.message);
-    setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم التحقق من الحساب. يجري فتح مساحة العمل…");
+    setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم تسجيل الدخول. يجري فتح مساحة العمل…");
   };
 
   const submitPasswordRecovery = async (event: React.FormEvent) => {
@@ -163,7 +165,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   };
 
   const title = recoveryMode ? "تعيين كلمة مرور جديدة" : mode === "signin" ? "تسجيل الدخول إلى إدارة المخزن" : "إنشاء حساب مساحة العمل";
-  const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "دخول آمن لعمليات مخزن REVERSE TECH.";
+  const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "منصة REVERSE TECH الداخلية لإدارة المخزون والطلبات.";
 
   return (
     <div className="grid min-h-screen place-items-center bg-[#F4F9FD] p-5">
@@ -259,7 +261,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   const knownAlertIds = useRef<Set<number> | null>(null);
   const isAdmin = user?.role === "admin";
   const notificationTitle = isAdmin ? "تنبيهات إدارة المخزن" : "تنبيهات طلباتي";
-  const notificationDescription = isAdmin ? "طلبات جديدة وتنبيهات المخزون" : "حالة طلباتك والتسليم والفواتير";
+  const notificationDescription = isAdmin ? "طلبات صرف جديدة وتنبيهات رصيد تحتاج متابعة" : "تغيرات حالة طلباتك والتسليمات والفواتير";
+  const unreadAlertLabel = unreadAlerts.length ? `${unreadAlerts.length} غير مقروءة` : "لا توجد إشعارات غير مقروءة";
 
   useEffect(() => {
     const currentIds = new Set((alerts ?? []).map(alert => alert.id));
@@ -347,7 +350,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
               </Avatar>
               <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <p className="truncate text-sm font-medium leading-none text-white">{user?.name || "-"}</p>
-                <p className="mt-1.5 truncate text-xs text-slate-500">{user?.role === "admin" ? "أدمن REVERSE TECH" : "مستخدم هندسي"}</p>
+                <p className="mt-1.5 truncate text-xs text-slate-500">{user?.role === "admin" ? "مسؤول المخزن" : "مستخدم مساحة العمل"}</p>
               </div>
             </div>
             <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#5FB6F2]/35 bg-gradient-to-l from-[#0178D4] to-[#0B5798] px-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(1,120,212,.22)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#1598EB] hover:to-[#0C6FAF] hover:shadow-[0_12px_28px_rgba(1,120,212,.32)] active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5FB6F2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2E4E] disabled:cursor-wait disabled:opacity-75 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:px-0">
@@ -366,12 +369,12 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
             <SidebarTrigger className="h-9 w-9 rounded-lg border border-[#DCEAF7] bg-white md:hidden" />
             <div>
               <p className="text-sm font-semibold text-[#0B2E4E]">{activeMenuItem?.label ?? "مساحة العمل"}</p>
-              <p className="text-[11px] text-slate-500">إدارة مخزون وطلبات REVERSE TECH</p>
+              <p className="text-[11px] text-slate-500">تشغيل المخزون والطلبات الداخلي</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden items-center gap-1.5 rounded-full border border-[#BEECDD] bg-[#E7F8F4] px-2.5 py-1 text-[11px] font-semibold text-[#008E7A] sm:inline-flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#00B39A]" />النظام يعمل
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00B39A]" />جلسة العمل نشطة
             </span>
             <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="grid h-9 w-9 place-items-center rounded-lg border border-[#5FB6F2]/35 bg-[#0178D4] text-white shadow-[0_4px_12px_rgba(1,120,212,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#0B70B5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0178D4] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-75 md:hidden">
               <LogOut className="h-4 w-4" />
@@ -386,7 +389,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
               <DropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-2rem)] overflow-hidden p-0">
                 <div className="flex items-center justify-between border-b border-[#E8EEF3] px-4 py-3">
                   <div><p className="font-bold text-[#0B2E4E]">{notificationTitle}</p><p className="mt-0.5 text-[11px] text-slate-500">{notificationDescription}</p></div>
-                  <div className="flex items-center gap-2"><button type="button" onClick={toggleNotificationSound} className={`grid h-8 w-8 place-items-center rounded-lg border transition-colors ${notificationSoundEnabled ? "border-[#8EDACD] bg-[#E7F8F4] text-[#008E7A]" : "border-[#DCEAF7] bg-white text-slate-400"}`} aria-label={notificationSoundEnabled ? "إيقاف صوت الإشعارات" : "تشغيل صوت الإشعارات"} title={notificationSoundEnabled ? "صوت الإشعارات مفعّل" : "صوت الإشعارات متوقف"}>{notificationSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</button><span className="text-xs text-slate-500">{unreadAlerts.length} غير مقروء</span></div>
+                  <div className="flex items-center gap-2"><button type="button" onClick={toggleNotificationSound} className={`grid h-8 w-8 place-items-center rounded-lg border transition-colors ${notificationSoundEnabled ? "border-[#8EDACD] bg-[#E7F8F4] text-[#008E7A]" : "border-[#DCEAF7] bg-white text-slate-400"}`} aria-label={notificationSoundEnabled ? "إيقاف صوت الإشعارات" : "تشغيل صوت الإشعارات"} title={notificationSoundEnabled ? "صوت الإشعارات مفعّل" : "صوت الإشعارات متوقف"}>{notificationSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</button><span className="text-xs text-slate-500">{unreadAlertLabel}</span></div>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {alerts?.slice(0, 8).map(alert => (
@@ -400,7 +403,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
                       </div>
                     </button>
                   ))}
-                  {!alerts?.length && <div className="p-7 text-center text-sm text-slate-500">لا توجد تنبيهات حتى الآن.</div>}
+                  {!alerts?.length && <div className="p-7 text-center text-sm text-slate-500">لا توجد إشعارات مسجلة في هذه الجلسة.</div>}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>

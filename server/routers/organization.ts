@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
-import { componentTypes, departments, employeeProfiles, employeeWarehouseRoleValues } from "../../drizzle/schema";
+import { componentTypes, departments, employeeProfiles, employeeWarehouseRoleValues, inventoryCategories, parts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
@@ -25,6 +25,12 @@ export const componentTypeInput = z.object({
   description: z.string().trim().max(1000).optional(),
 });
 
+export const inventoryCategoryInput = z.object({
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional(),
+  colorKey: z.enum(["blue", "sky", "violet", "amber", "emerald", "rose", "slate"]).default("blue"),
+});
+
 async function requireDb() {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Organization data is temporarily unavailable." });
@@ -36,6 +42,42 @@ function optionalText(value?: string) {
 }
 
 export const organizationRouter = router({
+  inventoryCategories: router({
+    list: protectedProcedure.query(async () => {
+      const db = await requireDb();
+      return db.select().from(inventoryCategories).orderBy(inventoryCategories.isActive, inventoryCategories.name);
+    }),
+    create: adminProcedure.input(inventoryCategoryInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      try {
+        await db.insert(inventoryCategories).values({ name: input.name, description: optionalText(input.description), colorKey: input.colorKey, createdById: ctx.user.id });
+        const [created] = await db.select().from(inventoryCategories).where(eq(inventoryCategories.name, input.name)).limit(1);
+        return created;
+      } catch {
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل تصنيف مخزون بهذا الاسم." });
+      }
+    }),
+    update: adminProcedure.input(inventoryCategoryInput.extend({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb(); const { id, ...values } = input;
+      const [existing] = await db.select().from(inventoryCategories).where(eq(inventoryCategories.id, id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "تصنيف المخزون غير موجود." });
+      try {
+        await db.transaction(async tx => {
+          await tx.update(inventoryCategories).set({ name: values.name, description: optionalText(values.description), colorKey: values.colorKey }).where(eq(inventoryCategories.id, id));
+          if (existing.name !== values.name) await tx.update(parts).set({ category: values.name }).where(eq(parts.categoryId, id));
+        });
+        return { success: true } as const;
+      } catch {
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل تصنيف مخزون بهذا الاسم." });
+      }
+    }),
+    archive: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(inventoryCategories).set({ isActive: 0 }).where(eq(inventoryCategories.id, input.id));
+      return { success: true } as const;
+    }),
+  }),
+
   componentTypes: router({
     list: protectedProcedure.query(async () => {
       const db = await requireDb();

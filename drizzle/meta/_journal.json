@@ -43,6 +43,13 @@
       "when": 1787147064345,
       "tag": "0005_huge_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1787148493885,
+      "tag": "0006_burly_thor_girl",
+      "breakpoints": true
     }
   ]
 }

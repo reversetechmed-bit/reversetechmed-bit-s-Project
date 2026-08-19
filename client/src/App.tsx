@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Inventory from "./pages/Inventory";
+import InventoryCategories from "./pages/InventoryCategories";
 import Organization from "./pages/Organization";
 import Requests from "./pages/Requests";
 import Transactions from "./pages/Transactions";
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/inventory"} component={() => <WarehouseShell><Inventory /></WarehouseShell>} />
       <Route path={"/products"} component={() => <WarehouseShell><Inventory section="products" /></WarehouseShell>} />
       <Route path={"/component-types"} component={() => <WarehouseShell><ComponentTypes /></WarehouseShell>} />
+      <Route path={"/inventory-categories"} component={() => <WarehouseShell><InventoryCategories /></WarehouseShell>} />
       <Route path={"/invoices"} component={() => <WarehouseShell><Invoices /></WarehouseShell>} />
       <Route path={"/my-requests"} component={() => <WarehouseShell><MyRequests /></WarehouseShell>} />
       <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />

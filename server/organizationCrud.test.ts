@@ -5,6 +5,7 @@ const db = {
   insert: vi.fn(() => ({ values: vi.fn(async () => undefined) })),
   select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [{ id: 1 }]) })) })) })),
   update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+  transaction: vi.fn(async (callback) => callback(db)),
 };
 
 vi.mock("./db", () => ({ getDb: vi.fn(async () => db) }));
@@ -41,6 +42,16 @@ describe("organization CRUD procedures", () => {
     await caller.componentTypes.update({ id: 1, name: "3D Printing", description: "Filaments, resin, and print-lab materials" });
     await caller.componentTypes.archive({ id: 1 });
     expect(db.insert).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
+  });
+
+  it("lets an Admin manage flexible inventory categories", async () => {
+    const caller = organizationRouter.createCaller(adminContext());
+    await caller.inventoryCategories.create({ name: "ميكانيكا", description: "مكونات ميكانيكية ومستلزمات الورشة", colorKey: "emerald" });
+    await caller.inventoryCategories.update({ id: 1, name: "ميكانيكا وورشة", description: "تصنيف محدث", colorKey: "emerald" });
+    await caller.inventoryCategories.archive({ id: 1 });
+    expect(db.insert).toHaveBeenCalled();
+    expect(db.transaction).toHaveBeenCalled();
     expect(db.update).toHaveBeenCalled();
   });
 });

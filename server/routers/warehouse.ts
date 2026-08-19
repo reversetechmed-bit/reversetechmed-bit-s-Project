@@ -3,9 +3,9 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   dispensingRequests,
   handoverInvoices,
-  partCategoryValues,
   warehouseSectionValues,
   parts,
+  inventoryCategories,
   inventoryTransactions,
   users,
   warehouseAlerts,
@@ -24,7 +24,7 @@ const partInput = z.object({
   partNumber: z.string().trim().min(2).max(100),
   name: z.string().trim().min(2).max(200),
   description: z.string().trim().max(2000).optional(),
-  category: z.enum(partCategoryValues),
+  categoryId: z.number().int().positive().nullable(),
   warehouseSection: z.enum(warehouseSectionValues).default("components"),
   componentTypeId: z.number().int().positive().nullable().optional(),
   quantity: z.number().int().min(0),
@@ -98,8 +98,13 @@ export const warehouseRouter = router({
       const db = await requireDb();
       try {
         return await db.transaction(async tx => {
+          if (!input.categoryId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر تصنيف مخزون نشطًا." });
+          const [category] = await tx.select().from(inventoryCategories).where(and(eq(inventoryCategories.id, input.categoryId), eq(inventoryCategories.isActive, 1))).limit(1);
+          if (!category) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر تصنيف مخزون نشطًا." });
           await tx.insert(parts).values({
             ...input,
+            category: category.name,
+            categoryId: category.id,
             description: optionalText(input.description),
             location: optionalText(input.location),
             storageShelf: optionalText(input.storageShelf),
@@ -163,11 +168,16 @@ export const warehouseRouter = router({
             const [duplicate] = await tx.select({ id: parts.id }).from(parts).where(eq(parts.partNumber, values.partNumber)).limit(1);
             if (duplicate) throw new TRPCError({ code: "CONFLICT", message: "توجد بالفعل قطعة بهذا الكود." });
           }
+          if (!values.categoryId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر تصنيف مخزون نشطًا." });
+          const [category] = await tx.select().from(inventoryCategories).where(and(eq(inventoryCategories.id, values.categoryId), eq(inventoryCategories.isActive, 1))).limit(1);
+          if (!category) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر تصنيف مخزون نشطًا." });
 
           await tx
             .update(parts)
             .set({
               ...values,
+              category: category.name,
+              categoryId: category.id,
               description: optionalText(values.description),
               location: optionalText(values.location),
               storageShelf: optionalText(values.storageShelf),

@@ -115,3 +115,15 @@
 - [x] Add an authenticated digital-receipt confirmation to handover invoices and preserve the confirmation in the audit trail.
 - [x] Add optional component and product fields for image upload or URL, specifications, and a structured storage location (shelf, drawer, box).
 - [ ] Verify the complete approve → reserve → handover → digital-receipt sequence with authenticated Admin and User sessions.
+- [x] Replace the fixed Medical, Embedded, Electronics, and Boards inventory categories with an Admin-managed category directory that supports create, edit, archive, and safe assignment to parts.
+- [x] Review and refine user-facing content so the product communicates REVERSE TECH’s internal operational value without unsupported marketing claims or overly promotional language.
+- [ ] Verify an Admin can create a new category, assign it to a part, rename it, and archive it in the authenticated UI.
+- [x] Audit and refine user-facing copy across authentication, dashboard, inventory, requests, invoices, notifications, and empty states so all messaging stays operational, precise, and non-promotional.
+- [x] Add a review checklist and regression coverage for key internal-product copy surfaces.
+- [ ] Verify the reviewed wording in authenticated Admin UI states alongside the already-verified User workspace.
+- [x] Audit and refine copy in Requests, Invoices, notification bell content, and remaining empty or error states; document each reviewed surface.
+- [ ] Record authenticated Admin UI evidence for dashboard, requests, invoices, notifications, and sidebar/header copy when an Admin session is available.
+- [x] Audit and refine notification-bell copy plus remaining empty and error states, and document accepted or changed wording for each surface.
+- [x] Add regression coverage for notification-bell copy and the empty or error states included in the editorial audit.
+- [x] Complete and document a screen-by-screen audit of empty and error states across authentication, inventory, requests, invoices, notifications, and management directories.
+- [ ] Verify the refined notification and empty or error-state wording in authenticated Admin UI flows and record evidence for the reviewed surfaces.

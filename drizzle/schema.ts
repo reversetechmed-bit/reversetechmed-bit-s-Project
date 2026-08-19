@@ -69,6 +69,21 @@ export const employeeProfiles = mysqlTable(
 export const partCategoryValues = ["Medical", "Embedded", "Electronics", "Boards"] as const;
 export const warehouseSectionValues = ["components", "products"] as const;
 
+export const inventoryCategories = mysqlTable(
+  "inventoryCategories",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull().unique(),
+    description: text("description"),
+    colorKey: varchar("colorKey", { length: 24 }).notNull().default("blue"),
+    isActive: int("isActive").notNull().default(1),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("inventoryCategories_active_name_idx").on(table.isActive, table.name)],
+);
+
 /** General-purpose types for Components; they do not depend on a company department. */
 export const componentTypes = mysqlTable(
   "componentTypes",
@@ -92,7 +107,8 @@ export const parts = mysqlTable(
     partNumber: varchar("partNumber", { length: 100 }).notNull().unique(),
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
-    category: mysqlEnum("category", partCategoryValues).notNull(),
+    category: varchar("category", { length: 120 }).notNull(),
+    categoryId: int("categoryId").references(() => inventoryCategories.id, { onDelete: "set null" }),
     warehouseSection: mysqlEnum("warehouseSection", warehouseSectionValues).notNull().default("components"),
     componentTypeId: int("componentTypeId").references(() => componentTypes.id, { onDelete: "set null" }),
     quantity: int("quantity").notNull().default(0),
