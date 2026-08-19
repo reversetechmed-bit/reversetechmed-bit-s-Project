@@ -14,4 +14,10 @@ describe("dashboard account switch controls", () => {
     expect(source).toContain('md:hidden');
     expect(source).toContain('aria-label="تسجيل الخروج وتبديل الحساب"');
   });
+
+  it("does not wait for an account query refresh before allowing the switch-account redirect", () => {
+    const authSource = readFileSync(new URL("../client/src/_core/hooks/useAuth.ts", import.meta.url), "utf8");
+    expect(authSource).toContain("void utils.auth.me.invalidate()");
+    expect(authSource).not.toContain("await utils.auth.me.invalidate()");
+  });
 });

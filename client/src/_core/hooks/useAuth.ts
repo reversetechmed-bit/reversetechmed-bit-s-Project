@@ -26,7 +26,8 @@ export function useAuth(options?: UseAuthOptions) {
     const result = await supabase.auth.signOut({ scope: "local" });
     setHasSession(false);
     utils.auth.me.setData(undefined, null);
-    await utils.auth.me.invalidate();
+    void utils.auth.me.cancel();
+    void utils.auth.me.invalidate();
     return result;
   }, [utils]);
 
