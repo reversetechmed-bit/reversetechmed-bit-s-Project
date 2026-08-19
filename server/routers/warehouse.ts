@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   dispensingRequests,
   handoverInvoices,
@@ -375,7 +375,7 @@ export const warehouseRouter = router({
     const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess] = await Promise.all([
       db.select().from(parts).orderBy(desc(parts.updatedAt)),
       db.select().from(dispensingRequests).orderBy(desc(dispensingRequests.createdAt)),
-      db.select().from(warehouseAlerts).where(eq(warehouseAlerts.isRead, 0)).orderBy(desc(warehouseAlerts.createdAt)),
+      db.select().from(warehouseAlerts).where(and(eq(warehouseAlerts.isRead, 0), isNull(warehouseAlerts.recipientUserId))).orderBy(desc(warehouseAlerts.createdAt)),
       db.select({ activity: warehouseActivities, actor: { id: users.id, name: users.name, email: users.email } }).from(warehouseActivities).leftJoin(users, eq(warehouseActivities.actorId, users.id)).orderBy(desc(warehouseActivities.createdAt)).limit(8),
       db.select({ id: users.id, name: users.name, email: users.email, lastSignedIn: users.lastSignedIn, role: users.role }).from(users).orderBy(desc(users.lastSignedIn)).limit(6),
     ]);
@@ -445,7 +445,7 @@ export const warehouseRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = await requireDb();
       return ctx.user.role === "admin"
-        ? db.select().from(warehouseAlerts).orderBy(desc(warehouseAlerts.createdAt)).limit(100)
+        ? db.select().from(warehouseAlerts).where(isNull(warehouseAlerts.recipientUserId)).orderBy(desc(warehouseAlerts.createdAt)).limit(100)
         : db.select().from(warehouseAlerts).where(eq(warehouseAlerts.recipientUserId, ctx.user.id)).orderBy(desc(warehouseAlerts.createdAt)).limit(100);
     }),
     markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {

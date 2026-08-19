@@ -16,6 +16,8 @@ import {
   PanelRight,
   Shapes,
   UsersRound,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -60,6 +62,36 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+let notificationAudioContext: AudioContext | null = null;
+
+function playNotificationTone() {
+  if (typeof window === "undefined" || !window.AudioContext) return;
+  try {
+    const context = notificationAudioContext ?? new window.AudioContext();
+    notificationAudioContext = context;
+    if (context.state === "suspended") void context.resume();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(740, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(980, context.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.09, context.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.3);
+  } catch {
+    // Audio can be unavailable until the browser receives a user gesture.
+  }
+}
+
+function notificationCategory(type: string, isAdmin: boolean) {
+  if (isAdmin) return type === "low_stock" ? "تنبيه مخزون" : "تشغيل المخزن";
+  if (type === "request_approved") return "تمت الموافقة";
+  if (type === "request_rejected") return "تم رفض الطلب";
+  return "تسليم وفاتورة";
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || `${DEFAULT_WIDTH}`, 10));
@@ -217,10 +249,29 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   const activeMenuItem = menuItems.find(item => item.path === location);
   const requestRoute = user?.role === "admin" ? "/requests" : "/my-requests";
   const utils = trpc.useUtils();
-  const { data: alerts } = trpc.warehouse.alerts.list.useQuery();
+  const { data: alerts } = trpc.warehouse.alerts.list.useQuery(undefined, { refetchInterval: 15_000, refetchIntervalInBackground: false });
   const markAlertRead = trpc.warehouse.alerts.markRead.useMutation({ onSuccess: () => utils.warehouse.alerts.list.invalidate() });
   const unreadAlerts = alerts?.filter(alert => !alert.isRead) ?? [];
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [notificationSoundEnabled, setNotificationSoundEnabled] = useState(() => localStorage.getItem("reverse-tech-notification-sound") === "enabled");
+  const knownAlertIds = useRef<Set<number> | null>(null);
+  const isAdmin = user?.role === "admin";
+  const notificationTitle = isAdmin ? "تنبيهات إدارة المخزن" : "تنبيهات طلباتي";
+  const notificationDescription = isAdmin ? "طلبات جديدة وتنبيهات المخزون" : "حالة طلباتك والتسليم والفواتير";
+
+  useEffect(() => {
+    const currentIds = new Set((alerts ?? []).map(alert => alert.id));
+    const previousIds = knownAlertIds.current;
+    if (previousIds && notificationSoundEnabled && unreadAlerts.some(alert => !previousIds.has(alert.id))) playNotificationTone();
+    knownAlertIds.current = currentIds;
+  }, [alerts, notificationSoundEnabled, unreadAlerts]);
+
+  const toggleNotificationSound = () => {
+    const nextValue = !notificationSoundEnabled;
+    setNotificationSoundEnabled(nextValue);
+    localStorage.setItem("reverse-tech-notification-sound", nextValue ? "enabled" : "disabled");
+    if (nextValue) playNotificationTone();
+  };
 
   const switchAccount = async () => {
     if (isSigningOut) return;
@@ -334,8 +385,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-2rem)] overflow-hidden p-0">
                 <div className="flex items-center justify-between border-b border-[#E8EEF3] px-4 py-3">
-                  <p className="font-bold text-[#0B2E4E]">التنبيهات</p>
-                  <span className="text-xs text-slate-500">{unreadAlerts.length} غير مقروء</span>
+                  <div><p className="font-bold text-[#0B2E4E]">{notificationTitle}</p><p className="mt-0.5 text-[11px] text-slate-500">{notificationDescription}</p></div>
+                  <div className="flex items-center gap-2"><button type="button" onClick={toggleNotificationSound} className={`grid h-8 w-8 place-items-center rounded-lg border transition-colors ${notificationSoundEnabled ? "border-[#8EDACD] bg-[#E7F8F4] text-[#008E7A]" : "border-[#DCEAF7] bg-white text-slate-400"}`} aria-label={notificationSoundEnabled ? "إيقاف صوت الإشعارات" : "تشغيل صوت الإشعارات"} title={notificationSoundEnabled ? "صوت الإشعارات مفعّل" : "صوت الإشعارات متوقف"}>{notificationSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</button><span className="text-xs text-slate-500">{unreadAlerts.length} غير مقروء</span></div>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {alerts?.slice(0, 8).map(alert => (
@@ -343,7 +394,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
                       <div className="flex items-start gap-2">
                         <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${alert.isRead ? "bg-slate-300" : "bg-[#0178D4]"}`} />
                         <div>
-                          <p className="text-sm font-semibold text-[#0B2E4E]">{alert.title}</p>
+                          <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold text-[#0B2E4E]">{alert.title}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isAdmin ? "bg-[#E7F3FE] text-[#0178D4]" : "bg-[#E7F8F4] text-[#008E7A]"}`}>{notificationCategory(alert.type, isAdmin)}</span></div>
                           <p className="mt-1 text-xs leading-5 text-slate-500">{alert.body}</p>
                         </div>
                       </div>

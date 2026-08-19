@@ -104,3 +104,7 @@
 - [ ] Reproduce the new-Admin signup flow end to end and identify the exact request that produced the code validation error.
 - [ ] Fix any confirmed signup blocker and add regression coverage for the actual registration path.
 - [ ] Fix Admin department and employee creation so Arabic and Latin identifiers save correctly and validation errors are shown in Arabic.
+- [x] Separate Admin operational notifications from user request notifications and add an accessible optional sound alert for newly received notifications.
+- [x] Add reliable visible-client notification refresh so new alerts are detected while the application is open.
+- [x] Add runtime coverage for Admin operational alert filtering and user personal-alert scoping.
+- [ ] Verify the notification bell and sound control with authenticated Admin and User sessions.
