@@ -526,7 +526,8 @@ export const warehouseRouter = router({
       const db = await requireDb();
       const [alert] = await db.select().from(warehouseAlerts).where(eq(warehouseAlerts.id, input.id)).limit(1);
       if (!alert) throw new TRPCError({ code: "NOT_FOUND", message: "التنبيه غير موجود." });
-      if (ctx.user.role !== "admin" && alert.recipientUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث هذا التنبيه." });
+      const canMarkRead = ctx.user.role === "admin" ? alert.recipientUserId === null : alert.recipientUserId === ctx.user.id;
+      if (!canMarkRead) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث هذا التنبيه." });
       await db.update(warehouseAlerts).set({ isRead: 1 }).where(eq(warehouseAlerts.id, input.id));
       return { success: true } as const;
     }),

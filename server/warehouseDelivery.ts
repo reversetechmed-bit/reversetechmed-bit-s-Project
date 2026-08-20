@@ -32,7 +32,7 @@ export type DeliveryPersistence = {
 };
 
 export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number, deliveredAt = new Date()) {
-  const delivery = validateDelivery(record.request.status, record.part.quantity, record.request.requestedQuantity);
+  const delivery = validateDelivery(record.request.status, record.part.quantity, record.part.reservedQuantity, record.request.requestedQuantity);
   if (!delivery.ok) return delivery;
 
   const invoiceNumber = `RT-HO-${deliveredAt.toISOString().slice(0, 10).replaceAll("-", "")}-${String(record.request.id).padStart(5, "0")}`;

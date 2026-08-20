@@ -98,6 +98,16 @@ describe("confirmed delivery persistence plan", () => {
     });
   });
 
+  it("refuses delivery if an approved request no longer has its requested quantity reserved", () => {
+    const movement = prepareConfirmedDelivery({
+      request: { id: 22, status: "approved", requestedQuantity: 4, requestedById: 8, purpose: "Reservation integrity test" },
+      part: { id: 6, partNumber: "EC-556", name: "Reserved regulator", warehouseSection: "components", quantity: 12, reservedQuantity: 2, minimumStock: 3 },
+      engineer: { id: 8, name: "Mariam Hassan" },
+    }, 2);
+
+    expect(movement).toEqual({ ok: false, reason: "The quantity reserved for this approved request is no longer sufficient for delivery." });
+  });
+
   it("executes the same delivery service used by the router to deduct stock, log the movement, and create a low-stock alert", async () => {
     const calls: Array<{ operation: string; payload: unknown }> = [];
     const outcome = await executeConfirmedDelivery({

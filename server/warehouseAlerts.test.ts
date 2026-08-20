@@ -37,4 +37,13 @@ describe("warehouse notification privacy", () => {
     const caller = warehouseRouter.createCaller(contextFor(1, "user"));
     await expect(caller.alerts.markRead({ id: 15 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("prevents an Admin from marking a user-only notification as read", async () => {
+    mockGetDb.mockResolvedValue({
+      select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [{ id: 16, recipientUserId: 7, isRead: 0 }]) })) })) })),
+      update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+    });
+    const caller = warehouseRouter.createCaller(contextFor(1, "admin"));
+    await expect(caller.alerts.markRead({ id: 16 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });

@@ -170,15 +170,14 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "منصة REVERSE TECH الداخلية لإدارة المخزون والطلبات.";
 
   return (
-    <div className="grid min-h-screen place-items-center bg-[#F4F9FD] p-5">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#DCEAF7] bg-white shadow-[0_18px_50px_rgba(11,46,78,.12)]">
-        <div className="relative overflow-hidden bg-[#0B2E4E] p-7 sm:p-8">
-          <div className="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-[#0178D4]/20 blur-2xl" />
-          <div className="absolute -bottom-16 right-1 h-32 w-32 rounded-full bg-[#5FB6F2]/10 blur-2xl" />
-          <div className="relative inline-flex rounded-2xl border border-white/25 bg-white px-5 py-3 shadow-[0_10px_26px_rgba(0,0,0,.18)]">
+    <div className="grid min-h-screen place-items-center bg-[#f4f0e8] p-5">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-[#d8cdbb] bg-[#fffefa] shadow-[0_18px_42px_rgba(31,42,52,.12)]">
+        <div className="relative overflow-hidden border-b-4 border-[#b58a4a] bg-[#17374c] p-7 sm:p-8">
+          <div className="absolute inset-0 opacity-20 [background-image:repeating-linear-gradient(90deg,transparent,transparent_15px,rgba(255,255,255,.12)_16px)]" />
+          <div className="relative inline-flex rounded-lg border border-[#d9c79d] bg-[#fffdf7] px-5 py-3 shadow-[0_7px_18px_rgba(0,0,0,.15)]">
             <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-12 w-auto object-contain sm:h-14" />
           </div>
-          <p className="relative mt-6 text-[10px] font-bold tracking-[.16em] text-[#7CC8F7]">تحليل · تصميم · تصنيع</p>
+          <p className="relative mt-6 text-[10px] font-bold tracking-[.16em] text-[#dfc488]">تحليل · تصميم · تصنيع</p>
           <h1 className="relative mt-2 text-[1.7rem] font-extrabold leading-tight text-white sm:text-3xl">{title}</h1>
           <p className="mt-2 text-sm leading-6 text-[#CDE8FA]">{subtitle}</p>
         </div>
@@ -333,17 +332,17 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar side="right" collapsible="icon" className="border-l-0 bg-[#0B2E4E] text-slate-200" disableTransition={isResizing}>
-          <SidebarHeader className="h-24 justify-center border-b border-white/10 bg-gradient-to-l from-[#0B2E4E] to-[#0C3F68]">
+        <Sidebar side="right" collapsible="icon" className="border-l-0 bg-[#17374c] text-[#ecdfc4]" disableTransition={isResizing}>
+          <SidebarHeader className="h-24 justify-center border-b-2 border-[#a9844b] bg-[#193b52]">
             <div className="flex w-full items-center gap-3 px-2">
-              <button onClick={toggleSidebar} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" aria-label="طي أو توسيع التنقل">
-                <PanelRight className="h-4 w-4 text-slate-400" />
+              <button onClick={toggleSidebar} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d9c79d]" aria-label="طي أو توسيع التنقل">
+                <PanelRight className="h-4 w-4 text-[#d9c79d]" />
               </button>
               <div className={`flex min-w-0 items-center gap-3 ${isCollapsed ? "mx-auto" : ""}`}>
-                <div className="grid h-12 w-16 shrink-0 place-items-center rounded-xl border border-white/25 bg-white px-2 shadow-[0_8px_18px_rgba(0,0,0,.16)] group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11">
+                <div className="grid h-12 w-16 shrink-0 place-items-center rounded-md border border-[#d9c79d] bg-[#fffdf7] px-2 shadow-[0_6px_14px_rgba(0,0,0,.16)] group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11">
                   <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-7 w-full object-contain group-data-[collapsible=icon]:h-5" />
                 </div>
-                {!isCollapsed && <div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[.08em] text-white">REVERSE TECH</p><span className="mt-1 block text-[9px] font-bold tracking-[.12em] text-[#9ECDF2]">المخزون والطلبات</span></div>}
+                {!isCollapsed && <div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[.08em] text-white">REVERSE TECH</p><span className="mt-1 block text-[9px] font-bold tracking-[.12em] text-[#ddc68e]">المخزون والطلبات</span></div>}
               </div>
             </div>
           </SidebarHeader>
@@ -351,8 +350,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
             <SidebarMenu className="gap-1 px-3 py-5">
               {menuItems.map(item => (
                 <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton isActive={location === item.path} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-11 text-right font-medium text-slate-400 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/10 data-[active=true]:text-white">
-                    <item.icon className={`h-4 w-4 ${location === item.path ? "text-[#5FB6F2]" : ""}`} />
+                  <SidebarMenuButton isActive={location === item.path} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-11 rounded-md text-right font-medium text-[#c7d0cf] hover:bg-white/10 hover:text-white data-[active=true]:bg-[#b58a4a] data-[active=true]:text-[#fffdf7]">
+                    <item.icon className={`h-4 w-4 ${location === item.path ? "text-white" : ""}`} />
                     <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -362,15 +361,15 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
           <SidebarFooter className="space-y-3 border-t border-white/10 p-3">
             <div className="flex items-center gap-3 px-1 group-data-[collapsible=icon]:justify-center">
               <Avatar className="h-9 w-9 shrink-0 border border-white/10">
-                <AvatarFallback className="bg-slate-800 text-xs font-medium text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="bg-[#294c62] text-xs font-medium text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <p className="truncate text-sm font-medium leading-none text-white">{user?.name || "-"}</p>
                 <p className="mt-1.5 truncate text-xs text-slate-500">{user?.role === "admin" ? "مسؤول المخزن" : "مستخدم مساحة العمل"}</p>
               </div>
             </div>
-            <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#5FB6F2]/35 bg-gradient-to-l from-[#0178D4] to-[#0B5798] px-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(1,120,212,.22)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#1598EB] hover:to-[#0C6FAF] hover:shadow-[0_12px_28px_rgba(1,120,212,.32)] active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5FB6F2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2E4E] disabled:cursor-wait disabled:opacity-75 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:px-0">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/15 ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
+            <button onClick={switchAccount} disabled={isSigningOut} aria-label="تسجيل الخروج وتبديل الحساب" title="تسجيل الخروج وتبديل الحساب" className="group flex h-11 w-full items-center justify-center gap-2 rounded-md border border-[#d0b27a] bg-[#a77b3d] px-3 text-sm font-bold text-white shadow-[0_5px_14px_rgba(0,0,0,.16)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#90672f] active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d9c79d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17374c] disabled:cursor-wait disabled:opacity-75 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:px-0">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/15 ring-1 ring-white/15 transition-transform duration-200 group-hover:scale-105">
                 <LogOut className="h-4 w-4" />
               </span>
               <span className="group-data-[collapsible=icon]:hidden">{isSigningOut ? "يتم تبديل الحساب…" : "تسجيل الخروج وتبديل الحساب"}</span>
@@ -379,13 +378,13 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
         </Sidebar>
         <div className={`absolute left-0 top-0 z-50 h-full w-1 cursor-col-resize hover:bg-primary/20 ${isCollapsed ? "hidden" : ""}`} onMouseDown={() => !isCollapsed && setIsResizing(true)} />
       </div>
-      <SidebarInset className="bg-[#F4F9FD]">
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#DCEAF7] bg-white/85 px-4 backdrop-blur sm:px-7">
+      <SidebarInset className="bg-[#f4f0e8]">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#d9d0bf] bg-[#fffefa]/95 px-4 backdrop-blur sm:px-7">
           <div className="flex items-center gap-3">
-            <SidebarTrigger className="h-9 w-9 rounded-lg border border-[#DCEAF7] bg-white md:hidden" />
+            <SidebarTrigger className="h-9 w-9 rounded-md border border-[#d9d0bf] bg-[#fffefa] md:hidden" />
             <div>
-              <p className="text-sm font-semibold text-[#0B2E4E]">{activeMenuItem?.label ?? "مساحة العمل"}</p>
-              <p className="text-[11px] text-slate-500">تشغيل المخزون والطلبات الداخلي</p>
+              <p className="text-sm font-semibold text-[#18354a]">{activeMenuItem?.label ?? "مساحة العمل"}</p>
+              <p className="text-[11px] text-[#777065]">تشغيل المخزون والطلبات الداخلي</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

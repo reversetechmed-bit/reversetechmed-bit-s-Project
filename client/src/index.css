@@ -43,39 +43,39 @@
 }
 
 :root {
-  --radius: 0.8rem;
-  --background: oklch(0.978 0.006 235);
-  --foreground: oklch(0.24 0.05 245);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.025 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.025 255);
-  --primary: oklch(0.56 0.16 245);
+  --radius: 0.5rem;
+  --background: oklch(0.966 0.014 82);
+  --foreground: oklch(0.25 0.035 246);
+  --card: oklch(0.992 0.006 82);
+  --card-foreground: oklch(0.23 0.03 246);
+  --popover: oklch(0.995 0.005 82);
+  --popover-foreground: oklch(0.23 0.03 246);
+  --primary: oklch(0.31 0.055 246);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.008 245);
-  --secondary-foreground: oklch(0.35 0.025 255);
-  --muted: oklch(0.96 0.008 245);
-  --muted-foreground: oklch(0.52 0.025 255);
-  --accent: oklch(0.94 0.04 210);
-  --accent-foreground: oklch(0.31 0.07 225);
+  --secondary: oklch(0.94 0.014 82);
+  --secondary-foreground: oklch(0.37 0.03 246);
+  --muted: oklch(0.945 0.012 82);
+  --muted-foreground: oklch(0.51 0.022 246);
+  --accent: oklch(0.78 0.07 79);
+  --accent-foreground: oklch(0.27 0.035 246);
   --destructive: oklch(0.58 0.2 25);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.91 0.008 245);
-  --input: oklch(0.91 0.008 245);
-  --ring: oklch(0.56 0.16 245);
-  --chart-1: oklch(0.56 0.16 245);
-  --chart-2: oklch(0.65 0.14 180);
-  --chart-3: oklch(0.7 0.18 55);
-  --chart-4: oklch(0.58 0.17 300);
-  --chart-5: oklch(0.62 0.18 25);
-  --sidebar: oklch(0.26 0.07 245);
-  --sidebar-foreground: oklch(0.93 0.01 255);
-  --sidebar-primary: oklch(0.63 0.14 240);
-  --sidebar-primary-foreground: oklch(0.15 0.02 255);
-  --sidebar-accent: oklch(0.32 0.07 245);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.3 0.03 255);
-  --sidebar-ring: oklch(0.65 0.13 205);
+  --border: oklch(0.86 0.018 82);
+  --input: oklch(0.85 0.018 82);
+  --ring: oklch(0.56 0.08 79);
+  --chart-1: oklch(0.42 0.06 246);
+  --chart-2: oklch(0.54 0.07 173);
+  --chart-3: oklch(0.64 0.1 79);
+  --chart-4: oklch(0.5 0.06 28);
+  --chart-5: oklch(0.55 0.08 110);
+  --sidebar: oklch(0.23 0.035 246);
+  --sidebar-foreground: oklch(0.91 0.014 82);
+  --sidebar-primary: oklch(0.67 0.075 79);
+  --sidebar-primary-foreground: oklch(0.21 0.03 246);
+  --sidebar-accent: oklch(0.3 0.04 246);
+  --sidebar-accent-foreground: oklch(0.98 0.005 82);
+  --sidebar-border: oklch(0.34 0.028 246);
+  --sidebar-ring: oklch(0.66 0.075 79);
 }
 
 .dark {
@@ -98,7 +98,7 @@
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { direction: rtl; }
-  body { @apply bg-background text-foreground; font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif; min-height: 100vh; text-align: right; font-weight: 500; }
+  body { @apply bg-background text-foreground; background-image: linear-gradient(90deg, rgba(86, 69, 38, .025) 1px, transparent 1px), linear-gradient(rgba(86, 69, 38, .02) 1px, transparent 1px); background-size: 28px 28px; font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif; min-height: 100vh; text-align: right; font-weight: 500; }
   h1, h2, h3, h4, h5, h6, .font-heading { font-family: "Cairo", "Tajawal", sans-serif; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [type="button"]:not(:disabled), [type="submit"]:not(:disabled), [type="reset"]:not(:disabled), a[href], select:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled) { @apply cursor-pointer; }
 }
@@ -106,10 +106,10 @@
 @layer components {
   .container { width: 100%; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; }
   .flex { min-height: 0; min-width: 0; }
-  .panel { @apply bg-white border border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(15,23,42,0.035)]; }
-  .page-title { @apply mt-1 text-2xl sm:text-3xl font-extrabold tracking-normal text-slate-950; font-family: "Cairo", "Tajawal", sans-serif; }
-  .page-subtitle { @apply mt-2 max-w-2xl text-sm leading-6 text-slate-500; }
-  .eyebrow { @apply text-[10px] font-extrabold tracking-[0.08em] text-cyan-700; font-family: "Cairo", "Tajawal", sans-serif; }
+  .panel { @apply bg-[#fffefa] border border-[#d9d0bf] rounded-xl shadow-[0_3px_14px_rgba(35,43,49,0.06)]; }
+  .page-title { @apply mt-1 text-2xl sm:text-3xl font-extrabold tracking-normal text-[#18354a]; font-family: "Cairo", "Tajawal", sans-serif; }
+  .page-subtitle { @apply mt-2 max-w-2xl text-sm leading-6 text-[#6e6a60]; }
+  .eyebrow { @apply text-[10px] font-extrabold tracking-[0.1em] text-[#94713d]; font-family: "Cairo", "Tajawal", sans-serif; }
   .font-mono { font-family: "Space Mono", ui-monospace, monospace; }
   table, input[type="number"], .warehouse-data { font-variant-numeric: tabular-nums; }
   [dir="rtl"] .text-left { text-align: right; }
