@@ -127,3 +127,7 @@
 - [x] Add regression coverage for notification-bell copy and the empty or error states included in the editorial audit.
 - [x] Complete and document a screen-by-screen audit of empty and error states across authentication, inventory, requests, invoices, notifications, and management directories.
 - [ ] Verify the refined notification and empty or error-state wording in authenticated Admin UI flows and record evidence for the reviewed surfaces.
+- [ ] Diagnose and fix the reported API/JSON response failure, then add regression coverage for the affected route or contract.
+- [x] Support unlimited email-and-password registrations for both Users and Admins, without an email-specific allowlist.
+- [x] Add a clear registration method selector and prepare a phone-number registration path subject to configured SMS delivery.
+- [ ] Verify all available registration methods, role mapping, and error states without exposing account details.
