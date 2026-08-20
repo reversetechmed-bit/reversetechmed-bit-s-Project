@@ -132,10 +132,11 @@
 - [x] Add a clear registration method selector and prepare a phone-number registration path subject to configured SMS delivery.
 - [ ] Verify all available registration methods, role mapping, and error states without exposing account details.
 - [ ] Enable and implement phone-number registration with SMS OTP after the Supabase SMS provider is configured.
-- [ ] Redesign the REVERSE TECH interface in a classic professional style across sign-in, sidebar, dashboards, forms, tables, and mobile navigation.
+- [x] Redesign the REVERSE TECH interface in a classic professional style across sign-in, sidebar, dashboards, forms, tables, and mobile navigation.
 - [ ] Verify the classic responsive interface and email/phone registration flows on desktop and mobile.
 - [x] Create an idempotent Admin-operated demo dataset covering departments, employees, component types, categories, components, products, requests, approvals, handovers, invoices, alerts, and audit records.
 - [x] Run a structured code review focused on authorization, inventory reservation integrity, API contracts, error handling, and regression risk; fix confirmed issues.
 - [ ] Add integration coverage for the seeded Admin and User workflows and verify the populated UI surfaces.
 - [x] Repair the delivery-rule and demo-data regression tests, then rerun the full automated verification suite.
 - [x] Harden delivery reservation integrity and notification read authorization based on the structured code review.
+- [x] Update and validate the reusable warehouse-management skill with reservation, notification-ownership, category, phone-registration, and idempotent-seed guidance.

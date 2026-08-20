@@ -170,10 +170,11 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "منصة REVERSE TECH الداخلية لإدارة المخزون والطلبات.";
 
   return (
-    <div className="grid min-h-screen place-items-center bg-[#f4f0e8] p-5">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-[#d8cdbb] bg-[#fffefa] shadow-[0_18px_42px_rgba(31,42,52,.12)]">
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-[#f4f0e8] p-5 before:absolute before:inset-y-0 before:right-[8%] before:w-px before:bg-[#b58a4a]/20 after:absolute after:inset-x-0 after:bottom-0 after:h-32 after:bg-[linear-gradient(135deg,transparent_0%,transparent_47%,rgba(181,138,74,.06)_47%,rgba(181,138,74,.06)_53%,transparent_53%,transparent_100%)]">
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-[#d8cdbb] bg-[#fffefa] shadow-[0_22px_52px_rgba(31,42,52,.16)]">
         <div className="relative overflow-hidden border-b-4 border-[#b58a4a] bg-[#17374c] p-7 sm:p-8">
           <div className="absolute inset-0 opacity-20 [background-image:repeating-linear-gradient(90deg,transparent,transparent_15px,rgba(255,255,255,.12)_16px)]" />
+          <div className="absolute left-7 top-7 font-mono text-[9px] tracking-[.18em] text-[#dfc488]/80">RT · WMS · 01</div>
           <div className="relative inline-flex rounded-lg border border-[#d9c79d] bg-[#fffdf7] px-5 py-3 shadow-[0_7px_18px_rgba(0,0,0,.15)]">
             <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-12 w-auto object-contain sm:h-14" />
           </div>
@@ -181,7 +182,8 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
           <h1 className="relative mt-2 text-[1.7rem] font-extrabold leading-tight text-white sm:text-3xl">{title}</h1>
           <p className="mt-2 text-sm leading-6 text-[#CDE8FA]">{subtitle}</p>
         </div>
-        <form onSubmit={recoveryMode ? submitPasswordRecovery : submit} className="space-y-4 p-7">
+        <form onSubmit={recoveryMode ? submitPasswordRecovery : submit} className="space-y-4 p-7 sm:p-8">
+          <div className="flex items-center gap-3 text-[10px] font-bold tracking-[.14em] text-[#94713d]"><span className="h-px flex-1 bg-[#d9c79d]" />بوابة العمليات الداخلية<span className="h-px flex-1 bg-[#d9c79d]" /></div>
           {recoveryMode ? (
             <>
               <div className="space-y-2">
@@ -242,7 +244,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             </>
           )}
           {message && <p className="rounded-lg border border-[#B9DAF7] bg-[#F1F8FE] px-3 py-2 text-sm text-[#0B5798]">{message}</p>}
-          <Button type="submit" disabled={submitting || !hasSupabaseConfiguration} className="w-full bg-[#0178D4] text-white hover:bg-[#0065B3]">
+          <Button type="submit" disabled={submitting || !hasSupabaseConfiguration} className="w-full border border-[#c99e5b] bg-[#a97937] text-white shadow-[0_5px_0_#7a5528] transition-[transform,box-shadow,background-color] duration-150 hover:bg-[#91642d] active:translate-y-px active:shadow-[0_3px_0_#7a5528]">
             {submitting ? "يرجى الانتظار…" : recoveryMode ? "حفظ كلمة المرور الجديدة" : mode === "signin" ? "تسجيل الدخول" : "إنشاء الحساب"}
           </Button>
           {!recoveryMode && <p className="text-center text-sm text-slate-500">
