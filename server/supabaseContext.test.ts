@@ -80,6 +80,21 @@ describe("Supabase-backed tRPC context", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  it("rejects a soft-deleted warehouse account even when its Supabase token and employee profile are otherwise valid", async () => {
+    const existing = { id: 23, openId: "removed-user", name: "Removed User", email: "removed@reversetech.com", loginMethod: "supabase", role: "user", requestedRole: "user", deletedAt: new Date(), createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
+    const select = selectQueue([existing], [{ id: 7, fullName: "Removed User", warehouseRole: "engineer", isActive: 1, userId: 23 }]);
+    const update = vi.fn();
+    const insert = vi.fn();
+    mocks.getDb.mockResolvedValue({ select, update, insert });
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ id: "removed-user", email: "removed@reversetech.com", user_metadata: {} }) })));
+
+    const context = await createContext({ req: { headers: { authorization: "Bearer signed-session-token" } }, res: {} } as never);
+
+    expect(context.user).toBeNull();
+    expect(update).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   it("returns an unauthenticated context when there is no bearer token and no legacy session", async () => {
     const context = await createContext({ req: { headers: {} }, res: {} } as never);
     expect(context.user).toBeNull();

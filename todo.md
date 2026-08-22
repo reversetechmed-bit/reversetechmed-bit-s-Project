@@ -203,3 +203,4 @@
 - [x] Add procedure-level regression coverage for employee activation eligibility and rejection reasons using isolated database mocks only.
 - [x] Add Admin-only safe deletion for a normal employee account while preserving operational records and employee history.
 - [x] Add department filters to the Employees and Users directories, with clear empty states and no exposure of credentials.
+- [x] Add a regression test proving a soft-deleted account cannot obtain an authenticated warehouse session.
