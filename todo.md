@@ -150,7 +150,7 @@
 - [x] Use the supplied REVERSE TECH logo prominently and centrally in the invoice layout and improve the matching Arabic PDF and Excel exports.
 - [x] Add an Admin-managed Companies module with create, edit, archive, search, and company-to-product relationships.
 - [x] Classify inventory products as finished products or work-in-progress products, and define their component bill of materials without duplicating stock records.
-- [ ] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.
+- [x] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.
 - [x] Add regression tests for company CRUD and product-component list/replace procedures plus the Companies and InvoiceDocument UI routes.
 - [x] Explicitly inspect and document the integrated hosting publish path and settings before the next deployment-ready checkpoint.
 - [ ] Verify the rendered Companies and InvoiceDocument pages in an authenticated Admin session and record visual evidence without changing operational records.
