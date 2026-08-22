@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
-import { companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, productComponents, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
+import { assemblyOrderLines, assemblyOrders, companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, maintenanceCases, parts, productComponents, purchaseOrderLines, purchaseOrders, users, warehouseActivities, warehouseAlerts, warehouseAutomationSettings } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { enrollmentPasscodeMatches, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
+import { buildWarehouseJsonBackup } from "../warehouseBackup";
 import { z } from "zod";
 
 export const departmentInput = z.object({
@@ -93,6 +94,16 @@ export const organizationRouter = router({
       if (!employee?.isActive || employee.userId || (employee.suspendedUntil && employee.suspendedUntil > new Date())) return { eligible: false as const, message: "هذا الحساب غير متاح للتفعيل. راجع مسؤول المخزن." };
       if (!employee.initialPasswordHash || !isValidEnrollmentPasscode(input.password) || !enrollmentPasscodeMatches(input.password, employee.initialPasswordHash)) return { eligible: false as const, message: "البريد أو كود دخول الموظف غير صحيح. استخدم البيانات التي أنشأها مسؤول المخزن." };
       return { eligible: true as const, message: "تم التحقق من بيانات الموظف. أنشئ كلمة مرور جديدة أو أكمل التفعيل.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "admin_credentials" as const };
+    }),
+  }),
+
+  backup: router({
+    exportJson: adminProcedure.query(async () => {
+      const db = await requireDb();
+      const [departmentRows, employeeRows, userRows, categoryRows, componentTypeRows, companyRows, partRows, bomRows, requestRows, invoiceRows, maintenanceRows, purchaseOrderRows, purchaseLineRows, assemblyOrderRows, assemblyLineRows, transactionRows, alertRows, activityRows, automationRows] = await Promise.all([
+        db.select().from(departments), db.select().from(employeeProfiles), db.select().from(users), db.select().from(inventoryCategories), db.select().from(componentTypes), db.select().from(companies), db.select().from(parts), db.select().from(productComponents), db.select().from(dispensingRequests), db.select().from(handoverInvoices), db.select().from(maintenanceCases), db.select().from(purchaseOrders), db.select().from(purchaseOrderLines), db.select().from(assemblyOrders), db.select().from(assemblyOrderLines), db.select().from(inventoryTransactions), db.select().from(warehouseAlerts), db.select().from(warehouseActivities), db.select().from(warehouseAutomationSettings),
+      ]);
+      return buildWarehouseJsonBackup({ departments: departmentRows, employeeProfiles: employeeRows, users: userRows, inventoryCategories: categoryRows, componentTypes: componentTypeRows, companies: companyRows, parts: partRows, productComponents: bomRows, dispensingRequests: requestRows, handoverInvoices: invoiceRows, maintenanceCases: maintenanceRows, purchaseOrders: purchaseOrderRows, purchaseOrderLines: purchaseLineRows, assemblyOrders: assemblyOrderRows, assemblyOrderLines: assemblyLineRows, inventoryTransactions: transactionRows, warehouseAlerts: alertRows, warehouseActivities: activityRows, warehouseAutomationSettings: automationRows });
     }),
   }),
 

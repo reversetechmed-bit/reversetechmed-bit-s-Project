@@ -182,3 +182,6 @@
 - [x] Let an Admin temporarily suspend an employee account until a specified date and safely deactivate or unlink an account while retaining warehouse audit records.
 - [x] Restrict sign-in and alternate email activation to active, non-suspended employee profiles only, with clear Arabic guidance.
 - [x] Add Admin account-management UI, demo coverage, and Vitest tests for provision, suspension, reactivation, and safe account removal.
+- [x] Add an Admin-only JSON backup export covering warehouse, organization, operations, and audit data without passwords, hashes, sessions, or secrets.
+- [x] Add a visible Admin backup-download control with clear backup scope, timestamp, and restore-safety guidance.
+- [x] Add Vitest coverage for backup completeness, admin authorization, and sensitive-field exclusion.

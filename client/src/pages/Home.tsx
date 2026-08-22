@@ -3,7 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { categoryMeta, formatDate, requestStatusMeta } from "@/lib/warehouse";
 import { trpc } from "@/lib/trpc";
-import { Activity, ArrowLeft, Boxes, ClipboardCheck, ClipboardList, Clock3, Handshake, PackageOpen, TriangleAlert, TrendingUp, UsersRound, Warehouse } from "lucide-react";
+import { Activity, ArrowLeft, Boxes, ClipboardCheck, ClipboardList, Clock3, DatabaseBackup, Handshake, PackageOpen, TriangleAlert, TrendingUp, UsersRound, Warehouse } from "lucide-react";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 export default function Home() {
@@ -13,14 +14,28 @@ export default function Home() {
   const { data: dashboard, isLoading: dashboardLoading } = trpc.warehouse.dashboard.useQuery(undefined, { enabled: isAdmin });
   const { data: parts, isLoading: partsLoading } = trpc.warehouse.inventory.list.useQuery();
   const { data: requests, isLoading: requestsLoading } = trpc.warehouse.requests.list.useQuery();
+  const backup = trpc.organization.backup.exportJson.useQuery(undefined, { enabled: false });
   const activeRequests = (requests ?? []).filter(({ request }) => request.status === "pending" || request.status === "approved");
+  const downloadBackup = async () => {
+    const result = await backup.refetch();
+    if (!result.data) return toast.error("تعذر إنشاء النسخة الاحتياطية الآن.");
+    const json = JSON.stringify(result.data, null, 2);
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reverse-tech-warehouse-backup-${result.data.generatedAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`تم تنزيل نسخة احتياطية تضم ${Object.values(result.data.recordCounts).reduce((total, count) => total + Number(count), 0)} سجلًا.`);
+  };
 
   return <div className="space-y-6">
     <section className="relative overflow-hidden rounded-2xl bg-[#0B2E4E] px-6 py-7 text-white sm:px-8 sm:py-9">
       <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(95,182,242,.5), transparent 24%), radial-gradient(circle at 35% 110%, rgba(0,179,154,.28), transparent 27%), linear-gradient(230deg, transparent 55%, rgba(255,255,255,.07) 55%, transparent 56%)" }} />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div><div className="inline-flex h-9 w-9 items-center justify-center"><img src="/manus-storage/reverse-tech-warehouse-icon-hq_0336c499.png" alt="أيقونة مخزن REVERSE TECH" className="h-8 w-8 object-contain drop-shadow-[0_3px_7px_rgba(0,0,0,.18)]" /></div><p className="mt-3 text-[10px] font-extrabold tracking-[0.12em] text-[#5FB6F2]">تحليل · تصميم · تصنيع</p><h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">{isAdmin ? "مركز إدارة المخزون" : `مرحبًا، ${user?.name?.split(" ")[0] || "زميل العمل"}`}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-[#CDE8FA]">{isAdmin ? "تابع الرصيد الفعلي والمحجوز والمتاح، وأدر الطلبات والتسليمات بوضوح داخل مساحة العمل." : "ابحث عن المكونات والمنتجات، وقدّم طلب صرف، وتابع حالة الطلب حتى تأكيد الاستلام."}</p></div>
-        <Button onClick={() => setLocation(isAdmin ? "/requests" : "/inventory")} className="shrink-0 gap-2 bg-[#FF7A29] text-white hover:bg-[#E76415]">{isAdmin ? "مراجعة الطلبات" : "استعراض المخزون"}<ArrowLeft className="h-4 w-4" /></Button>
+        <div className="flex flex-wrap gap-2"><Button onClick={() => setLocation(isAdmin ? "/requests" : "/inventory")} className="shrink-0 gap-2 bg-[#FF7A29] text-white hover:bg-[#E76415]">{isAdmin ? "مراجعة الطلبات" : "استعراض المخزون"}<ArrowLeft className="h-4 w-4" /></Button>{isAdmin && <Button variant="outline" onClick={downloadBackup} disabled={backup.isFetching} className="gap-2 border-[#dfc488] bg-white/10 text-white hover:bg-white/20 hover:text-white"><DatabaseBackup className="h-4 w-4" />{backup.isFetching ? "يجري تجهيز النسخة…" : "نسخة احتياطية JSON"}</Button>}</div>
       </div>
     </section>
     {isAdmin ? <><AdminOverview dashboard={dashboard} loading={dashboardLoading} requests={requests} requestsLoading={requestsLoading} setLocation={setLocation} /><AdminActivity dashboard={dashboard} loading={dashboardLoading} /></> : <EngineerOverview parts={parts} partsLoading={partsLoading} activeRequests={activeRequests} requestsLoading={requestsLoading} setLocation={setLocation} />}
