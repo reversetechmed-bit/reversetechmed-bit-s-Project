@@ -15,6 +15,7 @@ import {
   Mail,
   Package,
   PanelRight,
+  Wrench,
   Shapes,
   Tags,
   Users,
@@ -55,6 +56,7 @@ const adminMenuItems = [
   { icon: UsersRound, label: "الموظفون", path: "/employees" },
   { icon: Users, label: "المستخدمون", path: "/users" },
   { icon: History, label: "سجل الحركة", path: "/transactions" },
+  { icon: Wrench, label: "عمليات الصيانة والشراء", path: "/operations" },
 ];
 
 const engineerMenuItems = [
@@ -94,7 +96,15 @@ function playNotificationTone() {
 }
 
 function notificationCategory(type: string, isAdmin: boolean) {
-  if (isAdmin) return type === "low_stock" ? "تنبيه مخزون" : "تشغيل المخزن";
+  if (isAdmin) {
+    if (type === "low_stock") return "تنبيه مخزون";
+    if (type === "overdue_request") return "طلب متأخر";
+    if (type === "receipt_confirmation_pending") return "استلام معلق";
+    if (type === "purchase_received") return "توريد مخزون";
+    if (type === "maintenance_returned") return "صيانة ومرتجعات";
+    if (type === "assembly_completed") return "أمر تجميع";
+    return "تشغيل المخزن";
+  }
   if (type === "request_approved") return "تمت الموافقة";
   if (type === "request_rejected") return "تم رفض الطلب";
   return "تسليم وفاتورة";
@@ -260,7 +270,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   const knownAlertIds = useRef<Set<number> | null>(null);
   const isAdmin = user?.role === "admin";
   const notificationTitle = isAdmin ? "تنبيهات إدارة المخزن" : "تنبيهات طلباتي";
-  const notificationDescription = isAdmin ? "طلبات صرف جديدة وتنبيهات رصيد تحتاج متابعة" : "تغيرات حالة طلباتك والتسليمات والفواتير";
+  const notificationDescription = isAdmin ? "طلبات وتنبيهات رصيد وصيانة وشراء وتجميع تحتاج متابعة" : "تغيرات حالة طلباتك والتسليمات والفواتير";
   const unreadAlertLabel = unreadAlerts.length ? `${unreadAlerts.length} غير مقروءة` : "لا توجد إشعارات غير مقروءة";
 
   useEffect(() => {

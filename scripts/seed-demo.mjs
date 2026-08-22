@@ -133,6 +133,7 @@ try {
   const companyRows = [
     ["شركة ميدتك فيجن", "DEMO-MEDTECH", "مسؤول حلول الأجهزة", "+20 100 000 0101", "medtech.demo@reverse.local", "شركة عرض لأجهزة ومشروعات طبية."],
     ["شركة كونترول لاب", "DEMO-CONTROL", "فريق اللوحات والتحكم", "+20 100 000 0102", "control.demo@reverse.local", "شركة عرض لمنتجات التحكم واللوحات."],
+    ["شركة إمداد الإلكترونيات", "DEMO-SUPPLY", "فريق التوريد", "+20 100 000 0103", "supply.demo@reverse.local", "مورد تجريبي للمكونات ومواد التشغيل."],
   ];
   const companies = {};
   for (const [name, code, contactName, contactPhone, contactEmail, notes] of companyRows) {
@@ -165,7 +166,7 @@ try {
     await connection.execute("UPDATE parts SET name = ?, companyId = ?, productStage = ? WHERE id = ?", [name, companyCode ? companies[companyCode] : null, productStage, parts[partNumber]]);
   }
 
-  const productBomRows = [["DEMO-PCB-001", "DEMO-EMB-001", 1, "وحدة التحكم الأساسية للوحة تحت التشغيل."], ["DEMO-PCB-001", "DEMO-MED-001", 1, "واجهة الحساس ضمن اللوحة."], ["DEMO-PROD-001", "DEMO-EMB-001", 1, "وحدة التحكم داخل المنتج التام."], ["DEMO-PROD-001", "DEMO-MED-001", 1, "واجهة الحساس داخل المنتج التام."]];
+  const productBomRows = [["DEMO-PCB-001", "DEMO-EMB-001", 1, "وحدة التحكم الأساسية للوحة تحت التشغيل."], ["DEMO-PCB-001", "DEMO-MED-001", 1, "واجهة الحساس ضمن اللوحة."], ["DEMO-PROD-001", "DEMO-PCB-001", 1, "لوحة تحت التشغيل تدخل في المنتج التام."], ["DEMO-PROD-001", "DEMO-EMB-001", 1, "وحدة التحكم داخل المنتج التام."], ["DEMO-PROD-001", "DEMO-MED-001", 1, "واجهة الحساس داخل المنتج التام."]];
   for (const [productNumber, componentNumber, quantityRequired, notes] of productBomRows) {
     await insertOnce({ table: "productComponents", whereSql: "productId = ? AND componentId = ?", whereValues: [parts[productNumber], parts[componentNumber]], columns: ["productId", "componentId", "quantityRequired", "notes"], values: [parts[productNumber], parts[componentNumber], quantityRequired, `${DEMO_MARKER} ${notes}`] });
   }
@@ -201,6 +202,28 @@ try {
   });
   await connection.execute("UPDATE handoverInvoices SET requesterNameSnapshot = ?, recipientNameSnapshot = ?, recipientDepartmentSnapshot = ?, projectReferenceSnapshot = ?, requestNoteSnapshot = ?, deliveryNote = ? WHERE id = ?", [engineer.name, "المستلم التجريبي", "مختبر الأنظمة المضمنة", "DEMO-DEVICE-01", `${DEMO_MARKER} بيانات طلب تظهر تلقائيًا في الفاتورة.`, `${DEMO_MARKER} تم التسليم من رف A-02 بحالة سليمة.`, deliveredInvoiceId]);
 
+  const overdueRequestId = await insertOnce({
+    table: "dispensingRequests",
+    whereSql: "purpose = ?",
+    whereValues: [`${DEMO_MARKER} طلب متابعة متأخر لإعادة تزويد معمل الطباعة`],
+    columns: ["partId", "requestedById", "requestedQuantity", "purpose", "recipientName", "status", "createdAt"],
+    values: [parts["DEMO-3DP-001"], engineer.id, 1, `${DEMO_MARKER} طلب متابعة متأخر لإعادة تزويد معمل الطباعة`, "معمل الطباعة التجريبي", "pending", asMysqlDate(80)],
+  });
+  const pendingReceiptRequestId = await insertOnce({
+    table: "dispensingRequests",
+    whereSql: "purpose = ?",
+    whereValues: [`${DEMO_MARKER} طلب فاتورة بانتظار تأكيد الاستلام`],
+    columns: ["partId", "requestedById", "requestedQuantity", "purpose", "recipientName", "status", "reviewedById", "reviewedAt", "deliveredById", "deliveredAt", "createdAt"],
+    values: [parts["DEMO-MNT-001"], engineer.id, 2, `${DEMO_MARKER} طلب فاتورة بانتظار تأكيد الاستلام`, "المستلم التجريبي", "delivered", admin.id, asMysqlDate(38), admin.id, asMysqlDate(30), asMysqlDate(48)],
+  });
+  const pendingReceiptInvoiceId = await insertOnce({
+    table: "handoverInvoices",
+    whereSql: "invoiceNumber = ?",
+    whereValues: ["DEMO-INV-PENDING-0001"],
+    columns: ["invoiceNumber", "requestId", "partId", "issuedById", "receivedById", "partNumberSnapshot", "partNameSnapshot", "warehouseSectionSnapshot", "quantity", "purposeSnapshot", "requesterNameSnapshot", "recipientNameSnapshot", "deliveryNote", "issuedAt"],
+    values: ["DEMO-INV-PENDING-0001", pendingReceiptRequestId, parts["DEMO-MNT-001"], admin.id, engineer.id, "DEMO-MNT-001", "عبوة أكياس ESD", "products", 2, `${DEMO_MARKER} طلب فاتورة بانتظار تأكيد الاستلام`, engineer.name, "المستلم التجريبي", `${DEMO_MARKER} فاتورة عرض متروكة عمدًا دون تأكيد.`, asMysqlDate(30)],
+  });
+
   const transactionRows = [
     ["DEMO-MED-001", requests["DEMO-REQ-DELIVERED"], "delivery_confirmed", -4, 18, 14, admin.id, engineer.id, "تم تسليم لوحة واجهة الحساس وإصدار فاتورة العرض."],
     ["DEMO-EMB-001", requests["DEMO-REQ-APPROVED"], "request_approved", 0, 42, 42, admin.id, engineer.id, "تم اعتماد الطلب وحجز 5 وحدات للتجهيز."],
@@ -215,6 +238,59 @@ try {
       "INSERT INTO inventoryTransactions (partId, requestId, type, quantityDelta, quantityBefore, quantityAfter, actorId, engineerId, partNumberSnapshot, partNameSnapshot, warehouseSectionSnapshot, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [parts[partNumber], requestId, type, quantityDelta, quantityBefore, quantityAfter, actorId, engineerId, partNumber, part[1], part[3], key, asMysqlDate(type === "delivery_confirmed" ? 48 : 18)],
     );
+  }
+
+  const existingMaintenance = await one("SELECT id FROM maintenanceCases WHERE caseNumber = ? LIMIT 1", ["DEMO-MNT-0001"]);
+  const maintenanceOutboundId = await insertOnce({
+    table: "maintenanceCases", whereSql: "caseNumber = ?", whereValues: ["DEMO-MNT-0001"],
+    columns: ["caseNumber", "type", "status", "partId", "quantity", "outboundCondition", "notes", "createdById", "dispatchedById", "sentAt"],
+    values: ["DEMO-MNT-0001", "maintenance_outbound", "sent_for_maintenance", parts["DEMO-MNT-001"], 2, `${DEMO_MARKER} تغليف سليم قبل الإرسال.`, `${DEMO_MARKER} حالة صيانة خارجية مفتوحة للمورد.`, admin.id, admin.id, asMysqlDate(10)],
+  });
+  if (!existingMaintenance) {
+    await connection.execute("UPDATE parts SET quantity = quantity - 2 WHERE id = ?", [parts["DEMO-MNT-001"]]);
+    await connection.execute("INSERT INTO inventoryTransactions (partId, maintenanceCaseId, type, quantityDelta, quantityBefore, quantityAfter, actorId, partNumberSnapshot, partNameSnapshot, warehouseSectionSnapshot, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [parts["DEMO-MNT-001"], maintenanceOutboundId, "maintenance_dispatched", -2, 120, 118, admin.id, "DEMO-MNT-001", "عبوة أكياس ESD", "products", `${DEMO_MARKER} تم إخراج عبوتين للصيانة.`, asMysqlDate(10)]);
+  }
+  await insertOnce({
+    table: "maintenanceCases", whereSql: "caseNumber = ?", whereValues: ["DEMO-MNT-0002"],
+    columns: ["caseNumber", "type", "status", "partId", "quantity", "customerName", "customerReference", "notes", "createdById"],
+    values: ["DEMO-MNT-0002", "customer_return", "awaiting_inspection", parts["DEMO-MED-001"], 1, "عميل تجريبي", "DEMO-RMA-01", `${DEMO_MARKER} مرتجع عميل بانتظار فحص الأدمن قبل إعادة الرصيد.`, admin.id],
+  });
+
+  const existingPurchase = await one("SELECT id FROM purchaseOrders WHERE orderNumber = ? LIMIT 1", ["DEMO-PO-0001"]);
+  const purchaseOrderId = await insertOnce({
+    table: "purchaseOrders", whereSql: "orderNumber = ?", whereValues: ["DEMO-PO-0001"],
+    columns: ["orderNumber", "supplierCompanyId", "status", "expectedAt", "orderedAt", "notes", "createdById"],
+    values: ["DEMO-PO-0001", companies["DEMO-SUPPLY"], "partially_received", asMysqlDate(-48), asMysqlDate(24), `${DEMO_MARKER} أمر شراء مرتبط بنقص بكرة PLA.`, admin.id],
+  });
+  await insertOnce({
+    table: "purchaseOrderLines", whereSql: "purchaseOrderId = ? AND partId = ?", whereValues: [purchaseOrderId, parts["DEMO-3DP-001"]],
+    columns: ["purchaseOrderId", "partId", "quantityOrdered", "quantityReceived", "shortageQuantitySnapshot", "shortageReason", "notes"],
+    values: [purchaseOrderId, parts["DEMO-3DP-001"], 12, 5, 2, `${DEMO_MARKER} الرصيد المتاح أقل من الحد الأدنى.`, `${DEMO_MARKER} استلام جزئي بانتظار بقية التوريد.`],
+  });
+  if (!existingPurchase) {
+    await connection.execute("UPDATE parts SET quantity = quantity + 5 WHERE id = ?", [parts["DEMO-3DP-001"]]);
+    await connection.execute("INSERT INTO inventoryTransactions (partId, purchaseOrderId, type, quantityDelta, quantityBefore, quantityAfter, actorId, partNumberSnapshot, partNameSnapshot, warehouseSectionSnapshot, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [parts["DEMO-3DP-001"], purchaseOrderId, "purchase_received", 5, 2, 7, admin.id, "DEMO-3DP-001", "بكرة PLA أسود للطباعة ثلاثية الأبعاد", "components", `${DEMO_MARKER} استلام جزئي من أمر الشراء DEMO-PO-0001.`, asMysqlDate(8)]);
+  }
+
+  const existingAssembly = await one("SELECT id FROM assemblyOrders WHERE assemblyNumber = ? LIMIT 1", ["DEMO-ASM-0001"]);
+  const assemblyOrderId = await insertOnce({
+    table: "assemblyOrders", whereSql: "assemblyNumber = ?", whereValues: ["DEMO-ASM-0001"],
+    columns: ["assemblyNumber", "targetProductId", "quantityToProduce", "status", "notes", "createdById", "completedById", "completedAt"],
+    values: ["DEMO-ASM-0001", parts["DEMO-PROD-001"], 1, "completed", `${DEMO_MARKER} إنتاج وحدة مراقبة حيوية من لوحة تحت التشغيل ومكونات داعمة.`, admin.id, admin.id, asMysqlDate(6)],
+  });
+  const assemblySources = [["DEMO-PCB-001", 1], ["DEMO-EMB-001", 1], ["DEMO-MED-001", 1]];
+  for (const [sourceNumber, quantityPerUnit] of assemblySources) {
+    const source = partRows.find(row => row[0] === sourceNumber);
+    await insertOnce({ table: "assemblyOrderLines", whereSql: "assemblyOrderId = ? AND sourcePartId = ?", whereValues: [assemblyOrderId, parts[sourceNumber]], columns: ["assemblyOrderId", "sourcePartId", "quantityPerUnit", "quantityConsumed", "partNumberSnapshot", "partNameSnapshot"], values: [assemblyOrderId, parts[sourceNumber], quantityPerUnit, quantityPerUnit, sourceNumber, source[1]] });
+  }
+  if (!existingAssembly) {
+    await connection.execute("UPDATE parts SET quantity = quantity - 1 WHERE id IN (?, ?, ?)", [parts["DEMO-PCB-001"], parts["DEMO-EMB-001"], parts["DEMO-MED-001"]]);
+    await connection.execute("UPDATE parts SET quantity = quantity + 1 WHERE id = ?", [parts["DEMO-PROD-001"]]);
+    for (const [sourceNumber] of assemblySources) {
+      const source = partRows.find(row => row[0] === sourceNumber);
+      await connection.execute("INSERT INTO inventoryTransactions (partId, assemblyOrderId, type, quantityDelta, actorId, partNumberSnapshot, partNameSnapshot, warehouseSectionSnapshot, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [parts[sourceNumber], assemblyOrderId, "assembly_consumed", -1, admin.id, sourceNumber, source[1], source[3], `${DEMO_MARKER} استهلاك للتجميع DEMO-ASM-0001.`, asMysqlDate(6)]);
+    }
+    await connection.execute("INSERT INTO inventoryTransactions (partId, assemblyOrderId, type, quantityDelta, actorId, partNumberSnapshot, partNameSnapshot, warehouseSectionSnapshot, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [parts["DEMO-PROD-001"], assemblyOrderId, "assembly_produced", 1, admin.id, "DEMO-PROD-001", "وحدة مراقبة حيوية تامة", "products", `${DEMO_MARKER} إنتاج منتج تام عبر DEMO-ASM-0001.`, asMysqlDate(6)]);
   }
 
   const alertRows = [
@@ -232,6 +308,16 @@ try {
       values: [type, `${DEMO_MARKER} ${title}`, `${DEMO_MARKER} ${body}`, partId, requestId, recipientUserId, isRead, asMysqlDate(12)],
     });
   }
+  await insertOnce({
+    table: "warehouseAlerts", whereSql: "dedupeKey = ?", whereValues: [`overdue-request:${overdueRequestId}`],
+    columns: ["type", "title", "body", "partId", "requestId", "isRead", "dedupeKey", "createdAt"],
+    values: ["overdue_request", `${DEMO_MARKER} طلب صرف متأخر يحتاج متابعة`, `${DEMO_MARKER} طلب إعادة تزويد معمل الطباعة ما زال مفتوحًا منذ أكثر من 48 ساعة.`, parts["DEMO-3DP-001"], overdueRequestId, 0, `overdue-request:${overdueRequestId}`, asMysqlDate(2)],
+  });
+  await insertOnce({
+    table: "warehouseAlerts", whereSql: "dedupeKey = ?", whereValues: [`receipt-pending:${pendingReceiptInvoiceId}`],
+    columns: ["type", "title", "body", "partId", "requestId", "isRead", "dedupeKey", "createdAt"],
+    values: ["receipt_confirmation_pending", `${DEMO_MARKER} تأكيد استلام معلق`, `${DEMO_MARKER} الفاتورة DEMO-INV-PENDING-0001 بانتظار التأكيد الرقمي منذ أكثر من 24 ساعة.`, parts["DEMO-MNT-001"], pendingReceiptRequestId, 0, `receipt-pending:${pendingReceiptInvoiceId}`, asMysqlDate(2)],
+  });
 
   const activityRows = [
     ["request_submitted", engineer.id, "تم إنشاء طلب صرف تجريبي", "طلب تجهيز محطة اختبار بانتظار متابعة مسؤول المخزن.", requests["DEMO-REQ-PENDING"], parts["DEMO-MNT-001"], 12],

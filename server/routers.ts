@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { organizationRouter } from "./routers/organization";
+import { operationsRouter } from "./routers/operations";
 import { warehouseRouter } from "./routers/warehouse";
 
 export const appRouter = router({
@@ -19,6 +20,7 @@ export const appRouter = router({
     }),
   }),
   organization: organizationRouter,
+  operations: operationsRouter,
   warehouse: warehouseRouter,
 });
 

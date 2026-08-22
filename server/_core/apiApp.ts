@@ -4,6 +4,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
+import { scheduledEscalationsHandler } from "../scheduledEscalations";
 
 /** Builds the non-static API stack so its HTTP contract can be integration-tested. */
 export function createApiApp() {
@@ -12,6 +13,7 @@ export function createApiApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.post("/api/scheduled/warehouse-escalations", scheduledEscalationsHandler);
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
   return app;
 }

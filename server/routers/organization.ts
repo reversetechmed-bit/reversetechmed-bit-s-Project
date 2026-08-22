@@ -110,9 +110,9 @@ export const organizationRouter = router({
       return db.transaction(async tx => {
         const [product] = await tx.select().from(parts).where(eq(parts.id, input.productId)).limit(1);
         if (!product || product.warehouseSection !== "products") throw new TRPCError({ code: "BAD_REQUEST", message: "اختر منتجًا من قسم المنتجات لضبط قائمة مكوناته." });
-        const validComponents = await tx.select({ id: parts.id }).from(parts).where(eq(parts.warehouseSection, "components"));
-        const validIds = new Set(validComponents.map(component => component.id));
-        if (input.components.some(component => !validIds.has(component.componentId))) throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن ربط المنتج بمكونات موجودة في قسم المكونات فقط." });
+        const validComponents = await tx.select({ id: parts.id, warehouseSection: parts.warehouseSection, productStage: parts.productStage }).from(parts);
+        const validIds = new Set(validComponents.filter(component => component.warehouseSection === "components" || (component.warehouseSection === "products" && component.productStage === "work_in_progress")).map(component => component.id));
+        if (input.components.some(component => !validIds.has(component.componentId))) throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن ربط المنتج بمكونات المخزون أو المنتجات تحت التشغيل فقط." });
         await tx.delete(productComponents).where(eq(productComponents.productId, product.id));
         if (input.components.length) await tx.insert(productComponents).values(input.components.map(component => ({ productId: product.id, componentId: component.componentId, quantityRequired: component.quantityRequired, notes: optionalText(component.notes) })));
         return { success: true } as const;

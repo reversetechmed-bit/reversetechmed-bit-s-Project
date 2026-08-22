@@ -205,6 +205,120 @@ export const dispensingRequests = mysqlTable(
   ],
 );
 
+export const maintenanceCaseTypeValues = ["maintenance_outbound", "customer_return"] as const;
+export const maintenanceCaseStatusValues = ["open", "sent_for_maintenance", "awaiting_inspection", "returned_to_stock", "closed", "cancelled"] as const;
+
+/** Controlled custody record for parts sent to maintenance or returned from a customer. */
+export const maintenanceCases = mysqlTable(
+  "maintenanceCases",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    caseNumber: varchar("caseNumber", { length: 48 }).notNull().unique(),
+    type: mysqlEnum("type", maintenanceCaseTypeValues).notNull(),
+    status: mysqlEnum("status", maintenanceCaseStatusValues).notNull().default("open"),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantity: int("quantity").notNull(),
+    customerName: varchar("customerName", { length: 200 }),
+    customerReference: varchar("customerReference", { length: 160 }),
+    outboundCondition: text("outboundCondition"),
+    inboundCondition: text("inboundCondition"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    dispatchedById: int("dispatchedById").references(() => users.id, { onDelete: "set null" }),
+    receivedById: int("receivedById").references(() => users.id, { onDelete: "set null" }),
+    sentAt: timestamp("sentAt"),
+    returnedAt: timestamp("returnedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("maintenance_cases_status_idx").on(table.status, table.createdAt),
+    index("maintenance_cases_part_idx").on(table.partId),
+  ],
+);
+
+export const purchaseOrderStatusValues = ["draft", "ordered", "partially_received", "received", "cancelled"] as const;
+
+/** Purchase order header, using the existing company directory as the supplier directory. */
+export const purchaseOrders = mysqlTable(
+  "purchaseOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    orderNumber: varchar("orderNumber", { length: 48 }).notNull().unique(),
+    supplierCompanyId: int("supplierCompanyId").notNull().references(() => companies.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", purchaseOrderStatusValues).notNull().default("draft"),
+    expectedAt: timestamp("expectedAt"),
+    orderedAt: timestamp("orderedAt"),
+    receivedAt: timestamp("receivedAt"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("purchase_orders_status_idx").on(table.status, table.createdAt),
+    index("purchase_orders_supplier_idx").on(table.supplierCompanyId),
+  ],
+);
+
+/** Individual item lines of a purchase order, including the shortage snapshot that prompted procurement. */
+export const purchaseOrderLines = mysqlTable(
+  "purchaseOrderLines",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    purchaseOrderId: int("purchaseOrderId").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityOrdered: int("quantityOrdered").notNull(),
+    quantityReceived: int("quantityReceived").notNull().default(0),
+    shortageQuantitySnapshot: int("shortageQuantitySnapshot"),
+    shortageReason: varchar("shortageReason", { length: 240 }),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("purchase_order_lines_unique_idx").on(table.purchaseOrderId, table.partId),
+    index("purchase_order_lines_part_idx").on(table.partId),
+  ],
+);
+
+export const assemblyOrderStatusValues = ["draft", "completed", "cancelled"] as const;
+
+/** An auditable build record that consumes BOM sources and produces a finished product. */
+export const assemblyOrders = mysqlTable(
+  "assemblyOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    assemblyNumber: varchar("assemblyNumber", { length: 48 }).notNull().unique(),
+    targetProductId: int("targetProductId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityToProduce: int("quantityToProduce").notNull(),
+    status: mysqlEnum("status", assemblyOrderStatusValues).notNull().default("draft"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    completedById: int("completedById").references(() => users.id, { onDelete: "set null" }),
+    completedAt: timestamp("completedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("assembly_orders_status_idx").on(table.status, table.createdAt), index("assembly_orders_target_idx").on(table.targetProductId)],
+);
+
+/** Frozen component list captured for each assembly order. */
+export const assemblyOrderLines = mysqlTable(
+  "assemblyOrderLines",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    assemblyOrderId: int("assemblyOrderId").notNull().references(() => assemblyOrders.id, { onDelete: "cascade" }),
+    sourcePartId: int("sourcePartId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityPerUnit: int("quantityPerUnit").notNull(),
+    quantityConsumed: int("quantityConsumed").notNull(),
+    partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
+    partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("assembly_order_lines_unique_idx").on(table.assemblyOrderId, table.sourcePartId)],
+);
+
 export const transactionTypeValues = [
   "part_created",
   "part_updated",
@@ -212,6 +326,11 @@ export const transactionTypeValues = [
   "request_approved",
   "request_rejected",
   "delivery_confirmed",
+  "maintenance_dispatched",
+  "maintenance_returned",
+  "purchase_received",
+  "assembly_consumed",
+  "assembly_produced",
 ] as const;
 
 /** Immutable audit records. A delivery creates the only negative quantity movement. */
@@ -221,6 +340,9 @@ export const inventoryTransactions = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
     requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
+    purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
     type: mysqlEnum("type", transactionTypeValues).notNull(),
     quantityDelta: int("quantityDelta").notNull().default(0),
     quantityBefore: int("quantityBefore"),
@@ -236,11 +358,14 @@ export const inventoryTransactions = mysqlTable(
   table => [
     index("transactions_part_idx").on(table.partId),
     index("transactions_request_idx").on(table.requestId),
+    index("transactions_maintenance_idx").on(table.maintenanceCaseId),
+    index("transactions_purchase_order_idx").on(table.purchaseOrderId),
+    index("transactions_assembly_order_idx").on(table.assemblyOrderId),
     index("transactions_date_idx").on(table.createdAt),
   ],
 );
 
-export const alertTypeValues = ["new_request", "low_stock", "request_approved", "request_rejected", "handover_completed"] as const;
+export const alertTypeValues = ["new_request", "low_stock", "request_approved", "request_rejected", "handover_completed", "overdue_request", "receipt_confirmation_pending", "maintenance_returned", "purchase_received", "assembly_completed"] as const;
 
 /** Admin-facing in-app alerts, retained until marked as read. */
 export const warehouseAlerts = mysqlTable(
@@ -252,11 +377,15 @@ export const warehouseAlerts = mysqlTable(
     body: text("body").notNull(),
     partId: int("partId").references(() => parts.id, { onDelete: "set null" }),
     requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
+    purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
     recipientUserId: int("recipientUserId").references(() => users.id, { onDelete: "cascade" }),
+    dedupeKey: varchar("dedupeKey", { length: 160 }).unique(),
     isRead: int("isRead").notNull().default(0),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
-  table => [index("alerts_unread_idx").on(table.isRead, table.createdAt), index("alerts_recipient_idx").on(table.recipientUserId, table.isRead)],
+  table => [index("alerts_unread_idx").on(table.isRead, table.createdAt), index("alerts_recipient_idx").on(table.recipientUserId, table.isRead), index("alerts_type_part_idx").on(table.type, table.partId)],
 );
 
 /** Print-ready proof that an approved item was physically handed to the requesting user. */
@@ -289,7 +418,7 @@ export const handoverInvoices = mysqlTable(
   table => [index("invoices_issued_at_idx").on(table.issuedAt)],
 );
 
-export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed"] as const;
+export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "maintenance_dispatched", "maintenance_returned", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
 
 /** Recent warehouse events shown to the Admin on the control dashboard. */
 export const warehouseActivities = mysqlTable(
@@ -302,9 +431,27 @@ export const warehouseActivities = mysqlTable(
     detail: text("detail"),
     requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
     partId: int("partId").references(() => parts.id, { onDelete: "set null" }),
+    maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
+    purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => [index("warehouse_activity_date_idx").on(table.createdAt)],
+);
+
+/** Durable project-level record for the managed warehouse escalation Heartbeat job. */
+export const warehouseAutomationSettings = mysqlTable(
+  "warehouseAutomationSettings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    settingKey: varchar("settingKey", { length: 64 }).notNull().unique(),
+    scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }).unique(),
+    cronExpression: varchar("cronExpression", { length: 64 }).notNull(),
+    isEnabled: int("isEnabled").notNull().default(1),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("warehouse_automation_enabled_idx").on(table.isEnabled)],
 );
 
 export type Part = typeof parts.$inferSelect;
@@ -315,3 +462,7 @@ export type Department = typeof departments.$inferSelect;
 export type EmployeeProfile = typeof employeeProfiles.$inferSelect;
 export type ComponentType = typeof componentTypes.$inferSelect;
 export type HandoverInvoice = typeof handoverInvoices.$inferSelect;
+export type MaintenanceCase = typeof maintenanceCases.$inferSelect;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type AssemblyOrder = typeof assemblyOrders.$inferSelect;
+export type WarehouseAutomationSetting = typeof warehouseAutomationSettings.$inferSelect;

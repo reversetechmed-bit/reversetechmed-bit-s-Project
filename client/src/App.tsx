@@ -14,6 +14,7 @@ import Inventory from "./pages/Inventory";
 import InventoryCategories from "./pages/InventoryCategories";
 import InvoiceDocument from "./pages/InvoiceDocument";
 import Organization from "./pages/Organization";
+import Operations from "./pages/Operations";
 import Requests from "./pages/Requests";
 import Transactions from "./pages/Transactions";
 import Users from "./pages/Users";
@@ -40,6 +41,7 @@ function Router() {
       <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />
       <Route path={"/users"} component={() => <WarehouseShell><Users /></WarehouseShell>} />
       <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
+      <Route path={"/operations"} component={() => <WarehouseShell><Operations /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

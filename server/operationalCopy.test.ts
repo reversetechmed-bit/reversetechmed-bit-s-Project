@@ -34,7 +34,7 @@ describe("operational product copy", () => {
 
   it("uses role-specific notification wording and factual empty states", () => {
     const layout = source("client/src/components/DashboardLayout.tsx");
-    expect(layout).toContain("طلبات صرف جديدة وتنبيهات رصيد تحتاج متابعة");
+    expect(layout).toContain("طلبات وتنبيهات رصيد وصيانة وشراء وتجميع تحتاج متابعة");
     expect(layout).toContain("لا توجد إشعارات غير مقروءة");
     expect(layout).toContain("لا توجد إشعارات مسجلة في هذه الجلسة.");
     expect(layout).not.toContain("لا توجد تنبيهات حتى الآن.");

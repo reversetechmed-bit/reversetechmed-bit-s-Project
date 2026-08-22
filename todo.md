@@ -169,3 +169,8 @@
 - [x] Configure the mobile installed-app experience to use the refined warehouse icon as its home-screen identity.
 - [x] Verify the icon-only identity on desktop and mobile before publishing the update.
 - [x] Add integration assertions that the idempotent demo dataset exposes a complete request, approval, reservation, delivery, invoice, employee, company, and product-component path.
+- [x] Add automated escalation alerts for delayed requests, low stock, and pending digital-receipt confirmations with idempotent delivery.
+- [x] Add Admin maintenance and customer-return tracking with item custody, condition, repair status, and stock-safe return handling.
+- [x] Add supplier management and purchase orders linked to shortages, item lines, fulfillment status, and stock receipt.
+- [x] Add BOM assembly orders that atomically consume documented component quantities and produce finished-product stock, with audit records.
+- [x] Add integrated demo scenarios and Vitest coverage for escalations, maintenance/returns, purchase orders, and BOM assembly.

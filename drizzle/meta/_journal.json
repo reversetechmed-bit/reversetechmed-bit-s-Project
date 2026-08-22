@@ -64,6 +64,20 @@
       "when": 1787386957460,
       "tag": "0008_big_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1787389020542,
+      "tag": "0009_outstanding_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1787389818085,
+      "tag": "0010_mature_swordsman",
+      "breakpoints": true
     }
   ]
 }
