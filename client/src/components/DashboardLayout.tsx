@@ -310,7 +310,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
     try {
       await logout();
     } finally {
-      window.location.assign("/");
+      window.location.replace("/");
     }
   };
 

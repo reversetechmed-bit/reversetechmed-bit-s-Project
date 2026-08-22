@@ -204,3 +204,4 @@
 - [x] Add Admin-only safe deletion for a normal employee account while preserving operational records and employee history.
 - [x] Add department filters to the Employees and Users directories, with clear empty states and no exposure of credentials.
 - [x] Add a regression test proving a soft-deleted account cannot obtain an authenticated warehouse session.
+- [x] Fix the logout/account-switch action so a Supabase employee session is fully cleared and the user returns to the warehouse sign-in screen without external redirect.

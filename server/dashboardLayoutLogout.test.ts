@@ -7,7 +7,7 @@ describe("dashboard account switch controls", () => {
   it("renders a direct logout and account-switch action in the desktop sidebar", () => {
     expect(source).toContain("تسجيل الخروج وتبديل الحساب");
     expect(source).toContain('onClick={switchAccount}');
-    expect(source).toContain('window.location.assign("/")');
+    expect(source).toContain('window.location.replace("/")');
   });
 
   it("keeps a visible mobile logout action when sidebar navigation is unavailable", () => {
@@ -17,6 +17,9 @@ describe("dashboard account switch controls", () => {
 
   it("does not wait for an account query refresh before allowing the switch-account redirect", () => {
     const authSource = readFileSync(new URL("../client/src/_core/hooks/useAuth.ts", import.meta.url), "utf8");
+    expect(authSource).toContain("trpc.auth.logout.useMutation()");
+    expect(authSource).toContain("await legacyLogout.mutateAsync().catch(() => null)");
+    expect(authSource).toContain('supabase.auth.signOut({ scope: "local" })');
     expect(authSource).toContain("void utils.auth.me.invalidate()");
     expect(authSource).not.toContain("await utils.auth.me.invalidate()");
   });

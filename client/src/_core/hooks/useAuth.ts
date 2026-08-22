@@ -7,6 +7,7 @@ type UseAuthOptions = { redirectOnUnauthenticated?: boolean; redirectPath?: stri
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
+  const legacyLogout = trpc.auth.logout.useMutation();
   const [sessionReady, setSessionReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
@@ -23,13 +24,16 @@ export function useAuth(options?: UseAuthOptions) {
 
   const meQuery = trpc.auth.me.useQuery(undefined, { enabled: sessionReady && hasSession, retry: false, refetchOnWindowFocus: false });
   const logout = useCallback(async () => {
+    // Clear the legacy server cookie first: it can otherwise authenticate a user
+    // independently of the Supabase session that this screen has just removed.
+    await legacyLogout.mutateAsync().catch(() => null);
     const result = await supabase.auth.signOut({ scope: "local" });
     setHasSession(false);
     utils.auth.me.setData(undefined, null);
     void utils.auth.me.cancel();
     void utils.auth.me.invalidate();
     return result;
-  }, [utils]);
+  }, [legacyLogout, utils]);
 
   const state = useMemo(() => ({
     user: meQuery.data ?? null,
