@@ -178,3 +178,7 @@
 - [x] Add an Arabic activation flow where an employee selects their pre-registered name and verifies their passcode or approved email before creating a password.
 - [x] Expand product lifecycle states to include work in progress, under review, under maintenance, finished, and final operational product with stock and assembly safeguards.
 - [x] Update inventory, companies, BOM assembly, demo data, and tests for the expanded product lifecycle and employee activation flow.
+- [x] Let an Admin provision a pre-authorized employee login with approved email, role, and an initial employee-code password without exposing credentials after creation.
+- [x] Let an Admin temporarily suspend an employee account until a specified date and safely deactivate or unlink an account while retaining warehouse audit records.
+- [x] Restrict sign-in and alternate email activation to active, non-suspended employee profiles only, with clear Arabic guidance.
+- [x] Add Admin account-management UI, demo coverage, and Vitest tests for provision, suspension, reactivation, and safe account removal.

@@ -56,12 +56,17 @@ export const employeeProfiles = mysqlTable(
     departmentId: int("departmentId").references(() => departments.id, { onDelete: "set null" }),
     warehouseRole: mysqlEnum("warehouseRole", employeeWarehouseRoleValues).notNull().default("engineer"),
     isActive: int("isActive").notNull().default(1),
+    initialPasswordHash: varchar("initialPasswordHash", { length: 128 }),
+    initialPasswordIssuedAt: timestamp("initialPasswordIssuedAt"),
+    suspendedUntil: timestamp("suspendedUntil"),
+    accessRevokedAt: timestamp("accessRevokedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
   table => [
     index("employees_department_idx").on(table.departmentId),
     index("employees_active_idx").on(table.isActive),
+    index("employees_suspension_idx").on(table.suspendedUntil),
   ],
 );
 

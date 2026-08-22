@@ -29,15 +29,13 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
     if (!db) return null;
     const [existing] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);
     const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
-    // Existing internal accounts remain available until an Admin maps their legacy record to an employee profile.
-    // New Supabase accounts never become warehouse users without an active employee profile.
-    if (existing && !employee) return existing;
-    if (!employee || !employee.isActive || (employee.userId && employee.userId !== existing?.id)) return null;
+    // Every Supabase account must remain tied to an active, non-suspended employee profile.
+    if (!employee || !employee.isActive || (employee.suspendedUntil && employee.suspendedUntil > new Date()) || (employee.accessRevokedAt && existing?.createdAt && existing.createdAt <= employee.accessRevokedAt) || (employee.userId && employee.userId !== existing?.id)) return null;
     const role = employee.warehouseRole === "admin" ? "admin" : "user";
     const requestedRole = role;
     if (existing) {
       await db.update(users).set({ name: employee.fullName, email: account.email, role, requestedRole, lastSignedIn: new Date() }).where(eq(users.id, existing.id));
-      if (!employee.userId) await db.update(employeeProfiles).set({ userId: existing.id }).where(eq(employeeProfiles.id, employee.id));
+      if (!employee.userId || employee.initialPasswordHash) await db.update(employeeProfiles).set({ userId: existing.id, initialPasswordHash: null }).where(eq(employeeProfiles.id, employee.id));
       const [refreshed] = await db.select().from(users).where(eq(users.id, existing.id)).limit(1);
       return refreshed ?? existing;
     }
@@ -52,7 +50,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
       lastSignedIn: new Date(),
     });
     const [created] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);
-    if (created && employee && !employee.userId) await db.update(employeeProfiles).set({ userId: created.id }).where(eq(employeeProfiles.id, employee.id));
+    if (created && employee && !employee.userId) await db.update(employeeProfiles).set({ userId: created.id, initialPasswordHash: null }).where(eq(employeeProfiles.id, employee.id));
     return created ?? null;
   } catch {
     return null;

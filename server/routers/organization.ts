@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
-import { companies, componentTypes, departments, dispensingRequests, employeeEnrollmentPasscodes, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, productComponents, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
+import { companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, productComponents, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { createEnrollmentPasscode, enrollmentPasscodeMatches, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
+import { enrollmentPasscodeMatches, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
 import { z } from "zod";
 
 export const departmentInput = z.object({
@@ -56,41 +56,43 @@ function optionalText(value?: string) {
   return value?.trim() ? value.trim() : null;
 }
 
+const employeeProfileForAdmin = {
+  id: employeeProfiles.id,
+  userId: employeeProfiles.userId,
+  fullName: employeeProfiles.fullName,
+  email: employeeProfiles.email,
+  employeeCode: employeeProfiles.employeeCode,
+  jobTitle: employeeProfiles.jobTitle,
+  departmentId: employeeProfiles.departmentId,
+  warehouseRole: employeeProfiles.warehouseRole,
+  isActive: employeeProfiles.isActive,
+  initialPasswordIssuedAt: employeeProfiles.initialPasswordIssuedAt,
+  suspendedUntil: employeeProfiles.suspendedUntil,
+  accessRevokedAt: employeeProfiles.accessRevokedAt,
+  createdAt: employeeProfiles.createdAt,
+  updatedAt: employeeProfiles.updatedAt,
+};
+
 export const organizationRouter = router({
   enrollment: router({
     directory: publicProcedure.query(async () => {
       const db = await requireDb();
-      const rows = await db.select({ id: employeeProfiles.id, fullName: employeeProfiles.fullName, jobTitle: employeeProfiles.jobTitle, warehouseRole: employeeProfiles.warehouseRole, hasApprovedEmail: employeeProfiles.email, userId: employeeProfiles.userId })
+      const rows = await db.select({ id: employeeProfiles.id, fullName: employeeProfiles.fullName, jobTitle: employeeProfiles.jobTitle, warehouseRole: employeeProfiles.warehouseRole, hasApprovedEmail: employeeProfiles.email, userId: employeeProfiles.userId, suspendedUntil: employeeProfiles.suspendedUntil })
         .from(employeeProfiles).where(eq(employeeProfiles.isActive, 1)).orderBy(employeeProfiles.fullName);
-      return rows.filter(row => !row.userId).map(row => ({ id: row.id, fullName: row.fullName, jobTitle: row.jobTitle, warehouseRole: row.warehouseRole, hasApprovedEmail: Boolean(row.hasApprovedEmail) }));
+      return rows.filter(row => !row.userId && (!row.suspendedUntil || row.suspendedUntil <= new Date())).map(row => ({ id: row.id, fullName: row.fullName, jobTitle: row.jobTitle, warehouseRole: row.warehouseRole, hasApprovedEmail: Boolean(row.hasApprovedEmail) }));
     }),
     eligibility: publicProcedure.input(z.object({ email: z.string().trim().email().max(320) })).mutation(async ({ input }) => {
       const db = await requireDb();
-      const [employee] = await db.select({ id: employeeProfiles.id, isActive: employeeProfiles.isActive, userId: employeeProfiles.userId }).from(employeeProfiles).where(eq(employeeProfiles.email, input.email)).limit(1);
-      return { eligible: Boolean(employee?.isActive && !employee.userId) };
+      const [employee] = await db.select({ id: employeeProfiles.id, isActive: employeeProfiles.isActive, userId: employeeProfiles.userId, suspendedUntil: employeeProfiles.suspendedUntil, initialPasswordHash: employeeProfiles.initialPasswordHash }).from(employeeProfiles).where(eq(employeeProfiles.email, input.email.trim().toLowerCase())).limit(1);
+      return { eligible: Boolean(employee?.isActive && !employee.userId && !employee.initialPasswordHash && (!employee.suspendedUntil || employee.suspendedUntil <= new Date())) };
     }),
-    claim: publicProcedure.input(z.object({ employeeId: z.number().int().positive(), email: z.string().trim().email().max(320), passcode: z.string().trim().max(32).optional() })).mutation(async ({ input }) => {
+    claim: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().trim().min(6).max(64) })).mutation(async ({ input }) => {
       const db = await requireDb();
       const normalizedEmail = input.email.trim().toLowerCase();
-      return db.transaction(async tx => {
-        const [employee] = await tx.select().from(employeeProfiles).where(eq(employeeProfiles.id, input.employeeId)).limit(1);
-        if (!employee?.isActive || employee.userId) return { eligible: false as const, message: "ملف الموظف غير متاح للتفعيل." };
-        if (employee.email) {
-          if (employee.email.toLowerCase() !== normalizedEmail) return { eligible: false as const, message: "هذا الاسم مرتبط ببريد معتمد مختلف. استخدم البريد المسجل لدى مسؤول المخزن." };
-          return { eligible: true as const, message: "تم التحقق من البريد المعتمد.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "approved_email" as const };
-        }
-        const [passcode] = await tx.select().from(employeeEnrollmentPasscodes).where(eq(employeeEnrollmentPasscodes.employeeId, employee.id)).limit(1);
-        if (!input.passcode || !isValidEnrollmentPasscode(input.passcode) || !passcode || passcode.usedAt || passcode.expiresAt <= new Date() || !enrollmentPasscodeMatches(input.passcode, passcode.codeHash)) {
-          return { eligible: false as const, message: "أدخل رمز تفعيل صحيحًا وساريًا صادرًا من مسؤول المخزن." };
-        }
-        try {
-          await tx.update(employeeProfiles).set({ email: normalizedEmail }).where(and(eq(employeeProfiles.id, employee.id), isNull(employeeProfiles.userId)));
-          await tx.update(employeeEnrollmentPasscodes).set({ usedAt: new Date() }).where(eq(employeeEnrollmentPasscodes.id, passcode.id));
-        } catch {
-          return { eligible: false as const, message: "البريد مستخدم في ملف موظف آخر. اختر بريدًا مختلفًا." };
-        }
-        return { eligible: true as const, message: "تم اعتماد البريد بهذا الرمز. أنشئ كلمة مرورك الآن.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "passcode" as const };
-      });
+      const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, normalizedEmail)).limit(1);
+      if (!employee?.isActive || employee.userId || (employee.suspendedUntil && employee.suspendedUntil > new Date())) return { eligible: false as const, message: "هذا الحساب غير متاح للتفعيل. راجع مسؤول المخزن." };
+      if (!employee.initialPasswordHash || !isValidEnrollmentPasscode(input.password) || !enrollmentPasscodeMatches(input.password, employee.initialPasswordHash)) return { eligible: false as const, message: "البريد أو كود دخول الموظف غير صحيح. استخدم البيانات التي أنشأها مسؤول المخزن." };
+      return { eligible: true as const, message: "تم التحقق من بيانات الموظف. أنشئ كلمة مرور جديدة أو أكمل التفعيل.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "admin_credentials" as const };
     }),
   }),
 
@@ -258,7 +260,7 @@ export const organizationRouter = router({
     list: adminProcedure.query(async () => {
       const db = await requireDb();
       const [accounts, requests, invoices, transactions, alerts, activities] = await Promise.all([
-        db.select({ account: users, employee: employeeProfiles, department: { id: departments.id, name: departments.name, code: departments.code } })
+        db.select({ account: users, employee: employeeProfileForAdmin, department: { id: departments.id, name: departments.name, code: departments.code } })
           .from(users)
           .leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
           .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
@@ -298,7 +300,7 @@ export const organizationRouter = router({
     activity: adminProcedure.input(z.object({ userId: z.number().int().positive() })).query(async ({ input }) => {
       const db = await requireDb();
       const [accountResult, requests, invoices, transactions, alerts, activities] = await Promise.all([
-        db.select({ account: users, employee: employeeProfiles, department: { id: departments.id, name: departments.name, code: departments.code } })
+        db.select({ account: users, employee: employeeProfileForAdmin, department: { id: departments.id, name: departments.name, code: departments.code } })
           .from(users)
           .leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
           .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
@@ -326,7 +328,7 @@ export const organizationRouter = router({
       const db = await requireDb();
       return db
         .select({
-          employee: employeeProfiles,
+          employee: employeeProfileForAdmin,
           department: { id: departments.id, name: departments.name, code: departments.code },
         })
         .from(employeeProfiles)
@@ -360,17 +362,34 @@ export const organizationRouter = router({
       await db.update(employeeProfiles).set({ isActive: 0 }).where(eq(employeeProfiles.id, input.id));
       return { success: true } as const;
     }),
-    issuePasscode: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), passcode: z.string().trim().max(32).optional(), validDays: z.number().int().min(1).max(90).default(30) })).mutation(async ({ ctx, input }) => {
+    provisionAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), email: z.string().trim().email().max(320), initialPassword: z.string().trim().min(6).max(64) })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.id, input.employeeId)).limit(1);
-      if (!employee?.isActive || employee.userId) throw new TRPCError({ code: "CONFLICT", message: "يمكن إصدار رمز لموظف نشط غير مرتبط بحساب فقط." });
-      const passcode = input.passcode ? normalizeEnrollmentPasscode(input.passcode) : createEnrollmentPasscode();
-      if (!isValidEnrollmentPasscode(passcode)) throw new TRPCError({ code: "BAD_REQUEST", message: "رمز التفعيل يقبل 6 إلى 32 حرفًا أو رقمًا أو شرطة فقط." });
-      const expiresAt = new Date(Date.now() + input.validDays * 24 * 60 * 60 * 1000);
-      const existing = await db.select({ id: employeeEnrollmentPasscodes.id }).from(employeeEnrollmentPasscodes).where(eq(employeeEnrollmentPasscodes.employeeId, employee.id)).limit(1);
-      if (existing[0]) await db.update(employeeEnrollmentPasscodes).set({ codeHash: hashEnrollmentPasscode(passcode), issuedById: ctx.user.id, expiresAt, usedAt: null }).where(eq(employeeEnrollmentPasscodes.id, existing[0].id));
-      else await db.insert(employeeEnrollmentPasscodes).values({ employeeId: employee.id, codeHash: hashEnrollmentPasscode(passcode), issuedById: ctx.user.id, expiresAt });
-      return { passcode, expiresAt, employeeName: employee.fullName } as const;
+      if (!employee?.isActive || employee.userId) throw new TRPCError({ code: "CONFLICT", message: "يمكن تجهيز دخول لموظف نشط غير مرتبط بحساب فقط." });
+      const initialPassword = normalizeEnrollmentPasscode(input.initialPassword);
+      if (!isValidEnrollmentPasscode(initialPassword)) throw new TRPCError({ code: "BAD_REQUEST", message: "كود الدخول يقبل 6 إلى 32 حرفًا أو رقمًا أو شرطة فقط." });
+      try {
+        await db.update(employeeProfiles).set({ email: input.email.trim().toLowerCase(), initialPasswordHash: hashEnrollmentPasscode(initialPassword), initialPasswordIssuedAt: new Date(), suspendedUntil: null, accessRevokedAt: null }).where(eq(employeeProfiles.id, employee.id));
+      } catch {
+        throw new TRPCError({ code: "CONFLICT", message: "هذا البريد مستخدم في ملف موظف آخر." });
+      }
+      return { success: true as const, employeeName: employee.fullName, email: input.email.trim().toLowerCase(), role: employee.warehouseRole, issuedById: ctx.user.id };
+    }),
+    suspendAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), suspendedUntil: z.coerce.date() })).mutation(async ({ input }) => {
+      if (input.suspendedUntil <= new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد تاريخًا مستقبليًا لانتهاء التعليق." });
+      const db = await requireDb();
+      await db.update(employeeProfiles).set({ suspendedUntil: input.suspendedUntil }).where(and(eq(employeeProfiles.id, input.employeeId), eq(employeeProfiles.isActive, 1)));
+      return { success: true as const, suspendedUntil: input.suspendedUntil };
+    }),
+    reactivateAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(employeeProfiles).set({ suspendedUntil: null }).where(and(eq(employeeProfiles.id, input.employeeId), eq(employeeProfiles.isActive, 1)));
+      return { success: true } as const;
+    }),
+    revokeAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(employeeProfiles).set({ isActive: 0, userId: null, suspendedUntil: null, initialPasswordHash: null, accessRevokedAt: new Date() }).where(eq(employeeProfiles.id, input.employeeId));
+      return { success: true } as const;
     }),
     linkAccount: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();

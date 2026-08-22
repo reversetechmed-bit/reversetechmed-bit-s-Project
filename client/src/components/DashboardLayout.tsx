@@ -146,26 +146,22 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [employeeId, setEmployeeId] = useState("");
-  const [passcode, setPasscode] = useState("");
-  const { data: enrollmentDirectory } = trpc.organization.enrollment.directory.useQuery(undefined, { enabled: mode === "signup" && !recoveryMode });
+  const [activationMethod, setActivationMethod] = useState<"admin_code" | "approved_email">("admin_code");
   const enrollment = trpc.organization.enrollment.claim.useMutation();
-  const selectedEmployee = enrollmentDirectory?.find(employee => employee.id === Number(employeeId));
+  const emailEligibility = trpc.organization.enrollment.eligibility.useMutation();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
     if (mode === "signup") {
-      if (!employeeId) {
-        setSubmitting(false);
-        return setMessage("اختر اسمك من دليل الموظفين أولًا.");
-      }
       try {
-        const eligibility = await enrollment.mutateAsync({ employeeId: Number(employeeId), email: email.trim(), passcode: passcode.trim() || undefined });
+        const eligibility = activationMethod === "admin_code"
+          ? await enrollment.mutateAsync({ email: email.trim(), password })
+          : await emailEligibility.mutateAsync({ email: email.trim() });
         if (!eligibility.eligible) {
           setSubmitting(false);
-          return setMessage(eligibility.message);
+          return setMessage("بيانات التفعيل غير صحيحة أو الحساب غير متاح. راجع مسؤول المخزن.");
         }
       } catch {
         setSubmitting(false);
@@ -229,21 +225,12 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <>
               <div className="rounded-lg border border-[#d9c79d] bg-[#fcf8ef] p-3 text-right">
                 <span className="flex items-center gap-2 text-sm font-bold text-[#0B2E4E]"><Mail className="h-4 w-4 text-[#a97937]" />بريد وكلمة مرور</span>
-                <span className="mt-1 block text-[11px] leading-5 text-slate-600">اختر اسمك أولًا، ثم استخدم البريد المعتمد أو رمز التفعيل الذي أصدره الأدمن. الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف.</span>
+                <span className="mt-1 block text-[11px] leading-5 text-slate-600">الأدمن هو من يضيف البريد والدور أولًا. اختر طريقة التفعيل المناسبة لك؛ ولا يقبل النظام بريدًا خارج دليل الموظفين. الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف.</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="enrollment-employee">اسم الموظف</Label>
-                <select id="enrollment-employee" value={employeeId} onChange={event => { setEmployeeId(event.target.value); setPasscode(""); setMessage(""); }} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" required>
-                  <option value="">اختر اسمك المسجل</option>
-                  {enrollmentDirectory?.map(employee => <option key={employee.id} value={employee.id}>{employee.fullName} — {employee.warehouseRole === "admin" ? "أدمن" : "مستخدم"}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#f4f0e8] p-1 text-xs font-bold">
+                <button type="button" onClick={() => { setActivationMethod("admin_code"); setMessage(""); }} className={`rounded-md px-3 py-2 transition ${activationMethod === "admin_code" ? "bg-[#17374c] text-white" : "text-[#5b6570]"}`}>كود الدخول من الأدمن</button>
+                <button type="button" onClick={() => { setActivationMethod("approved_email"); setMessage(""); }} className={`rounded-md px-3 py-2 transition ${activationMethod === "approved_email" ? "bg-[#17374c] text-white" : "text-[#5b6570]"}`}>تفعيل بالبريد المعتمد</button>
               </div>
-              {selectedEmployee && !selectedEmployee.hasApprovedEmail && <div className="space-y-2">
-                <Label htmlFor="enrollment-passcode">رمز التفعيل من الأدمن</Label>
-                <Input id="enrollment-passcode" value={passcode} onChange={event => setPasscode(event.target.value.toUpperCase())} placeholder="مثال: RT-1A2B3C4D" autoCapitalize="characters" required />
-                <p className="text-[11px] text-slate-500">سيُسجّل البريد الذي تكتبه أدناه كبريد معتمد لهذا الموظف بعد نجاح الرمز.</p>
-              </div>}
-              {selectedEmployee?.hasApprovedEmail && <p className="rounded-md border border-[#d9c79d] bg-[#fcf8ef] px-3 py-2 text-xs text-[#6e5632]">لهذا الموظف بريد معتمد بالفعل؛ أدخله كما سجّله الأدمن، ولا يلزم رمز تفعيل.</p>}
             </>
           )}
           <div className="space-y-2">
@@ -251,7 +238,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <Input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="auth-password">كلمة المرور</Label>
+            <Label htmlFor="auth-password">{mode === "signup" && activationMethod === "admin_code" ? "كود الدخول الذي حدده الأدمن" : mode === "signup" ? "اختر كلمة مرور جديدة" : "كلمة المرور"}</Label>
             <Input id="auth-password" type="password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required />
           </div>
             </>
@@ -262,7 +249,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
           </Button>
           {!recoveryMode && <p className="text-center text-sm text-slate-500">
             {mode === "signin" ? "موظف مسجل في الدليل؟" : "لدي حساب بالفعل؟"}{" "}
-            <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(""); setEmployeeId(""); setPasscode(""); }} className="font-semibold text-[#0178D4] hover:underline">
+            <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(""); }} className="font-semibold text-[#0178D4] hover:underline">
               {mode === "signin" ? "تفعيل الحساب" : "تسجيل الدخول"}
             </button>
           </p>}
