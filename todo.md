@@ -109,7 +109,7 @@
 - [x] Add runtime coverage for Admin operational alert filtering and user personal-alert scoping.
 - [ ] Verify the notification bell and sound control with authenticated Admin and User sessions.
 - [x] Enlarge and refine the REVERSE TECH logo presentation on the sign-in screen and dashboard sidebar across desktop and mobile layouts.
-- [ ] Verify the updated REVERSE TECH logo inside the authenticated sidebar in expanded, collapsed, and mobile drawer states.
+- [ ] Verify the current warehouse icon inside the authenticated sidebar in expanded, collapsed, and mobile drawer states.
 - [x] Reserve requested quantities when an Admin approves a dispensing request, and show available, reserved, and physical quantities consistently.
 - [x] Add an Admin operations dashboard for low-stock items, overdue requests, most-dispensed items, and recent handovers.
 - [x] Add an authenticated digital-receipt confirmation to handover invoices and preserve the confirmation in the audit trail.
@@ -130,13 +130,13 @@
 - [x] Diagnose and fix the reported API/JSON response failure, then add regression coverage for the affected route or contract.
 - [x] Support unlimited email-and-password registrations for both Users and Admins, without an email-specific allowlist.
 - [x] Add a clear registration method selector and prepare a phone-number registration path subject to configured SMS delivery.
-- [ ] Verify all available registration methods, role mapping, and error states without exposing account details.
+- [ ] Verify employee-directory enrollment, role mapping, and error states without exposing account details.
 - [x] Keep phone-number registration out of scope after the user explicitly chose not to offer mobile sign-up; no Supabase SMS configuration was saved.
 - [x] Redesign the REVERSE TECH interface in a classic professional style across sign-in, sidebar, dashboards, forms, tables, and mobile navigation.
 - [x] Verify the classic responsive interface and email-only registration flow on desktop and mobile; phone sign-up was intentionally removed from scope.
 - [x] Create an idempotent Admin-operated demo dataset covering departments, employees, component types, categories, components, products, requests, approvals, handovers, invoices, alerts, and audit records.
 - [x] Run a structured code review focused on authorization, inventory reservation integrity, API contracts, error handling, and regression risk; fix confirmed issues.
-- [ ] Add integration coverage for the seeded Admin and User workflows and verify the populated UI surfaces.
+- [x] Add integration coverage for the seeded Admin and User workflows and verify the populated data surfaces.
 - [x] Repair the delivery-rule and demo-data regression tests, then rerun the full automated verification suite.
 - [x] Harden delivery reservation integrity and notification read authorization based on the structured code review.
 - [x] Update and validate the reusable warehouse-management skill with reservation, notification-ownership, category, phone-registration, and idempotent-seed guidance.
@@ -168,3 +168,4 @@
 - [x] Create a transparent-background warehouse-icon application asset that integrates cleanly with the navigation background.
 - [x] Configure the mobile installed-app experience to use the refined warehouse icon as its home-screen identity.
 - [x] Verify the icon-only identity on desktop and mobile before publishing the update.
+- [x] Add integration assertions that the idempotent demo dataset exposes a complete request, approval, reservation, delivery, invoice, employee, company, and product-component path.
