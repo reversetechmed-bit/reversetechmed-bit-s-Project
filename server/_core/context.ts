@@ -30,7 +30,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
     const [existing] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);
     const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
     // Every Supabase account must remain tied to an active, non-suspended employee profile.
-    if (!employee || !employee.isActive || (employee.suspendedUntil && employee.suspendedUntil > new Date()) || (employee.accessRevokedAt && existing?.createdAt && existing.createdAt <= employee.accessRevokedAt) || (employee.userId && employee.userId !== existing?.id)) return null;
+    if (existing?.deletedAt || !employee || !employee.isActive || (employee.suspendedUntil && employee.suspendedUntil > new Date()) || (employee.accessRevokedAt && existing?.createdAt && existing.createdAt <= employee.accessRevokedAt) || (employee.userId && employee.userId !== existing?.id)) return null;
     const role = employee.warehouseRole === "admin" ? "admin" : "user";
     const requestedRole = role;
     if (existing) {

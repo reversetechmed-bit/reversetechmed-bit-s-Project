@@ -200,3 +200,6 @@
 - [x] Reissue Eng Mostafa Mabrouk's initial access code to match RT-ENG-MOSTAFA after explicit approval, then verify the activation state.
 - [x] Diagnose and mitigate Supabase email rate limiting during employee activation, with a clear fallback that does not misreport it as an invalid employee code.
 - [x] Normalize only employee-code-shaped passwords during ordinary sign-in, so the code used at activation remains accepted after confirmation without altering normal passwords.
+- [ ] Add procedure-level regression coverage for employee activation eligibility and rejection reasons using isolated database mocks only.
+- [x] Add Admin-only safe deletion for a normal employee account while preserving operational records and employee history.
+- [x] Add department filters to the Employees and Users directories, with clear empty states and no exposure of credentials.

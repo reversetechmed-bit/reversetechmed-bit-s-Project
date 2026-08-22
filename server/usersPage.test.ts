@@ -19,5 +19,12 @@ describe("Admin Users page wiring", () => {
     expect(page).toContain('user?.role !== "admin"');
     expect(page).toContain("تنبيهات شخصية");
     expect(page).toContain("حركات المخزون");
+    expect(page).toContain("departmentFilter");
+    expect(page).toContain("deleteNormalAccount");
+    expect(page).toContain("حذف حساب المستخدم");
+
+    const organization = source("client/src/pages/Organization.tsx");
+    expect(organization).toContain("كل الأقسام");
+    expect(organization).toContain("حذف الحساب");
   });
 });

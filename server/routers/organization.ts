@@ -3,7 +3,7 @@ import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { assemblyOrderLines, assemblyOrders, companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, maintenanceCases, parts, productComponents, purchaseOrderLines, purchaseOrders, users, warehouseActivities, warehouseAlerts, warehouseAutomationSettings } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { enrollmentPasscodeMatches, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
+import { evaluateEmployeeEnrollmentClaim, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
 import { buildWarehouseJsonBackup, inspectWarehouseJsonBackup } from "../warehouseBackup";
 import { restoreWarehouseMasterData } from "../warehouseRestore";
 import { z } from "zod";
@@ -92,14 +92,7 @@ export const organizationRouter = router({
       const db = await requireDb();
       const normalizedEmail = input.email.trim().toLowerCase();
       const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, normalizedEmail)).limit(1);
-      if (!employee) return { eligible: false as const, message: "هذا البريد غير مسجل في دليل الموظفين. راجع الأدمن للتأكد من البريد المعتمد." };
-      if (!employee.isActive || employee.accessRevokedAt) return { eligible: false as const, message: "وصول هذا الموظف غير نشط حاليًا. راجع مسؤول المخزن." };
-      if (employee.suspendedUntil && employee.suspendedUntil > new Date()) return { eligible: false as const, message: "هذا الحساب معلّق مؤقتًا. راجع مسؤول المخزن." };
-      if (employee.userId) return { eligible: false as const, message: "هذا البريد لديه حساب مفعّل بالفعل. استخدم «تسجيل الدخول» بدل تفعيل الحساب." };
-      if (!employee.initialPasswordHash) return { eligible: false as const, message: "لم يصدر الأدمن كود دخول لهذا البريد بعد. اطلب منه الضغط على «تجهيز الدخول»." };
-      if (!isValidEnrollmentPasscode(input.password)) return { eligible: false as const, message: "صيغة كود الدخول غير صحيحة. استخدم 6 إلى 64 حرفًا أو رقمًا أو شرطة فقط." };
-      if (!enrollmentPasscodeMatches(input.password, employee.initialPasswordHash)) return { eligible: false as const, message: "كود الدخول لا يطابق الكود الذي جهزه الأدمن لهذا البريد. أعد نسخ الكود بلا مسافات أو اطلب من الأدمن إعادة تجهيزه." };
-      return { eligible: true as const, message: "تم التحقق من بيانات الموظف. أنشئ كلمة مرور جديدة أو أكمل التفعيل.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "admin_credentials" as const };
+      return evaluateEmployeeEnrollmentClaim(employee ?? null, input.password);
     }),
   }),
 
@@ -289,6 +282,7 @@ export const organizationRouter = router({
           .from(users)
           .leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
           .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
+          .where(isNull(users.deletedAt))
           .orderBy(desc(users.lastSignedIn)),
         db.select({ requestedById: dispensingRequests.requestedById, status: dispensingRequests.status }).from(dispensingRequests).limit(500),
         db.select({ receivedById: handoverInvoices.receivedById, issuedById: handoverInvoices.issuedById }).from(handoverInvoices).limit(500),
@@ -346,6 +340,18 @@ export const organizationRouter = router({
       if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "حساب المستخدم غير موجود." });
       return { ...account, requests, invoices, transactions, alerts, activities };
     }),
+    deleteNormalAccount: adminProcedure.input(z.object({ userId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.id === input.userId) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكن حذف حساب الأدمن المستخدم حاليًا." });
+      const db = await requireDb();
+      return db.transaction(async tx => {
+        const [account] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (!account || account.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "حساب المستخدم غير موجود أو حُذف بالفعل." });
+        if (account.role !== "user") throw new TRPCError({ code: "FORBIDDEN", message: "حذف الحسابات متاح للمستخدمين العاديين فقط، ولا يمكن حذف حساب أدمن من هنا." });
+        await tx.update(users).set({ deletedAt: new Date() }).where(eq(users.id, account.id));
+        await tx.update(employeeProfiles).set({ accessRevokedAt: new Date(), suspendedUntil: null, initialPasswordHash: null }).where(eq(employeeProfiles.userId, account.id));
+        return { success: true as const };
+      });
+    }),
   }),
 
   employees: router({
@@ -355,9 +361,11 @@ export const organizationRouter = router({
         .select({
           employee: employeeProfileForAdmin,
           department: { id: departments.id, name: departments.name, code: departments.code },
+          accountDeletedAt: users.deletedAt,
         })
         .from(employeeProfiles)
         .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
+        .leftJoin(users, eq(employeeProfiles.userId, users.id))
         .orderBy(employeeProfiles.isActive, desc(employeeProfiles.createdAt));
     }),
     create: adminProcedure.input(employeeInput).mutation(async ({ input }) => {

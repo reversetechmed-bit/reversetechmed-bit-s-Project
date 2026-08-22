@@ -3,6 +3,7 @@ import type { TrpcContext } from "./_core/context";
 
 const responses = vi.hoisted(() => [] as unknown[]);
 const mockGetDb = vi.hoisted(() => vi.fn());
+const updateValues = vi.hoisted(() => [] as Record<string, unknown>[]);
 
 function chain(result: unknown) {
   const query: Record<string, unknown> = {};
@@ -15,8 +16,19 @@ function chain(result: unknown) {
   return query;
 }
 
+const tx = {
+  select: vi.fn(() => responses.shift()),
+  update: vi.fn(() => {
+    const query: Record<string, unknown> = {};
+    query.set = vi.fn((values: Record<string, unknown>) => { updateValues.push(values); return query; });
+    query.where = vi.fn(async () => undefined);
+    return query;
+  }),
+};
+
 const db = {
   select: vi.fn(() => responses.shift()),
+  transaction: vi.fn(async (callback: (transaction: typeof tx) => unknown) => callback(tx)),
 };
 
 vi.mock("./db", () => ({ getDb: mockGetDb }));
@@ -25,7 +37,7 @@ const { organizationRouter } = await import("./routers/organization");
 
 function contextFor(role: "admin" | "user"): TrpcContext {
   return {
-    user: { id: 1, openId: `${role}-directory`, name: "Directory User", email: "directory@reversetech.com", loginMethod: "supabase", role, requestedRole: role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+    user: { id: 1, openId: `${role}-directory`, name: "Directory User", email: "directory@reversetech.com", loginMethod: "supabase", role, requestedRole: role, deletedAt: null, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     req: {} as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };
@@ -34,6 +46,7 @@ function contextFor(role: "admin" | "user"): TrpcContext {
 describe("Admin user directory", () => {
   beforeEach(() => {
     responses.length = 0;
+    updateValues.length = 0;
     vi.clearAllMocks();
     mockGetDb.mockResolvedValue(db);
   });
@@ -42,6 +55,7 @@ describe("Admin user directory", () => {
     const caller = organizationRouter.createCaller(contextFor("user"));
     await expect(caller.users.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.users.activity({ userId: 2 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.users.deleteNormalAccount({ userId: 2 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(db.select).not.toHaveBeenCalled();
   });
 
@@ -67,5 +81,21 @@ describe("Admin user directory", () => {
       activityCount: 1,
       unreadAlertCount: 1,
     });
+  });
+
+  it("soft-deletes only a normal account and revokes its linked access while retaining database references", async () => {
+    responses.push(chain([{ id: 7, role: "user", deletedAt: null }]));
+
+    await expect(organizationRouter.createCaller(contextFor("admin")).users.deleteNormalAccount({ userId: 7 })).resolves.toEqual({ success: true });
+    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(updateValues[0]).toMatchObject({ deletedAt: expect.any(Date) });
+    expect(updateValues[1]).toMatchObject({ accessRevokedAt: expect.any(Date), suspendedUntil: null, initialPasswordHash: null });
+  });
+
+  it("never permits deletion of an Admin account", async () => {
+    responses.push(chain([{ id: 7, role: "admin", deletedAt: null }]));
+
+    await expect(organizationRouter.createCaller(contextFor("admin")).users.deleteNormalAccount({ userId: 7 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(tx.update).not.toHaveBeenCalled();
   });
 });
