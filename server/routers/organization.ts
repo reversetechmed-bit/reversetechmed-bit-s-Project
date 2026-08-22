@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { desc, eq, or } from "drizzle-orm";
 import { companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, productComponents, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const departmentInput = z.object({
@@ -13,7 +13,7 @@ export const departmentInput = z.object({
 
 export const employeeInput = z.object({
   fullName: z.string().trim().min(2).max(200),
-  email: z.string().trim().email().max(320),
+  email: z.union([z.string().trim().email().max(320), z.literal("")]).optional(),
   employeeCode: z.string().trim().toUpperCase().regex(/^[- A-Z0-9\u0621-\u064A\u0660-\u0669\u0670-\u06FF]+$/, "كود الموظف يقبل الحروف والأرقام والمسافات والشرطة فقط.").min(2).max(64),
   jobTitle: z.string().trim().min(2).max(160),
   departmentId: z.number().int().positive().nullable().optional(),
@@ -56,6 +56,14 @@ function optionalText(value?: string) {
 }
 
 export const organizationRouter = router({
+  enrollment: router({
+    eligibility: publicProcedure.input(z.object({ email: z.string().trim().email().max(320) })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [employee] = await db.select({ id: employeeProfiles.id, isActive: employeeProfiles.isActive, userId: employeeProfiles.userId }).from(employeeProfiles).where(eq(employeeProfiles.email, input.email)).limit(1);
+      return { eligible: Boolean(employee?.isActive && !employee.userId) };
+    }),
+  }),
+
   companies: router({
     list: adminProcedure.query(async () => {
       const db = await requireDb();
@@ -298,7 +306,7 @@ export const organizationRouter = router({
     create: adminProcedure.input(employeeInput).mutation(async ({ input }) => {
       const db = await requireDb();
       try {
-        await db.insert(employeeProfiles).values({ ...input, departmentId: input.departmentId ?? null });
+        await db.insert(employeeProfiles).values({ ...input, email: optionalText(input.email), departmentId: input.departmentId ?? null });
         const [created] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.employeeCode, input.employeeCode)).limit(1);
         return created;
       } catch {
@@ -311,7 +319,7 @@ export const organizationRouter = router({
       const [existing] = await db.select({ id: employeeProfiles.id }).from(employeeProfiles).where(eq(employeeProfiles.id, id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
       try {
-        await db.update(employeeProfiles).set({ ...values, departmentId: values.departmentId ?? null }).where(eq(employeeProfiles.id, id));
+        await db.update(employeeProfiles).set({ ...values, email: optionalText(values.email), departmentId: values.departmentId ?? null }).where(eq(employeeProfiles.id, id));
         return { success: true } as const;
       } catch {
         throw new TRPCError({ code: "CONFLICT", message: "An employee with this email or employee code already exists." });
@@ -321,6 +329,21 @@ export const organizationRouter = router({
       const db = await requireDb();
       await db.update(employeeProfiles).set({ isActive: 0 }).where(eq(employeeProfiles.id, input.id));
       return { success: true } as const;
+    }),
+    linkAccount: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), userId: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      return db.transaction(async tx => {
+        const [employee] = await tx.select().from(employeeProfiles).where(eq(employeeProfiles.id, input.employeeId)).limit(1);
+        const [account] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (!employee || !employee.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "ملف الموظف النشط غير موجود." });
+        if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "حساب المستخدم غير موجود." });
+        if (employee.userId && employee.userId !== account.id) throw new TRPCError({ code: "CONFLICT", message: "هذا الموظف مرتبط بحساب آخر بالفعل." });
+        const [otherEmployee] = await tx.select({ id: employeeProfiles.id }).from(employeeProfiles).where(eq(employeeProfiles.userId, account.id)).limit(1);
+        if (otherEmployee && otherEmployee.id !== employee.id) throw new TRPCError({ code: "CONFLICT", message: "هذا الحساب مرتبط بموظف آخر بالفعل." });
+        await tx.update(employeeProfiles).set({ userId: account.id }).where(eq(employeeProfiles.id, employee.id));
+        await tx.update(users).set({ name: employee.fullName, role: employee.warehouseRole === "admin" ? "admin" : "user", requestedRole: employee.warehouseRole === "admin" ? "admin" : "user" }).where(eq(users.id, account.id));
+        return { success: true } as const;
+      });
     }),
   }),
 });

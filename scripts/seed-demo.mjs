@@ -73,6 +73,26 @@ try {
       values: [fullName, email, employeeCode, jobTitle, departmentId, warehouseRole, 1],
     });
   }
+  // Demo profiles remain visible for test data but cannot be used to activate a warehouse account.
+  await connection.execute("UPDATE employeeProfiles SET isActive = 0 WHERE employeeCode LIKE 'DEMO-%'");
+
+  const reverseTechRoster = [
+    ["Eng Hamada Mohamed", "RT-ENG-HAMADA", "Embedded Engineer", departments["DEMO-EMB"], "engineer"],
+    ["Eng Mostafa Mabrouk", "RT-ENG-MOSTAFA", "Embedded Engineer", departments["DEMO-EMB"], "engineer"],
+    ["Eng Mohamed Ali", "RT-ENG-MOHAMED-ALI", "Electronics Engineer", departments["DEMO-PCB"], "engineer"],
+    ["Sh. Abdelmon'em Eldesouky", "RT-TECH-ABDELMONEM", "Warehouse Technician", departments["DEMO-WH"], "engineer"],
+    ["Eng Abdelalieem Ahmed", "RT-ADMIN-ABDELALIEEM", "Warehouse Administrator", departments["DEMO-WH"], "admin"],
+    ["Eng Ibrahim Eldesouky", "RT-ADMIN-IBRAHIM", "Warehouse Administrator", departments["DEMO-WH"], "admin"],
+  ];
+  for (const [fullName, employeeCode, jobTitle, departmentId, warehouseRole] of reverseTechRoster) {
+    await insertOnce({
+      table: "employeeProfiles",
+      whereSql: "fullName = ?",
+      whereValues: [fullName],
+      columns: ["fullName", "email", "employeeCode", "jobTitle", "departmentId", "warehouseRole", "isActive"],
+      values: [fullName, null, employeeCode, jobTitle, departmentId, warehouseRole, 1],
+    });
+  }
 
   const categoryRows = [
     ["طبي", "blue"],

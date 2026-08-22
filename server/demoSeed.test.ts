@@ -19,4 +19,14 @@ describe("demo warehouse seed", () => {
     expect(seedSource).not.toContain("INSERT INTO users");
     expect(seedSource).not.toMatch(/testimonial|rating/i);
   });
+
+  it("includes the approved REVERSE TECH roster as employee profiles without seeding credentials", () => {
+    expect(seedSource).toContain("Eng Hamada Mohamed");
+    expect(seedSource).toContain("Eng Mostafa Mabrouk");
+    expect(seedSource).toContain("Eng Mohamed Ali");
+    expect(seedSource).toContain("Eng Abdelalieem Ahmed");
+    expect(seedSource).toContain("Eng Ibrahim Eldesouky");
+    expect(seedSource).toContain("Sh. Abdelmon'em Eldesouky");
+    expect(seedSource).not.toMatch(/password|auth\.users|INSERT INTO users/i);
+  });
 });

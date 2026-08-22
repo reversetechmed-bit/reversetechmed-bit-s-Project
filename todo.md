@@ -156,3 +156,8 @@
 - [ ] Verify the rendered Companies and InvoiceDocument pages in an authenticated Admin session and record visual evidence without changing operational records.
 - [x] Diagnose and fix distorted Arabic glyphs in the standalone handover-invoice PDF using an embedded Arabic-capable font and RTL-safe rendering path.
 - [x] Generate and inspect a representative Arabic standalone-invoice PDF, then add a regression test for its embedded font and readable Arabic content.
+- [x] Enforce a one-to-one relationship between each warehouse user account and an approved employee profile, preventing unlinked external accounts.
+- [x] Restrict email registration to pre-created active employee profiles whose approved email matches the account email, with a clear Arabic explanation when no employee record is eligible.
+- [x] Let the Admin create employee profiles with account role and enrollment state, then show the linked account and active employee identity in the Users directory.
+- [x] Add the named engineering and Admin employee roster to the idempotent demo data without creating or exposing login passwords.
+- [x] Add and run regression coverage for employee-to-user linking, restricted enrollment, role mapping, and account-directory privacy.

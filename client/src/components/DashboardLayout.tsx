@@ -130,25 +130,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
 function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { recoveryMode?: boolean; onRecoveryComplete?: () => void }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [requestedRole, setRequestedRole] = useState<"admin" | "user">("user");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const enrollment = trpc.organization.enrollment.eligibility.useMutation();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
+    if (mode === "signup") {
+      try {
+        const eligibility = await enrollment.mutateAsync({ email: email.trim() });
+        if (!eligibility.eligible) {
+          setSubmitting(false);
+          return setMessage("لا يوجد ملف موظف نشط ومُعتمد بهذا البريد. راجع مسؤول المخزن لإضافتك أو لتحديث بريدك.");
+        }
+      } catch {
+        setSubmitting(false);
+        return setMessage("تعذر التحقق من ملف الموظف الآن. حاول مرة أخرى أو تواصل مع مسؤول المخزن.");
+      }
+    }
     const result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name, requested_role: requestedRole }, emailRedirectTo: window.location.origin },
-        });
+      : await supabase.auth.signUp({ email, password, options: { data: { registration_source: "employee_directory" }, emailRedirectTo: window.location.origin } });
     setSubmitting(false);
     if (result.error) return setMessage(result.error.message);
     setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم تسجيل الدخول. يجري فتح مساحة العمل…");
@@ -168,7 +175,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
     onRecoveryComplete?.();
   };
 
-  const title = recoveryMode ? "تعيين كلمة مرور جديدة" : mode === "signin" ? "تسجيل الدخول إلى إدارة المخزن" : "إنشاء حساب مساحة العمل";
+  const title = recoveryMode ? "تعيين كلمة مرور جديدة" : mode === "signin" ? "تسجيل الدخول إلى إدارة المخزن" : "تفعيل حساب الموظف";
   const subtitle = recoveryMode ? "اكتب كلمة مرور جديدة لحساب REVERSE TECH ثم سجّل الدخول بها." : "منصة REVERSE TECH الداخلية لإدارة المخزون والطلبات.";
 
   return (
@@ -203,25 +210,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <>
               <div className="rounded-lg border border-[#d9c79d] bg-[#fcf8ef] p-3 text-right">
                 <span className="flex items-center gap-2 text-sm font-bold text-[#0B2E4E]"><Mail className="h-4 w-4 text-[#a97937]" />بريد وكلمة مرور</span>
-                <span className="mt-1 block text-[11px] text-slate-600">متاح لإنشاء أي عدد من حسابات الأدمن والمستخدمين.</span>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="auth-name">الاسم الكامل</Label>
-                <Input id="auth-name" value={name} onChange={event => setName(event.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label>نوع الحساب المطلوب</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setRequestedRole("user")} className={`rounded-lg border p-3 text-right ${requestedRole === "user" ? "border-[#0178D4] bg-[#F1F8FE]" : "border-[#E8EEF3]"}`}>
-                    <span className="block text-sm font-bold text-[#0B2E4E]">مستخدم</span>
-                    <span className="text-[11px] text-slate-500">بحث وطلبات صرف</span>
-                  </button>
-                  <button type="button" onClick={() => setRequestedRole("admin")} className={`rounded-lg border p-3 text-right ${requestedRole === "admin" ? "border-[#0178D4] bg-[#F1F8FE]" : "border-[#E8EEF3]"}`}>
-                    <span className="block text-sm font-bold text-[#0B2E4E]">أدمن</span>
-                    <span className="text-[11px] text-slate-500">إدارة المخزن كاملة</span>
-                  </button>
-                </div>
-                <p className="text-xs leading-5 text-slate-500">صلاحية الأدمن تمنح إدارة كاملة للمخزن، والطلبات، والموظفين، والتقارير.</p>
+                <span className="mt-1 block text-[11px] leading-5 text-slate-600">يتاح التفعيل للموظف الذي سجّله الأدمن ببريده المعتمد. الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف.</span>
               </div>
             </>
           )}
@@ -240,9 +229,9 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             {submitting ? "يرجى الانتظار…" : recoveryMode ? "حفظ كلمة المرور الجديدة" : mode === "signin" ? "تسجيل الدخول" : "إنشاء الحساب"}
           </Button>
           {!recoveryMode && <p className="text-center text-sm text-slate-500">
-            {mode === "signin" ? "جديد في REVERSE TECH؟" : "لدي حساب بالفعل؟"}{" "}
+            {mode === "signin" ? "موظف مسجل في الدليل؟" : "لدي حساب بالفعل؟"}{" "}
             <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(""); }} className="font-semibold text-[#0178D4] hover:underline">
-              {mode === "signin" ? "إنشاء حساب" : "تسجيل الدخول"}
+              {mode === "signin" ? "تفعيل الحساب" : "تسجيل الدخول"}
             </button>
           </p>}
         </form>

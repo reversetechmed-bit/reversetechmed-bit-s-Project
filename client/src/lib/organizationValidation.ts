@@ -22,7 +22,7 @@ export function validateDepartmentForm(values: DepartmentValues) {
 
 export function validateEmployeeForm(values: EmployeeValues) {
   if (values.fullName.trim().length < 2) return "اكتب الاسم الكامل للموظف.";
-  if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) return "اكتب بريدًا إلكترونيًا صحيحًا للموظف.";
+  if (values.email.trim() && !/^\S+@\S+\.\S+$/.test(values.email.trim())) return "اكتب بريدًا إلكترونيًا صحيحًا للموظف أو اتركه فارغًا حتى تفعيل الحساب.";
   if (values.jobTitle.trim().length < 2) return "اكتب المسمى الوظيفي للموظف.";
   return identifierMessage("كود الموظف", values.employeeCode, 64);
 }

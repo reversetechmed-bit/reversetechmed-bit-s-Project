@@ -28,22 +28,23 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
     const db = await getDb();
     if (!db) return null;
     const [existing] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);
+    const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
+    // Existing internal accounts remain available until an Admin maps their legacy record to an employee profile.
+    // New Supabase accounts never become warehouse users without an active employee profile.
+    if (existing && !employee) return existing;
+    if (!employee || !employee.isActive || (employee.userId && employee.userId !== existing?.id)) return null;
+    const role = employee.warehouseRole === "admin" ? "admin" : "user";
+    const requestedRole = role;
     if (existing) {
-      const requestedRole = account.user_metadata?.requested_role === "admin" ? "admin" : "user";
-      const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
-      const role = requestedRole === "admin" || employee?.warehouseRole === "admin" ? "admin" : "user";
-      await db.update(users).set({ name: account.user_metadata?.full_name || account.user_metadata?.name || existing.name, email: account.email, role, requestedRole, lastSignedIn: new Date() }).where(eq(users.id, existing.id));
-      if (employee && !employee.userId) await db.update(employeeProfiles).set({ userId: existing.id }).where(eq(employeeProfiles.id, employee.id));
+      await db.update(users).set({ name: employee.fullName, email: account.email, role, requestedRole, lastSignedIn: new Date() }).where(eq(users.id, existing.id));
+      if (!employee.userId) await db.update(employeeProfiles).set({ userId: existing.id }).where(eq(employeeProfiles.id, employee.id));
       const [refreshed] = await db.select().from(users).where(eq(users.id, existing.id)).limit(1);
       return refreshed ?? existing;
     }
 
-    const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, account.email)).limit(1);
-    const requestedRole = account.user_metadata?.requested_role === "admin" ? "admin" : "user";
-    const role = requestedRole === "admin" || employee?.warehouseRole === "admin" ? "admin" : "user";
     await db.insert(users).values({
       openId: account.id,
-      name: account.user_metadata?.full_name || account.user_metadata?.name || null,
+      name: employee.fullName,
       email: account.email,
       loginMethod: "supabase",
       role,

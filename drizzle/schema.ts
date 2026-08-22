@@ -50,7 +50,7 @@ export const employeeProfiles = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     userId: int("userId").unique().references(() => users.id, { onDelete: "set null" }),
     fullName: varchar("fullName", { length: 200 }).notNull(),
-    email: varchar("email", { length: 320 }).notNull().unique(),
+    email: varchar("email", { length: 320 }).unique(),
     employeeCode: varchar("employeeCode", { length: 64 }).notNull().unique(),
     jobTitle: varchar("jobTitle", { length: 160 }).notNull(),
     departmentId: int("departmentId").references(() => departments.id, { onDelete: "set null" }),
