@@ -185,3 +185,5 @@
 - [x] Add an Admin-only JSON backup export covering warehouse, organization, operations, and audit data without passwords, hashes, sessions, or secrets.
 - [x] Add a visible Admin backup-download control with clear backup scope, timestamp, and restore-safety guidance.
 - [x] Add Vitest coverage for backup completeness, admin authorization, and sensitive-field exclusion.
+- [x] Verify the latest published project source is synchronized with the connected GitHub repository without pushing unapproved changes.
+- [x] Push the latest published project source to the connected GitHub main branch and verify the commit matches.
