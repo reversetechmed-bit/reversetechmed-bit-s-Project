@@ -161,3 +161,6 @@
 - [x] Let the Admin create employee profiles with account role and enrollment state, then show the linked account and active employee identity in the Users directory.
 - [x] Add the named engineering and Admin employee roster to the idempotent demo data without creating or exposing login passwords.
 - [x] Add and run regression coverage for employee-to-user linking, restricted enrollment, role mapping, and account-directory privacy.
+- [x] Prepare the supplied warehouse icon as a web-safe application asset without altering its visual identity.
+- [x] Apply the warehouse icon to the web favicon, touch-icon metadata, and compact mobile/sidebar application identity.
+- [x] Verify the icon rendering in the browser and save a published checkpoint.

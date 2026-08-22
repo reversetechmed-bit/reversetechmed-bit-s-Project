@@ -1,0 +1,17 @@
+{
+  "name": "REVERSE TECH — نظام إدارة المخزن",
+  "short_name": "مخزن REVERSE TECH",
+  "lang": "ar",
+  "dir": "rtl",
+  "display": "standalone",
+  "theme_color": "#17374c",
+  "background_color": "#f4f0e8",
+  "icons": [
+    {
+      "src": "/manus-storage/reverse-tech-warehouse-icon_33f2d6a3.png",
+      "type": "image/png",
+      "sizes": "37x45",
+      "purpose": "any"
+    }
+  ]
+}

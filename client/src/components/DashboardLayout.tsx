@@ -68,6 +68,7 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+const WAREHOUSE_APP_ICON = "/manus-storage/reverse-tech-warehouse-icon_33f2d6a3.png";
 let notificationAudioContext: AudioContext | null = null;
 
 function playNotificationTone() {
@@ -322,6 +323,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
                 <PanelRight className="h-4 w-4 text-[#d9c79d]" />
               </button>
               <div className={`flex min-w-0 items-center gap-3 ${isCollapsed ? "mx-auto" : ""}`}>
+                <img src={WAREHOUSE_APP_ICON} alt="أيقونة مخزن REVERSE TECH" className="h-7 w-6 shrink-0 object-contain drop-shadow-sm group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-7" />
                 <div className="grid h-12 w-16 shrink-0 place-items-center rounded-md border border-[#d9c79d] bg-[#fffdf7] px-2 shadow-[0_6px_14px_rgba(0,0,0,.16)] group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11">
                   <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-7 w-full object-contain group-data-[collapsible=icon]:h-5" />
                 </div>
@@ -365,6 +367,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#d9d0bf] bg-[#fffefa]/95 px-4 backdrop-blur sm:px-7">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="h-9 w-9 rounded-md border border-[#d9d0bf] bg-[#fffefa] md:hidden" />
+            <img src={WAREHOUSE_APP_ICON} alt="أيقونة المخزن" className="h-7 w-6 object-contain md:hidden" />
             <div>
               <p className="text-sm font-semibold text-[#18354a]">{activeMenuItem?.label ?? "مساحة العمل"}</p>
               <p className="text-[11px] text-[#777065]">تشغيل المخزون والطلبات الداخلي</p>
