@@ -8,9 +8,9 @@
   "background_color": "#f4f0e8",
   "icons": [
     {
-      "src": "/manus-storage/reverse-tech-warehouse-icon_33f2d6a3.png",
+      "src": "/manus-storage/reverse-tech-warehouse-icon-hq_0336c499.png",
       "type": "image/png",
-      "sizes": "37x45",
+      "sizes": "1024x1024",
       "purpose": "any"
     }
   ]

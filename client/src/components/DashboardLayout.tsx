@@ -68,7 +68,7 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
-const WAREHOUSE_APP_ICON = "/manus-storage/reverse-tech-warehouse-icon_33f2d6a3.png";
+const WAREHOUSE_APP_ICON = "/manus-storage/reverse-tech-warehouse-icon-hq_0336c499.png";
 let notificationAudioContext: AudioContext | null = null;
 
 function playNotificationTone() {
@@ -185,8 +185,8 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
         <div className="relative overflow-hidden border-b-4 border-[#b58a4a] bg-[#17374c] p-7 sm:p-8">
           <div className="absolute inset-0 opacity-20 [background-image:repeating-linear-gradient(90deg,transparent,transparent_15px,rgba(255,255,255,.12)_16px)]" />
           <div className="absolute left-7 top-7 font-mono text-[9px] tracking-[.18em] text-[#dfc488]/80">RT · WMS · 01</div>
-          <div className="relative inline-flex rounded-lg border border-[#d9c79d] bg-[#fffdf7] px-5 py-3 shadow-[0_7px_18px_rgba(0,0,0,.15)]">
-            <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-12 w-auto object-contain sm:h-14" />
+          <div className="group relative inline-flex h-16 w-16 items-center justify-center sm:h-[4.5rem] sm:w-[4.5rem]">
+            <img src={WAREHOUSE_APP_ICON} alt="أيقونة مخزن REVERSE TECH" className="h-full w-full object-contain drop-shadow-[0_5px_12px_rgba(0,0,0,.18)] transition duration-300 ease-out group-hover:-rotate-3 group-hover:scale-110" />
           </div>
           <p className="relative mt-6 text-[10px] font-bold tracking-[.16em] text-[#dfc488]">تحليل · تصميم · تصنيع</p>
           <h1 className="relative mt-2 text-[1.7rem] font-extrabold leading-tight text-white sm:text-3xl">{title}</h1>
@@ -323,11 +323,10 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
                 <PanelRight className="h-4 w-4 text-[#d9c79d]" />
               </button>
               <div className={`flex min-w-0 items-center gap-3 ${isCollapsed ? "mx-auto" : ""}`}>
-                <img src={WAREHOUSE_APP_ICON} alt="أيقونة مخزن REVERSE TECH" className="h-7 w-6 shrink-0 object-contain drop-shadow-sm group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-7" />
-                <div className="grid h-12 w-16 shrink-0 place-items-center rounded-md border border-[#d9c79d] bg-[#fffdf7] px-2 shadow-[0_6px_14px_rgba(0,0,0,.16)] group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11">
-                  <img src="/manus-storage/reverse-tech-logo_04d48f19.webp" alt="REVERSE TECH" className="h-7 w-full object-contain group-data-[collapsible=icon]:h-5" />
-                </div>
-                {!isCollapsed && <div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[.08em] text-white">REVERSE TECH</p><span className="mt-1 block text-[9px] font-bold tracking-[.12em] text-[#ddc68e]">المخزون والطلبات</span></div>}
+                <button onClick={() => setLocation("/")} className="group/icon grid h-14 w-14 shrink-0 place-items-center rounded-lg transition duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d9c79d] group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12" aria-label="العودة إلى لوحة المخزن" title="لوحة المخزن">
+                  <img src={WAREHOUSE_APP_ICON} alt="أيقونة مخزن REVERSE TECH" className="h-10 w-10 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,.22)] transition duration-200 group-hover/icon:-rotate-3 group-hover/icon:scale-110 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9" />
+                </button>
+                {!isCollapsed && <div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[.08em] text-white">نظام المخزن</p><span className="mt-1 block text-[9px] font-bold tracking-[.12em] text-[#ddc68e]">المخزون والطلبات</span></div>}
               </div>
             </div>
           </SidebarHeader>
@@ -367,7 +366,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#d9d0bf] bg-[#fffefa]/95 px-4 backdrop-blur sm:px-7">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="h-9 w-9 rounded-md border border-[#d9d0bf] bg-[#fffefa] md:hidden" />
-            <img src={WAREHOUSE_APP_ICON} alt="أيقونة المخزن" className="h-7 w-6 object-contain md:hidden" />
+            <button onClick={() => setLocation("/")} className="group/icon grid h-9 w-9 place-items-center rounded-md transition hover:bg-[#f4f0e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b58a4a] md:hidden" aria-label="العودة إلى لوحة المخزن">
+              <img src={WAREHOUSE_APP_ICON} alt="أيقونة المخزن" className="h-7 w-7 object-contain transition duration-200 group-hover/icon:-rotate-3 group-hover/icon:scale-110" />
+            </button>
             <div>
               <p className="text-sm font-semibold text-[#18354a]">{activeMenuItem?.label ?? "مساحة العمل"}</p>
               <p className="text-[11px] text-[#777065]">تشغيل المخزون والطلبات الداخلي</p>
