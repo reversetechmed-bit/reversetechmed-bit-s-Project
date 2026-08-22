@@ -196,3 +196,5 @@
 - [x] Run a post-backup-restore readiness sweep covering tests, production build, TypeScript, runtime logs, and public sign-in routing.
 - [x] Diagnose and fix inconsistent employee activation using the Admin-approved email and initial employee code, without a functional employee-count limit.
 - [x] Add coverage proving multiple active employees can activate independently with their own approved email and code, while invalid email-code pairs are rejected safely.
+- [x] Diagnose and fix the reported activation failure for Eng Mostafa Mabrouk using the Admin-approved email and employee code without exposing credentials.
+- [x] Reissue Eng Mostafa Mabrouk's initial access code to match RT-ENG-MOSTAFA after explicit approval, then verify the activation state.

@@ -92,8 +92,13 @@ export const organizationRouter = router({
       const db = await requireDb();
       const normalizedEmail = input.email.trim().toLowerCase();
       const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, normalizedEmail)).limit(1);
-      if (!employee?.isActive || employee.userId || (employee.suspendedUntil && employee.suspendedUntil > new Date())) return { eligible: false as const, message: "هذا الحساب غير متاح للتفعيل. راجع مسؤول المخزن." };
-      if (!employee.initialPasswordHash || !isValidEnrollmentPasscode(input.password) || !enrollmentPasscodeMatches(input.password, employee.initialPasswordHash)) return { eligible: false as const, message: "البريد أو كود دخول الموظف غير صحيح. استخدم البيانات التي أنشأها مسؤول المخزن." };
+      if (!employee) return { eligible: false as const, message: "هذا البريد غير مسجل في دليل الموظفين. راجع الأدمن للتأكد من البريد المعتمد." };
+      if (!employee.isActive || employee.accessRevokedAt) return { eligible: false as const, message: "وصول هذا الموظف غير نشط حاليًا. راجع مسؤول المخزن." };
+      if (employee.suspendedUntil && employee.suspendedUntil > new Date()) return { eligible: false as const, message: "هذا الحساب معلّق مؤقتًا. راجع مسؤول المخزن." };
+      if (employee.userId) return { eligible: false as const, message: "هذا البريد لديه حساب مفعّل بالفعل. استخدم «تسجيل الدخول» بدل تفعيل الحساب." };
+      if (!employee.initialPasswordHash) return { eligible: false as const, message: "لم يصدر الأدمن كود دخول لهذا البريد بعد. اطلب منه الضغط على «تجهيز الدخول»." };
+      if (!isValidEnrollmentPasscode(input.password)) return { eligible: false as const, message: "صيغة كود الدخول غير صحيحة. استخدم 6 إلى 64 حرفًا أو رقمًا أو شرطة فقط." };
+      if (!enrollmentPasscodeMatches(input.password, employee.initialPasswordHash)) return { eligible: false as const, message: "كود الدخول لا يطابق الكود الذي جهزه الأدمن لهذا البريد. أعد نسخ الكود بلا مسافات أو اطلب من الأدمن إعادة تجهيزه." };
       return { eligible: true as const, message: "تم التحقق من بيانات الموظف. أنشئ كلمة مرور جديدة أو أكمل التفعيل.", fullName: employee.fullName, warehouseRole: employee.warehouseRole, method: "admin_credentials" as const };
     }),
   }),

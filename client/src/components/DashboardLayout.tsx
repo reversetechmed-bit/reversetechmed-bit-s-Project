@@ -161,7 +161,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
         const eligibility = await enrollment.mutateAsync({ email: approvedEmail, password: activationCode });
         if (!eligibility.eligible) {
           setSubmitting(false);
-          return setMessage("بيانات التفعيل غير صحيحة أو الحساب غير متاح. راجع مسؤول المخزن.");
+          return setMessage(eligibility.message);
         }
       } catch {
         setSubmitting(false);
