@@ -74,7 +74,7 @@
 - [x] Assess compatible hosting for the full-stack application and select the integrated hosting rather than Firebase static hosting.
 - [x] Prepare and verify the checkpoint for deployment through the integrated full-stack hosting instead of Firebase.
 - [ ] Verify the Admin account in the authenticated app UI on admin-only routes and actions, then re-run readiness checks.
-- [ ] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
+- [x] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
 - [x] Replace the current Arabic typography with a clear commercial font pairing suited to warehouse dashboards and validate RTL readability.
 - [x] Add an always-discoverable logout and account-switch action for both desktop and mobile dashboard navigation.
 - [x] Refine the sidebar logout and account-switch button with stronger visual hierarchy, hover, focus, and collapsed-navigation states.
@@ -150,4 +150,7 @@
 - [x] Use the supplied REVERSE TECH logo prominently and centrally in the invoice layout and improve the matching Arabic PDF and Excel exports.
 - [x] Add an Admin-managed Companies module with create, edit, archive, search, and company-to-product relationships.
 - [x] Classify inventory products as finished products or work-in-progress products, and define their component bill of materials without duplicating stock records.
-- [x] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.
+- [ ] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.
+- [x] Add regression tests for company CRUD and product-component list/replace procedures plus the Companies and InvoiceDocument UI routes.
+- [x] Explicitly inspect and document the integrated hosting publish path and settings before the next deployment-ready checkpoint.
+- [ ] Verify the rendered Companies and InvoiceDocument pages in an authenticated Admin session and record visual evidence without changing operational records.

@@ -54,4 +54,14 @@ describe("organization CRUD procedures", () => {
     expect(db.transaction).toHaveBeenCalled();
     expect(db.update).toHaveBeenCalled();
   });
+
+  it("lets an Admin create, update, and archive a company record", async () => {
+    const caller = organizationRouter.createCaller(adminContext());
+    const company = { name: "شركة ميدتك", code: "MED-TECH", contactName: "Mariam", contactEmail: "mariam@example.com" };
+    await caller.companies.create(company);
+    await caller.companies.update({ id: 1, ...company, contactName: "Mariam Hassan" });
+    await caller.companies.archive({ id: 1 });
+    expect(db.insert).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
+  });
 });
