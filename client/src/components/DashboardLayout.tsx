@@ -16,8 +16,8 @@ import {
   Package,
   PanelRight,
   Shapes,
-  Smartphone,
   Tags,
+  Users,
   UsersRound,
   Volume2,
   VolumeX,
@@ -52,6 +52,7 @@ const adminMenuItems = [
   { icon: FileText, label: "الفواتير", path: "/invoices" },
   { icon: Building2, label: "الأقسام", path: "/departments" },
   { icon: UsersRound, label: "الموظفون", path: "/employees" },
+  { icon: Users, label: "المستخدمون", path: "/users" },
   { icon: History, label: "سجل الحركة", path: "/transactions" },
 ];
 
@@ -199,19 +200,9 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <>
           {mode === "signup" && (
             <>
-              <div className="space-y-2">
-                <Label>طريقة إنشاء الحساب</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-[#0178D4] bg-[#F1F8FE] p-3 text-right">
-                    <span className="flex items-center gap-2 text-sm font-bold text-[#0B2E4E]"><Mail className="h-4 w-4 text-[#0178D4]" />بريد وكلمة مرور</span>
-                    <span className="mt-1 block text-[11px] text-slate-500">متاح لإنشاء أي عدد من الحسابات.</span>
-                  </div>
-                  <div className="rounded-lg border border-dashed border-[#DCEAF7] bg-slate-50 p-3 text-right">
-                    <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><Smartphone className="h-4 w-4" />رقم هاتف ورمز</span>
-                    <span className="mt-1 block text-[11px] text-slate-500">يتطلب تفعيل بوابة رسائل SMS أولًا.</span>
-                  </div>
-                </div>
-                <p className="text-xs leading-5 text-slate-500">التسجيل بالبريد وكلمة المرور مفتوح للأدمن والمستخدم. يمكن إضافة تسجيل الهاتف فور ربط مزود الرسائل في إعدادات Supabase.</p>
+              <div className="rounded-lg border border-[#d9c79d] bg-[#fcf8ef] p-3 text-right">
+                <span className="flex items-center gap-2 text-sm font-bold text-[#0B2E4E]"><Mail className="h-4 w-4 text-[#a97937]" />بريد وكلمة مرور</span>
+                <span className="mt-1 block text-[11px] text-slate-600">متاح لإنشاء أي عدد من حسابات الأدمن والمستخدمين.</span>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="auth-name">الاسم الكامل</Label>

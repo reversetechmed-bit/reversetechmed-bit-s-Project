@@ -140,3 +140,7 @@
 - [x] Repair the delivery-rule and demo-data regression tests, then rerun the full automated verification suite.
 - [x] Harden delivery reservation integrity and notification read authorization based on the structured code review.
 - [x] Update and validate the reusable warehouse-management skill with reservation, notification-ownership, category, phone-registration, and idempotent-seed guidance.
+- [x] Remove phone-number registration from the sign-up interface and retain unlimited email-and-password registration for Admin and User accounts.
+- [x] Add an Admin-only Users page that lists all application accounts with role, contact details, access history, and operational activity summaries.
+- [x] Add a per-user Admin activity view covering dispensing requests, handovers, inventory operations, alerts, and audit-log events without exposing private data to normal users.
+- [x] Add and run regression coverage for Users-page authorization, activity scoping, and the complete warehouse request-to-handover flow.

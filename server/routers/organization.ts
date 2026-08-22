@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
-import { componentTypes, departments, employeeProfiles, employeeWarehouseRoleValues, inventoryCategories, parts } from "../../drizzle/schema";
+import { desc, eq, or } from "drizzle-orm";
+import { componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
@@ -143,6 +143,73 @@ export const organizationRouter = router({
       const db = await requireDb();
       await db.update(departments).set({ isActive: 0 }).where(eq(departments.id, input.id));
       return { success: true } as const;
+    }),
+  }),
+
+  users: router({
+    list: adminProcedure.query(async () => {
+      const db = await requireDb();
+      const [accounts, requests, invoices, transactions, alerts, activities] = await Promise.all([
+        db.select({ account: users, employee: employeeProfiles, department: { id: departments.id, name: departments.name, code: departments.code } })
+          .from(users)
+          .leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
+          .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
+          .orderBy(desc(users.lastSignedIn)),
+        db.select({ requestedById: dispensingRequests.requestedById, status: dispensingRequests.status }).from(dispensingRequests).limit(500),
+        db.select({ receivedById: handoverInvoices.receivedById, issuedById: handoverInvoices.issuedById }).from(handoverInvoices).limit(500),
+        db.select({ actorId: inventoryTransactions.actorId, engineerId: inventoryTransactions.engineerId }).from(inventoryTransactions).limit(1000),
+        db.select({ recipientUserId: warehouseAlerts.recipientUserId, isRead: warehouseAlerts.isRead }).from(warehouseAlerts).limit(500),
+        db.select({ actorId: warehouseActivities.actorId, createdAt: warehouseActivities.createdAt }).from(warehouseActivities).orderBy(desc(warehouseActivities.createdAt)).limit(1000),
+      ]);
+
+      return accounts.map(({ account, employee, department }) => {
+        const userRequests = requests.filter(request => request.requestedById === account.id);
+        const userAlerts = alerts.filter(alert => alert.recipientUserId === account.id);
+        const userActivities = activities.filter(activity => activity.actorId === account.id);
+        return {
+          account,
+          employee,
+          department,
+          summary: {
+            requestCount: userRequests.length,
+            pendingRequestCount: userRequests.filter(request => request.status === "pending").length,
+            approvedRequestCount: userRequests.filter(request => request.status === "approved").length,
+            deliveredRequestCount: userRequests.filter(request => request.status === "delivered").length,
+            rejectedRequestCount: userRequests.filter(request => request.status === "rejected").length,
+            receivedInvoiceCount: invoices.filter(invoice => invoice.receivedById === account.id).length,
+            issuedInvoiceCount: invoices.filter(invoice => invoice.issuedById === account.id).length,
+            transactionCount: transactions.filter(transaction => transaction.actorId === account.id || transaction.engineerId === account.id).length,
+            activityCount: userActivities.length,
+            unreadAlertCount: userAlerts.filter(alert => !alert.isRead).length,
+            lastActivityAt: userActivities[0]?.createdAt ?? null,
+          },
+        };
+      });
+    }),
+
+    activity: adminProcedure.input(z.object({ userId: z.number().int().positive() })).query(async ({ input }) => {
+      const db = await requireDb();
+      const [accountResult, requests, invoices, transactions, alerts, activities] = await Promise.all([
+        db.select({ account: users, employee: employeeProfiles, department: { id: departments.id, name: departments.name, code: departments.code } })
+          .from(users)
+          .leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
+          .leftJoin(departments, eq(employeeProfiles.departmentId, departments.id))
+          .where(eq(users.id, input.userId))
+          .limit(1),
+        db.select({ request: dispensingRequests, part: { id: parts.id, name: parts.name, partNumber: parts.partNumber, warehouseSection: parts.warehouseSection } })
+          .from(dispensingRequests)
+          .innerJoin(parts, eq(dispensingRequests.partId, parts.id))
+          .where(eq(dispensingRequests.requestedById, input.userId))
+          .orderBy(desc(dispensingRequests.createdAt))
+          .limit(100),
+        db.select().from(handoverInvoices).where(or(eq(handoverInvoices.receivedById, input.userId), eq(handoverInvoices.issuedById, input.userId))).orderBy(desc(handoverInvoices.issuedAt)).limit(100),
+        db.select().from(inventoryTransactions).where(or(eq(inventoryTransactions.actorId, input.userId), eq(inventoryTransactions.engineerId, input.userId))).orderBy(desc(inventoryTransactions.createdAt)).limit(150),
+        db.select().from(warehouseAlerts).where(eq(warehouseAlerts.recipientUserId, input.userId)).orderBy(desc(warehouseAlerts.createdAt)).limit(100),
+        db.select().from(warehouseActivities).where(eq(warehouseActivities.actorId, input.userId)).orderBy(desc(warehouseActivities.createdAt)).limit(150),
+      ]);
+      const account = accountResult[0];
+      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "حساب المستخدم غير موجود." });
+      return { ...account, requests, invoices, transactions, alerts, activities };
     }),
   }),
 

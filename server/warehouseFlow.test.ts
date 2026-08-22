@@ -108,6 +108,26 @@ describe("confirmed delivery persistence plan", () => {
     expect(movement).toEqual({ ok: false, reason: "The quantity reserved for this approved request is no longer sufficient for delivery." });
   });
 
+  it("does not write inventory, invoices, transactions, or alerts when reservation integrity fails", async () => {
+    const writes: string[] = [];
+    const outcome = await executeConfirmedDelivery({
+      request: { id: 23, status: "approved", requestedQuantity: 5, requestedById: 8, purpose: "Integrity protection test" },
+      part: { id: 7, partNumber: "EC-557", name: "Reservation guard", warehouseSection: "components", quantity: 20, reservedQuantity: 3, minimumStock: 2 },
+      engineer: { id: 8, name: "Mariam Hassan" },
+    }, 2, {
+      updatePartInventory: async () => { writes.push("inventory"); },
+      markRequestDelivered: async () => { writes.push("request"); },
+      insertTransaction: async () => { writes.push("transaction"); },
+      createHandoverInvoice: async () => { writes.push("invoice"); },
+      recordActivity: async () => { writes.push("activity"); },
+      hasUnreadLowStockAlert: async () => { writes.push("low-stock-check"); return false; },
+      createLowStockAlert: async () => { writes.push("alert"); },
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "The quantity reserved for this approved request is no longer sufficient for delivery." });
+    expect(writes).toEqual([]);
+  });
+
   it("executes the same delivery service used by the router to deduct stock, log the movement, and create a low-stock alert", async () => {
     const calls: Array<{ operation: string; payload: unknown }> = [];
     const outcome = await executeConfirmedDelivery({

@@ -14,6 +14,7 @@ import InventoryCategories from "./pages/InventoryCategories";
 import Organization from "./pages/Organization";
 import Requests from "./pages/Requests";
 import Transactions from "./pages/Transactions";
+import Users from "./pages/Users";
 
 function WarehouseShell({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -33,6 +34,7 @@ function Router() {
       <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />
       <Route path={"/departments"} component={() => <WarehouseShell><Organization initialTab="departments" /></WarehouseShell>} />
       <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />
+      <Route path={"/users"} component={() => <WarehouseShell><Users /></WarehouseShell>} />
       <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

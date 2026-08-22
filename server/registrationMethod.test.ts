@@ -8,13 +8,12 @@ describe("registration method presentation", () => {
     const layout = source("client/src/components/DashboardLayout.tsx");
     expect(layout).toContain('requested_role: requestedRole');
     expect(layout).toContain("بريد وكلمة مرور");
-    expect(layout).toContain("متاح لإنشاء أي عدد من الحسابات.");
-    expect(layout).toContain("التسجيل بالبريد وكلمة المرور مفتوح للأدمن والمستخدم.");
+    expect(layout).toContain("متاح لإنشاء أي عدد من حسابات الأدمن والمستخدمين.");
   });
 
-  it("does not present phone registration as ready until the SMS provider is enabled", () => {
+  it("does not present phone registration in the sign-up interface", () => {
     const layout = source("client/src/components/DashboardLayout.tsx");
-    expect(layout).toContain("رقم هاتف ورمز");
-    expect(layout).toContain("يتطلب تفعيل بوابة رسائل SMS أولًا.");
+    expect(layout).not.toContain("رقم هاتف ورمز");
+    expect(layout).not.toContain("بوابة رسائل SMS");
   });
 });
