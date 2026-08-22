@@ -10,6 +10,7 @@ describe("registration method presentation", () => {
     expect(layout).toContain('registration_source: "employee_directory"');
     expect(layout).toContain("اكتب البريد المسجل وكود الدخول نفسه");
     expect(layout).toContain("كود الدخول الذي حدده الأدمن");
+    expect(layout).toContain("حد رسائل تأكيد البريد المؤقت في Supabase");
     expect(layout).toContain("الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف");
     expect(layout).not.toContain("requested_role: requestedRole");
   });

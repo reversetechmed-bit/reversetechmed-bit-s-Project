@@ -198,3 +198,4 @@
 - [x] Add coverage proving multiple active employees can activate independently with their own approved email and code, while invalid email-code pairs are rejected safely.
 - [x] Diagnose and fix the reported activation failure for Eng Mostafa Mabrouk using the Admin-approved email and employee code without exposing credentials.
 - [x] Reissue Eng Mostafa Mabrouk's initial access code to match RT-ENG-MOSTAFA after explicit approval, then verify the activation state.
+- [x] Diagnose and mitigate Supabase email rate limiting during employee activation, with a clear fallback that does not misreport it as an invalid employee code.

@@ -172,7 +172,11 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
       ? await supabase.auth.signInWithPassword({ email: approvedEmail, password })
       : await supabase.auth.signUp({ email: approvedEmail, password: activationCode, options: { data: { registration_source: "employee_directory" }, emailRedirectTo: window.location.origin } });
     setSubmitting(false);
-    if (result.error) return setMessage(result.error.message.toLowerCase().includes("already registered") ? "هذا البريد لديه حساب سابقًا. استخدم «تسجيل الدخول»، أو اطلب من الأدمن إعادة ضبط كلمة المرور من Supabase عند الحاجة." : result.error.message);
+    if (result.error) {
+      const authError = result.error.message.toLowerCase();
+      if (authError.includes("email rate limit")) return setMessage("تم تجاوز حد رسائل تأكيد البريد المؤقت في Supabase، وليس هناك خطأ في البريد أو كود الموظف. توقّف عن المحاولة الآن واطلب من الأدمن تجهيز الحساب من لوحة Supabase أو الانتظار حتى ينقضي الحد.");
+      return setMessage(authError.includes("already registered") ? "هذا البريد لديه حساب سابقًا. استخدم «تسجيل الدخول»، أو اطلب من الأدمن إعادة ضبط كلمة المرور من Supabase عند الحاجة." : result.error.message);
+    }
     setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم تسجيل الدخول. يجري فتح مساحة العمل…");
   };
 
