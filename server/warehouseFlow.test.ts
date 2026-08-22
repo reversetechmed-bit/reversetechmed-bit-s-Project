@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { departmentInput, employeeInput, organizationRouter } from "./routers/organization";
+import { companyInput, departmentInput, employeeInput, organizationRouter } from "./routers/organization";
 import { warehouseRouter } from "./routers/warehouse";
 import { executeConfirmedDelivery, prepareConfirmedDelivery } from "./warehouseDelivery";
 import type { TrpcContext } from "./_core/context";
@@ -25,7 +25,7 @@ function contextFor(role: "admin" | "user"): TrpcContext {
 describe("warehouse procedure permissions", () => {
   it("rejects an admin attempting to submit an engineer dispensing request", async () => {
     const caller = warehouseRouter.createCaller(contextFor("admin"));
-    await expect(caller.requests.create({ partId: 1, requestedQuantity: 1, purpose: "Prototype verification" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.requests.create({ partId: 1, requestedQuantity: 1, purpose: "Prototype verification", recipientName: "Test Receiver" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("rejects an engineer attempting to create an inventory record", async () => {
@@ -43,6 +43,13 @@ describe("warehouse procedure permissions", () => {
   it("rejects an engineer attempting to access the company departments directory", async () => {
     const caller = organizationRouter.createCaller(contextFor("user"));
     await expect(caller.departments.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("restricts the companies catalog to admins and validates the company code", async () => {
+    const caller = organizationRouter.createCaller(contextFor("user"));
+    await expect(caller.companies.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(companyInput.parse({ name: "شركة ميدتك", code: "MED-TECH", contactEmail: "contact@example.com" })).toMatchObject({ code: "MED-TECH" });
+    expect(() => companyInput.parse({ name: "شركة ميدتك", code: "@@@" })).toThrow();
   });
 
   it("rejects any warehouse section other than components or products before a database write", async () => {
@@ -70,7 +77,7 @@ describe("confirmed delivery persistence plan", () => {
   it("produces stock deduction, immutable transaction data, and a low-stock alert flag together", () => {
     const deliveryTime = new Date("2026-08-18T12:00:00.000Z");
     const movement = prepareConfirmedDelivery({
-      request: { id: 21, status: "approved", requestedQuantity: 4, requestedById: 8, purpose: "Prototype verification" },
+      request: { id: 21, status: "approved", requestedQuantity: 4, requestedById: 8, purpose: "Prototype verification", recipientName: "Clinical Lab", recipientDepartment: "Medical Engineering", projectReference: "MD-21", requestNote: "Controlled test" },
       part: { id: 5, partNumber: "EC-555", name: "Precision regulator", warehouseSection: "components", quantity: 6, reservedQuantity: 4, minimumStock: 3 },
       engineer: { id: 8, name: "Mariam Hassan" },
     }, 2, deliveryTime);
@@ -93,7 +100,14 @@ describe("confirmed delivery persistence plan", () => {
         partNumberSnapshot: "EC-555",
         partNameSnapshot: "Precision regulator",
         warehouseSectionSnapshot: "components",
-        details: "تم التسليم الفعلي لعدد 4 وحدة إلى Mariam Hassan.",
+        details: "تم التسليم الفعلي لعدد 4 وحدة إلى Clinical Lab.",
+      },
+      invoice: {
+        requesterNameSnapshot: "Mariam Hassan",
+        recipientNameSnapshot: "Clinical Lab",
+        recipientDepartmentSnapshot: "Medical Engineering",
+        projectReferenceSnapshot: "MD-21",
+        requestNoteSnapshot: "Controlled test",
       },
     });
   });
@@ -131,7 +145,7 @@ describe("confirmed delivery persistence plan", () => {
   it("executes the same delivery service used by the router to deduct stock, log the movement, and create a low-stock alert", async () => {
     const calls: Array<{ operation: string; payload: unknown }> = [];
     const outcome = await executeConfirmedDelivery({
-      request: { id: 31, status: "approved", requestedQuantity: 3, requestedById: 7, purpose: "Pressure calibration" },
+      request: { id: 31, status: "approved", requestedQuantity: 3, requestedById: 7, purpose: "Pressure calibration", recipientName: "Omar Adel", recipientDepartment: "Calibration", projectReference: "CAL-31", requestNote: "Bench 4" },
       part: { id: 9, partNumber: "MD-009", name: "Pressure sensor", warehouseSection: "products", quantity: 5, reservedQuantity: 3, minimumStock: 4 },
       engineer: { id: 7, name: "Omar Adel" },
     }, 1, {
@@ -142,14 +156,14 @@ describe("confirmed delivery persistence plan", () => {
       recordActivity: async activity => { calls.push({ operation: "recordActivity", payload: activity }); },
       hasUnreadLowStockAlert: async partId => { calls.push({ operation: "hasUnreadLowStockAlert", payload: partId }); return false; },
       createLowStockAlert: async alert => { calls.push({ operation: "createLowStockAlert", payload: alert }); },
-    }, new Date("2026-08-18T12:00:00.000Z"));
+    }, new Date("2026-08-18T12:00:00.000Z"), "Delivered sealed and checked.");
 
     expect(outcome).toMatchObject({ ok: true, quantityAfter: 2, reservedQuantityAfter: 0, shouldCreateLowStockAlert: true });
     expect(calls).toEqual([
       { operation: "updatePartInventory", payload: { partId: 9, inventory: { quantity: 2, reservedQuantity: 0 } } },
       { operation: "markRequestDelivered", payload: { requestId: 31, adminId: 1, deliveredAt: new Date("2026-08-18T12:00:00.000Z") } },
       { operation: "insertTransaction", payload: expect.objectContaining({ type: "delivery_confirmed", quantityDelta: -3, quantityBefore: 5, quantityAfter: 2, engineerId: 7 }) },
-      { operation: "createHandoverInvoice", payload: expect.objectContaining({ invoiceNumber: "RT-HO-20260818-00031", requestId: 31, partId: 9, receivedById: 7, quantity: 3, purposeSnapshot: "Pressure calibration" }) },
+      { operation: "createHandoverInvoice", payload: expect.objectContaining({ invoiceNumber: "RT-HO-20260818-00031", requestId: 31, partId: 9, receivedById: 7, quantity: 3, purposeSnapshot: "Pressure calibration", requesterNameSnapshot: "Omar Adel", recipientNameSnapshot: "Omar Adel", recipientDepartmentSnapshot: "Calibration", projectReferenceSnapshot: "CAL-31", requestNoteSnapshot: "Bench 4", deliveryNote: "Delivered sealed and checked." }) },
       { operation: "recordActivity", payload: expect.objectContaining({ type: "handover_completed", actorId: 1, requestId: 31, partId: 9 }) },
       { operation: "hasUnreadLowStockAlert", payload: 9 },
       { operation: "createLowStockAlert", payload: { type: "low_stock", title: "المنتجات: تنبيه مخزون منخفض", body: "وصلت كمية Pressure sensor في المنتجات إلى الحد الأدنى أو انخفضت عنه بعد التسليم.", partId: 9, requestId: 31 } },

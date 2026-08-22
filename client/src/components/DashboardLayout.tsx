@@ -48,6 +48,7 @@ const adminMenuItems = [
   { icon: Shapes, label: "أنواع المكونات", path: "/component-types" },
   { icon: Tags, label: "تصنيفات المخزون", path: "/inventory-categories" },
   { icon: Package, label: "المنتجات", path: "/products" },
+  { icon: Building2, label: "الشركات", path: "/companies" },
   { icon: ClipboardList, label: "طلبات الصرف", path: "/requests" },
   { icon: FileText, label: "الفواتير", path: "/invoices" },
   { icon: Building2, label: "الأقسام", path: "/departments" },

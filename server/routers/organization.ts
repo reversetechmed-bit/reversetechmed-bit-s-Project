@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq, or } from "drizzle-orm";
-import { componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
+import { companies, componentTypes, departments, dispensingRequests, employeeProfiles, employeeWarehouseRoleValues, handoverInvoices, inventoryCategories, inventoryTransactions, parts, productComponents, users, warehouseActivities, warehouseAlerts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
@@ -31,6 +31,20 @@ export const inventoryCategoryInput = z.object({
   colorKey: z.enum(["blue", "sky", "violet", "amber", "emerald", "rose", "slate"]).default("blue"),
 });
 
+export const companyInput = z.object({
+  name: z.string().trim().min(2).max(200),
+  code: z.string().trim().toUpperCase().regex(/^[- A-Z0-9\u0621-\u064A\u0660-\u0669\u0670-\u06FF]+$/, "رمز الشركة يقبل الحروف والأرقام والمسافات والشرطة فقط.").min(2).max(48),
+  contactName: z.string().trim().max(160).optional(),
+  contactPhone: z.string().trim().max(48).optional(),
+  contactEmail: z.string().trim().email().max(320).optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+const productBomInput = z.object({
+  productId: z.number().int().positive(),
+  components: z.array(z.object({ componentId: z.number().int().positive(), quantityRequired: z.number().int().positive(), notes: z.string().trim().max(1000).optional() })).max(100),
+});
+
 async function requireDb() {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Organization data is temporarily unavailable." });
@@ -42,6 +56,62 @@ function optionalText(value?: string) {
 }
 
 export const organizationRouter = router({
+  companies: router({
+    list: adminProcedure.query(async () => {
+      const db = await requireDb();
+      return db.select().from(companies).orderBy(companies.isActive, companies.name);
+    }),
+    create: adminProcedure.input(companyInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      try {
+        await db.insert(companies).values({ ...input, contactName: optionalText(input.contactName), contactPhone: optionalText(input.contactPhone), contactEmail: optionalText(input.contactEmail), notes: optionalText(input.notes), createdById: ctx.user.id });
+        const [created] = await db.select().from(companies).where(eq(companies.code, input.code)).limit(1);
+        return created;
+      } catch {
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل سجل شركة بالاسم أو الرمز نفسه." });
+      }
+    }),
+    update: adminProcedure.input(companyInput.extend({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb(); const { id, ...values } = input;
+      const [existing] = await db.select({ id: companies.id }).from(companies).where(eq(companies.id, id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "الشركة غير موجودة." });
+      try {
+        await db.update(companies).set({ ...values, contactName: optionalText(values.contactName), contactPhone: optionalText(values.contactPhone), contactEmail: optionalText(values.contactEmail), notes: optionalText(values.notes) }).where(eq(companies.id, id));
+        return { success: true } as const;
+      } catch {
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل سجل شركة بالاسم أو الرمز نفسه." });
+      }
+    }),
+    archive: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(companies).set({ isActive: 0 }).where(eq(companies.id, input.id));
+      return { success: true } as const;
+    }),
+  }),
+
+  productComponents: router({
+    list: adminProcedure.input(z.object({ productId: z.number().int().positive() })).query(async ({ input }) => {
+      const db = await requireDb();
+      return db.select({ bom: productComponents, component: parts }).from(productComponents).innerJoin(parts, eq(productComponents.componentId, parts.id)).where(eq(productComponents.productId, input.productId)).orderBy(parts.name);
+    }),
+    replace: adminProcedure.input(productBomInput).mutation(async ({ input }) => {
+      const db = await requireDb();
+      const uniqueComponentIds = new Set(input.components.map(component => component.componentId));
+      if (uniqueComponentIds.size !== input.components.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تكرار المكون نفسه داخل قائمة مكونات المنتج." });
+      if (uniqueComponentIds.has(input.productId)) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن أن يكون المنتج مكونًا لنفسه." });
+      return db.transaction(async tx => {
+        const [product] = await tx.select().from(parts).where(eq(parts.id, input.productId)).limit(1);
+        if (!product || product.warehouseSection !== "products") throw new TRPCError({ code: "BAD_REQUEST", message: "اختر منتجًا من قسم المنتجات لضبط قائمة مكوناته." });
+        const validComponents = await tx.select({ id: parts.id }).from(parts).where(eq(parts.warehouseSection, "components"));
+        const validIds = new Set(validComponents.map(component => component.id));
+        if (input.components.some(component => !validIds.has(component.componentId))) throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن ربط المنتج بمكونات موجودة في قسم المكونات فقط." });
+        await tx.delete(productComponents).where(eq(productComponents.productId, product.id));
+        if (input.components.length) await tx.insert(productComponents).values(input.components.map(component => ({ productId: product.id, componentId: component.componentId, quantityRequired: component.quantityRequired, notes: optionalText(component.notes) })));
+        return { success: true } as const;
+      });
+    }),
+  }),
+
   inventoryCategories: router({
     list: protectedProcedure.query(async () => {
       const db = await requireDb();

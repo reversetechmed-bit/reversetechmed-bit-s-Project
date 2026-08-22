@@ -1,7 +1,7 @@
 import { isLowStock, validateDelivery } from "./warehouseRules";
 
 export type DeliveryRecord = {
-  request: { id: number; status: string; requestedQuantity: number; requestedById: number; purpose: string };
+  request: { id: number; status: string; requestedQuantity: number; requestedById: number; purpose: string; recipientName?: string | null; recipientDepartment?: string | null; projectReference?: string | null; requestNote?: string | null };
   part: { id: number; partNumber: string; name: string; quantity: number; reservedQuantity: number; minimumStock: number; warehouseSection: "components" | "products" };
   engineer: { id: number; name: string | null };
 };
@@ -25,13 +25,13 @@ export type DeliveryPersistence = {
   updatePartInventory: (partId: number, inventory: { quantity: number; reservedQuantity: number }) => Promise<void>;
   markRequestDelivered: (requestId: number, adminId: number, deliveredAt: Date) => Promise<void>;
   insertTransaction: (transaction: DeliveryTransaction) => Promise<void>;
-  createHandoverInvoice: (invoice: { invoiceNumber: string; requestId: number; partId: number; issuedById: number; receivedById: number; partNumberSnapshot: string; partNameSnapshot: string; warehouseSectionSnapshot: "components" | "products"; quantity: number; purposeSnapshot: string; issuedAt: Date }) => Promise<void>;
+  createHandoverInvoice: (invoice: { invoiceNumber: string; requestId: number; partId: number; issuedById: number; receivedById: number; partNumberSnapshot: string; partNameSnapshot: string; warehouseSectionSnapshot: "components" | "products"; quantity: number; purposeSnapshot: string; requesterNameSnapshot: string | null; recipientNameSnapshot: string | null; recipientDepartmentSnapshot: string | null; projectReferenceSnapshot: string | null; requestNoteSnapshot: string | null; deliveryNote: string | null; issuedAt: Date }) => Promise<void>;
   recordActivity: (activity: { type: "handover_completed"; actorId: number; title: string; detail: string; requestId: number; partId: number }) => Promise<void>;
   hasUnreadLowStockAlert: (partId: number) => Promise<boolean>;
   createLowStockAlert: (input: { type: "low_stock"; title: string; body: string; partId: number; requestId: number }) => Promise<void>;
 };
 
-export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number, deliveredAt = new Date()) {
+export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number, deliveredAt = new Date(), deliveryNote?: string | null) {
   const delivery = validateDelivery(record.request.status, record.part.quantity, record.part.reservedQuantity, record.request.requestedQuantity);
   if (!delivery.ok) return delivery;
 
@@ -54,7 +54,7 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
       partNumberSnapshot: record.part.partNumber,
       partNameSnapshot: record.part.name,
       warehouseSectionSnapshot: record.part.warehouseSection,
-      details: `تم التسليم الفعلي لعدد ${record.request.requestedQuantity} وحدة إلى ${record.engineer.name || "المهندس الطالب"}.`,
+      details: `تم التسليم الفعلي لعدد ${record.request.requestedQuantity} وحدة إلى ${record.request.recipientName || record.engineer.name || "المهندس الطالب"}.`,
     } satisfies DeliveryTransaction,
     invoice: {
       invoiceNumber,
@@ -67,14 +67,20 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
       warehouseSectionSnapshot: record.part.warehouseSection,
       quantity: record.request.requestedQuantity,
       purposeSnapshot: record.request.purpose,
+      requesterNameSnapshot: record.engineer.name,
+      recipientNameSnapshot: record.request.recipientName || record.engineer.name,
+      recipientDepartmentSnapshot: record.request.recipientDepartment || null,
+      projectReferenceSnapshot: record.request.projectReference || null,
+      requestNoteSnapshot: record.request.requestNote || null,
+      deliveryNote: deliveryNote || null,
       issuedAt: deliveredAt,
     },
   };
 }
 
 /** Executes the delivery write sequence inside the database transaction supplied by the caller. */
-export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: number, persistence: DeliveryPersistence, deliveredAt = new Date()) {
-  const plan = prepareConfirmedDelivery(record, adminId, deliveredAt);
+export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: number, persistence: DeliveryPersistence, deliveredAt = new Date(), deliveryNote?: string | null) {
+  const plan = prepareConfirmedDelivery(record, adminId, deliveredAt, deliveryNote);
   if (!plan.ok) return plan;
 
   await persistence.updatePartInventory(record.part.id, { quantity: plan.quantityAfter, reservedQuantity: plan.reservedQuantityAfter });
@@ -85,7 +91,7 @@ export async function executeConfirmedDelivery(record: DeliveryRecord, adminId: 
     type: "handover_completed",
     actorId: adminId,
     title: "اكتمل التسليم اليدوي",
-    detail: `تم تسليم ${record.request.requestedQuantity} × ${record.part.name} إلى ${record.engineer.name || "المهندس الطالب"}. الفاتورة ${plan.invoice.invoiceNumber}.`,
+    detail: `تم تسليم ${record.request.requestedQuantity} × ${record.part.name} إلى ${record.request.recipientName || record.engineer.name || "المهندس الطالب"}. الفاتورة ${plan.invoice.invoiceNumber}.`,
     requestId: record.request.id,
     partId: record.part.id,
   });

@@ -26,8 +26,8 @@ describe("operational product copy", () => {
     const requests = source("client/src/pages/Requests.tsx");
     const invoices = source("client/src/pages/Invoices.tsx");
     const myRequests = source("client/src/pages/MyRequests.tsx");
-    expect(requests).toContain("أكد التسليم فقط بعد تسليم القطعة فعليًا");
-    expect(invoices).toContain("بانتظار المستلم لتأكيد استلامه رقميًا");
+    expect(requests).toContain("سجّل ملاحظة التسليم عند تسليم القطعة فعليًا لإنشاء فاتورة مستقلة.");
+    expect(invoices).toContain("كل فاتورة تفتح في صفحة مستقلة تضم بيانات الطلب والاستلام والصنف والتأكيد الرقمي");
     expect(myRequests).toContain("ولا تتوفر بيانات فاتورة مرتبطة بهذا الطلب بعد");
     expect(myRequests).not.toContain("وستظهر فاتورتك هنا قريبًا");
   });
@@ -47,8 +47,8 @@ describe("operational product copy", () => {
     const partForm = source("client/src/components/PartFormDialog.tsx");
     expect(inventory).toContain("لا توجد {label} مطابقة");
     expect(requests).toContain("ستظهر طلبات المهندسين الواردة هنا.");
-    expect(invoices).toContain("اختر فاتورة لمراجعتها وطباعتها.");
-    expect(partForm).toContain("اختر تصنيف المخزون أولًا.");
-    expect(partForm).toContain("يجب ألا يتجاوز حجم الصورة 5 ميغابايت.");
+    expect(invoices).toContain("لا توجد فواتير مطابقة للبحث.");
+    expect(partForm).toContain("أدخل البيانات الأساسية واختر تصنيف المخزون.");
+    expect(partForm).toContain("الصورة يجب أن تكون JPG أو PNG أو WEBP وبحد أقصى 5MB.");
   });
 });

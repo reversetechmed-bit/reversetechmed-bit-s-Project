@@ -1,4 +1,4 @@
-import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -99,6 +99,27 @@ export const componentTypes = mysqlTable(
   table => [index("component_types_active_idx").on(table.isActive)],
 );
 
+/** External companies whose devices, boards, and engineering products are tracked by the warehouse. */
+export const companies = mysqlTable(
+  "companies",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 200 }).notNull().unique(),
+    code: varchar("code", { length: 48 }).notNull().unique(),
+    contactName: varchar("contactName", { length: 160 }),
+    contactPhone: varchar("contactPhone", { length: 48 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    notes: text("notes"),
+    isActive: int("isActive").notNull().default(1),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("companies_active_name_idx").on(table.isActive, table.name)],
+);
+
+export const productStageValues = ["finished", "work_in_progress"] as const;
+
 /** Current on-hand inventory for each tracked engineering part. */
 export const parts = mysqlTable(
   "parts",
@@ -111,6 +132,8 @@ export const parts = mysqlTable(
     categoryId: int("categoryId").references(() => inventoryCategories.id, { onDelete: "set null" }),
     warehouseSection: mysqlEnum("warehouseSection", warehouseSectionValues).notNull().default("components"),
     componentTypeId: int("componentTypeId").references(() => componentTypes.id, { onDelete: "set null" }),
+    companyId: int("companyId").references(() => companies.id, { onDelete: "set null" }),
+    productStage: mysqlEnum("productStage", productStageValues),
     quantity: int("quantity").notNull().default(0),
     reservedQuantity: int("reservedQuantity").notNull().default(0),
     minimumStock: int("minimumStock").notNull().default(0),
@@ -128,7 +151,26 @@ export const parts = mysqlTable(
     index("parts_category_idx").on(table.category),
     index("parts_section_idx").on(table.warehouseSection),
     index("parts_component_type_idx").on(table.componentTypeId),
+    index("parts_company_idx").on(table.companyId),
     index("parts_stock_idx").on(table.quantity, table.minimumStock),
+  ],
+);
+
+/** Bill of materials for a warehouse product. Component rows remain the single source of truth for stock. */
+export const productComponents = mysqlTable(
+  "productComponents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    productId: int("productId").notNull().references(() => parts.id, { onDelete: "cascade" }),
+    componentId: int("componentId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityRequired: int("quantityRequired").notNull().default(1),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("product_components_unique_idx").on(table.productId, table.componentId),
+    index("product_components_component_idx").on(table.componentId),
   ],
 );
 
@@ -143,6 +185,10 @@ export const dispensingRequests = mysqlTable(
     requestedById: int("requestedById").notNull().references(() => users.id, { onDelete: "restrict" }),
     requestedQuantity: int("requestedQuantity").notNull(),
     purpose: text("purpose").notNull(),
+    recipientName: varchar("recipientName", { length: 160 }),
+    recipientDepartment: varchar("recipientDepartment", { length: 160 }),
+    projectReference: varchar("projectReference", { length: 160 }),
+    requestNote: text("requestNote"),
     status: mysqlEnum("status", dispensingStatusValues).notNull().default("pending"),
     decisionNote: text("decisionNote"),
     reviewedById: int("reviewedById").references(() => users.id, { onDelete: "set null" }),
@@ -228,6 +274,12 @@ export const handoverInvoices = mysqlTable(
     warehouseSectionSnapshot: mysqlEnum("warehouseSectionSnapshot", warehouseSectionValues).notNull(),
     quantity: int("quantity").notNull(),
     purposeSnapshot: text("purposeSnapshot").notNull(),
+    requesterNameSnapshot: varchar("requesterNameSnapshot", { length: 160 }),
+    recipientNameSnapshot: varchar("recipientNameSnapshot", { length: 160 }),
+    recipientDepartmentSnapshot: varchar("recipientDepartmentSnapshot", { length: 160 }),
+    projectReferenceSnapshot: varchar("projectReferenceSnapshot", { length: 160 }),
+    requestNoteSnapshot: text("requestNoteSnapshot"),
+    deliveryNote: text("deliveryNote"),
     issuedAt: timestamp("issuedAt").notNull(),
     receiptConfirmedAt: timestamp("receiptConfirmedAt"),
     receiptConfirmationName: varchar("receiptConfirmationName", { length: 160 }),

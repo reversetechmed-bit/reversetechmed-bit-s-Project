@@ -4,6 +4,7 @@ import {
   dispensingRequests,
   handoverInvoices,
   warehouseSectionValues,
+  productStageValues,
   parts,
   inventoryCategories,
   inventoryTransactions,
@@ -27,6 +28,8 @@ const partInput = z.object({
   categoryId: z.number().int().positive().nullable(),
   warehouseSection: z.enum(warehouseSectionValues).default("components"),
   componentTypeId: z.number().int().positive().nullable().optional(),
+  companyId: z.number().int().positive().nullable().optional(),
+  productStage: z.enum(productStageValues).nullable().optional(),
   quantity: z.number().int().min(0),
   minimumStock: z.number().int().min(0),
   location: z.string().trim().max(160).optional(),
@@ -41,6 +44,10 @@ const requestInput = z.object({
   partId: z.number().int().positive(),
   requestedQuantity: z.number().int().positive(),
   purpose: z.string().trim().min(3).max(2000),
+  recipientName: z.string().trim().min(2).max(160),
+  recipientDepartment: z.string().trim().max(160).optional(),
+  projectReference: z.string().trim().max(160).optional(),
+  requestNote: z.string().trim().max(2000).optional(),
 });
 
 async function requireDb() {
@@ -113,6 +120,8 @@ export const warehouseRouter = router({
             imageUrl: optionalText(input.imageUrl),
             specifications: optionalText(input.specifications),
             componentTypeId: input.warehouseSection === "components" ? input.componentTypeId ?? null : null,
+            companyId: input.warehouseSection === "products" ? input.companyId ?? null : null,
+            productStage: input.warehouseSection === "products" ? input.productStage ?? "finished" : null,
             createdById: ctx.user.id,
           });
           const [created] = await tx
@@ -186,6 +195,8 @@ export const warehouseRouter = router({
               imageUrl: optionalText(values.imageUrl),
               specifications: optionalText(values.specifications),
               componentTypeId: values.warehouseSection === "components" ? values.componentTypeId ?? null : null,
+              companyId: values.warehouseSection === "products" ? values.companyId ?? null : null,
+              productStage: values.warehouseSection === "products" ? values.productStage ?? "finished" : null,
             })
             .where(eq(parts.id, id));
           const [updated] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
@@ -276,6 +287,10 @@ export const warehouseRouter = router({
             requestedById: ctx.user.id,
             requestedQuantity: input.requestedQuantity,
             purpose: input.purpose,
+            recipientName: input.recipientName,
+            recipientDepartment: optionalText(input.recipientDepartment),
+            projectReference: optionalText(input.projectReference),
+            requestNote: optionalText(input.requestNote),
           })
           .$returningId();
         const requestId = insertedIds[0]?.id;
@@ -293,22 +308,22 @@ export const warehouseRouter = router({
           partNumberSnapshot: part.partNumber,
           partNameSnapshot: part.name,
           warehouseSectionSnapshot: part.warehouseSection,
-          details: `تم طلب ${input.requestedQuantity} وحدة. الغرض: ${input.purpose}`,
+          details: `تم طلب ${input.requestedQuantity} وحدة للمستلم ${input.recipientName}. الغرض: ${input.purpose}`,
         });
         await tx.insert(warehouseAlerts).values({
           type: "new_request",
           title: `${warehouseSectionLabel(part.warehouseSection)}: طلب صرف جديد`,
-          body: `طلب ${ctx.user.name || "مهندس"} عدد ${input.requestedQuantity} × ${part.name} من ${warehouseSectionLabel(part.warehouseSection)}.`,
+          body: `طلب ${ctx.user.name || "مهندس"} تسليم ${input.requestedQuantity} × ${part.name} إلى ${input.recipientName}.`,
           partId: part.id,
           requestId,
         });
-        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "إرسال طلب صرف", detail: `تم طلب ${input.requestedQuantity} × ${part.name} من ${warehouseSectionLabel(part.warehouseSection)}.`, requestId, partId: part.id });
+        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "إرسال طلب صرف", detail: `تم طلب ${input.requestedQuantity} × ${part.name} إلى ${input.recipientName}.`, requestId, partId: part.id });
         return { requestId, partName: part.name };
       });
 
       const notificationSent = await notifyOwner({
         title: "طلب صرف جديد من المخزن",
-        content: `طلب ${ctx.user.name || "مهندس"} عدد ${input.requestedQuantity} × ${result.partName}.`,
+        content: `طلب ${ctx.user.name || "مهندس"} تسليم ${input.requestedQuantity} × ${result.partName} إلى ${input.recipientName}.`,
       });
       return { ...result, notificationSent };
     }),
@@ -360,7 +375,7 @@ export const warehouseRouter = router({
         });
       }),
 
-    confirmDelivery: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    confirmDelivery: adminProcedure.input(z.object({ id: z.number().int().positive(), deliveryNote: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [record] = await tx
@@ -405,7 +420,7 @@ export const warehouseRouter = router({
           createLowStockAlert: async alert => {
             await tx.insert(warehouseAlerts).values(alert);
           },
-        });
+        }, new Date(), optionalText(input.deliveryNote));
         if (!deliveryMovement.ok) {
           throw new TRPCError({ code: "CONFLICT", message: deliveryMovement.reason });
         }
@@ -474,6 +489,18 @@ export const warehouseRouter = router({
         .where(eq(handoverInvoices.receivedById, ctx.user.id))
         .orderBy(desc(handoverInvoices.issuedAt))
         .limit(100);
+    }),
+    get: protectedProcedure.input(z.object({ invoiceId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const [result] = await db
+        .select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } })
+        .from(handoverInvoices)
+        .innerJoin(users, eq(handoverInvoices.receivedById, users.id))
+        .where(eq(handoverInvoices.id, input.invoiceId))
+        .limit(1);
+      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة التسليم غير موجودة." });
+      if (ctx.user.role !== "admin" && result.invoice.receivedById !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك الوصول إلى هذه الفاتورة." });
+      return result;
     }),
     byRequest: protectedProcedure.input(z.object({ requestId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = await requireDb();

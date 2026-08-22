@@ -110,22 +110,44 @@ try {
     });
   }
 
+  const companyRows = [
+    ["شركة ميدتك فيجن", "DEMO-MEDTECH", "مسؤول حلول الأجهزة", "+20 100 000 0101", "medtech.demo@reverse.local", "شركة عرض لأجهزة ومشروعات طبية."],
+    ["شركة كونترول لاب", "DEMO-CONTROL", "فريق اللوحات والتحكم", "+20 100 000 0102", "control.demo@reverse.local", "شركة عرض لمنتجات التحكم واللوحات."],
+  ];
+  const companies = {};
+  for (const [name, code, contactName, contactPhone, contactEmail, notes] of companyRows) {
+    companies[code] = await insertOnce({
+      table: "companies",
+      whereSql: "code = ?",
+      whereValues: [code],
+      columns: ["name", "code", "contactName", "contactPhone", "contactEmail", "notes", "isActive", "createdById"],
+      values: [name, code, contactName, contactPhone, contactEmail, `${DEMO_MARKER} ${notes}`, 1, admin.id],
+    });
+  }
+
   const partRows = [
-    ["DEMO-MED-001", "لوحة واجهة حساس طبي", "طبي", "components", "أدوات معايرة واختبار", 14, 0, 8, "المخزن الرئيسي", "A-02", "03", "MED-01", "لوحة اختبار حساسات طبية للاستخدام التجريبي في العرض."],
-    ["DEMO-EMB-001", "وحدة تطوير ESP32", "إمبيديد", "components", "موصلات صناعية", 42, 5, 12, "رف الأنظمة المضمنة", "B-01", "04", "EMB-02", "وحدة تحكم لاسلكية لتجربة الطلب والاعتماد والحجز."],
-    ["DEMO-PCB-001", "لوحة FR4 مزدوجة الوجه", "لوحات", "products", "مستلزمات معمل", 6, 0, 5, "رف تصنيع اللوحات", "C-03", "02", "PCB-03", "لوحات خام للاستخدام في نماذج تصنيع الدوائر."],
-    ["DEMO-3DP-001", "بكرة PLA أسود للطباعة ثلاثية الأبعاد", "معمل الطباعة ثلاثية الأبعاد", "components", "مستلزمات معمل", 2, 0, 4, "معمل الطباعة", "D-01", "01", "3DP-01", "رصيد منخفض مقصود لإظهار تنبيه إعادة التوريد."],
-    ["DEMO-MNT-001", "عبوة أكياس ESD", "تشغيل وصيانة", "products", "مستلزمات معمل", 120, 0, 30, "منطقة التشغيل", "E-01", "05", "MNT-01", "مواد حماية وتجهيز للقطع الإلكترونية."],
+    ["DEMO-MED-001", "لوحة واجهة حساس طبي", "طبي", "components", "أدوات معايرة واختبار", 14, 0, 8, "المخزن الرئيسي", "A-02", "03", "MED-01", "لوحة اختبار حساسات طبية للاستخدام التجريبي في العرض.", null, null],
+    ["DEMO-EMB-001", "وحدة تطوير ESP32", "إمبيديد", "components", "موصلات صناعية", 42, 5, 12, "رف الأنظمة المضمنة", "B-01", "04", "EMB-02", "وحدة تحكم لاسلكية لتجربة الطلب والاعتماد والحجز.", null, null],
+    ["DEMO-PCB-001", "لوحة تحكم طبية تحت التشغيل", "لوحات", "products", "مستلزمات معمل", 6, 0, 5, "رف تصنيع اللوحات", "C-03", "02", "PCB-03", "لوحة تحت التشغيل توضح ربط المنتج بمكوناته.", "DEMO-MEDTECH", "work_in_progress"],
+    ["DEMO-PROD-001", "وحدة مراقبة حيوية تامة", "طبي", "products", "مستلزمات معمل", 3, 0, 1, "منطقة المنتجات الطبية", "C-01", "01", "MED-PROD-01", "منتج تام تابع لشركة طبية ويحتوي قائمة مكونات موثقة.", "DEMO-MEDTECH", "finished"],
+    ["DEMO-3DP-001", "بكرة PLA أسود للطباعة ثلاثية الأبعاد", "معمل الطباعة ثلاثية الأبعاد", "components", "مستلزمات معمل", 2, 0, 4, "معمل الطباعة", "D-01", "01", "3DP-01", "رصيد منخفض مقصود لإظهار تنبيه إعادة التوريد.", null, null],
+    ["DEMO-MNT-001", "عبوة أكياس ESD", "تشغيل وصيانة", "products", "مستلزمات معمل", 120, 0, 30, "منطقة التشغيل", "E-01", "05", "MNT-01", "مواد حماية وتجهيز للقطع الإلكترونية.", "DEMO-CONTROL", "finished"],
   ];
   const parts = {};
-  for (const [partNumber, name, category, warehouseSection, typeName, quantity, reservedQuantity, minimumStock, location, storageShelf, storageDrawer, storageBox, description] of partRows) {
+  for (const [partNumber, name, category, warehouseSection, typeName, quantity, reservedQuantity, minimumStock, location, storageShelf, storageDrawer, storageBox, description, companyCode, productStage] of partRows) {
     parts[partNumber] = await insertOnce({
       table: "parts",
       whereSql: "partNumber = ?",
       whereValues: [partNumber],
-      columns: ["partNumber", "name", "description", "category", "categoryId", "warehouseSection", "componentTypeId", "quantity", "reservedQuantity", "minimumStock", "location", "storageShelf", "storageDrawer", "storageBox", "specifications", "createdById"],
-      values: [partNumber, name, `${DEMO_MARKER} ${description}`, category, categories[category], warehouseSection, componentTypes[typeName], quantity, reservedQuantity, minimumStock, location, storageShelf, storageDrawer, storageBox, "حالة: بيانات عرض. لا تستخدم كمواصفة إنتاجية.", admin.id],
+      columns: ["partNumber", "name", "description", "category", "categoryId", "warehouseSection", "componentTypeId", "companyId", "productStage", "quantity", "reservedQuantity", "minimumStock", "location", "storageShelf", "storageDrawer", "storageBox", "specifications", "createdById"],
+      values: [partNumber, name, `${DEMO_MARKER} ${description}`, category, categories[category], warehouseSection, componentTypes[typeName], companyCode ? companies[companyCode] : null, productStage, quantity, reservedQuantity, minimumStock, location, storageShelf, storageDrawer, storageBox, "حالة: بيانات عرض. لا تستخدم كمواصفة إنتاجية.", admin.id],
     });
+    await connection.execute("UPDATE parts SET name = ?, companyId = ?, productStage = ? WHERE id = ?", [name, companyCode ? companies[companyCode] : null, productStage, parts[partNumber]]);
+  }
+
+  const productBomRows = [["DEMO-PCB-001", "DEMO-EMB-001", 1, "وحدة التحكم الأساسية للوحة تحت التشغيل."], ["DEMO-PCB-001", "DEMO-MED-001", 1, "واجهة الحساس ضمن اللوحة."], ["DEMO-PROD-001", "DEMO-EMB-001", 1, "وحدة التحكم داخل المنتج التام."], ["DEMO-PROD-001", "DEMO-MED-001", 1, "واجهة الحساس داخل المنتج التام."]];
+  for (const [productNumber, componentNumber, quantityRequired, notes] of productBomRows) {
+    await insertOnce({ table: "productComponents", whereSql: "productId = ? AND componentId = ?", whereValues: [parts[productNumber], parts[componentNumber]], columns: ["productId", "componentId", "quantityRequired", "notes"], values: [parts[productNumber], parts[componentNumber], quantityRequired, `${DEMO_MARKER} ${notes}`] });
   }
 
   const requestRows = [
@@ -143,19 +165,21 @@ try {
       continue;
     }
     const [result] = await connection.execute(
-      "INSERT INTO dispensingRequests (partId, requestedById, requestedQuantity, purpose, status, decisionNote, reviewedById, reviewedAt, deliveredById, deliveredAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [partId, engineer.id, requestedQuantity, `${DEMO_MARKER} ${purpose}`, status, decisionNote ? `${DEMO_MARKER} ${decisionNote}` : null, reviewerId, reviewedAt, status === "delivered" ? admin.id : null, deliveredAt, asMysqlDate(status === "delivered" ? 96 : 24)],
+      "INSERT INTO dispensingRequests (partId, requestedById, requestedQuantity, purpose, recipientName, recipientDepartment, projectReference, requestNote, status, decisionNote, reviewedById, reviewedAt, deliveredById, deliveredAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [partId, engineer.id, requestedQuantity, `${DEMO_MARKER} ${purpose}`, "المستلم التجريبي", "مختبر الأنظمة المضمنة", "DEMO-DEVICE-01", `${DEMO_MARKER} بيانات طلب تظهر تلقائيًا في الفاتورة.`, status, decisionNote ? `${DEMO_MARKER} ${decisionNote}` : null, reviewerId, reviewedAt, status === "delivered" ? admin.id : null, deliveredAt, asMysqlDate(status === "delivered" ? 96 : 24)],
     );
     requests[key] = Number(result.insertId);
   }
+  await connection.execute("UPDATE dispensingRequests SET recipientName = ?, recipientDepartment = ?, projectReference = ?, requestNote = ? WHERE id IN (?, ?, ?, ?)", ["المستلم التجريبي", "مختبر الأنظمة المضمنة", "DEMO-DEVICE-01", `${DEMO_MARKER} بيانات طلب تظهر تلقائيًا في الفاتورة.`, requests["DEMO-REQ-PENDING"], requests["DEMO-REQ-APPROVED"], requests["DEMO-REQ-DELIVERED"], requests["DEMO-REQ-REJECTED"]]);
 
   const deliveredInvoiceId = await insertOnce({
     table: "handoverInvoices",
     whereSql: "invoiceNumber = ?",
     whereValues: ["DEMO-INV-0001"],
-    columns: ["invoiceNumber", "requestId", "partId", "issuedById", "receivedById", "partNumberSnapshot", "partNameSnapshot", "warehouseSectionSnapshot", "quantity", "purposeSnapshot", "issuedAt", "receiptConfirmedAt", "receiptConfirmationName", "receiptNote"],
-    values: ["DEMO-INV-0001", requests["DEMO-REQ-DELIVERED"], parts["DEMO-MED-001"], admin.id, engineer.id, "DEMO-MED-001", "لوحة واجهة حساس طبي", "components", 4, `${DEMO_MARKER} اختبار واجهة حساس في نموذج طبي`, asMysqlDate(48), asMysqlDate(44), engineer.name, `${DEMO_MARKER} تم تأكيد الاستلام في بيئة العرض.`],
+    columns: ["invoiceNumber", "requestId", "partId", "issuedById", "receivedById", "partNumberSnapshot", "partNameSnapshot", "warehouseSectionSnapshot", "quantity", "purposeSnapshot", "requesterNameSnapshot", "recipientNameSnapshot", "recipientDepartmentSnapshot", "projectReferenceSnapshot", "requestNoteSnapshot", "deliveryNote", "issuedAt", "receiptConfirmedAt", "receiptConfirmationName", "receiptNote"],
+    values: ["DEMO-INV-0001", requests["DEMO-REQ-DELIVERED"], parts["DEMO-MED-001"], admin.id, engineer.id, "DEMO-MED-001", "لوحة واجهة حساس طبي", "components", 4, `${DEMO_MARKER} اختبار واجهة حساس في نموذج طبي`, engineer.name, "المستلم التجريبي", "مختبر الأنظمة المضمنة", "DEMO-DEVICE-01", `${DEMO_MARKER} بيانات طلب تظهر تلقائيًا في الفاتورة.`, `${DEMO_MARKER} تم التسليم من رف A-02 بحالة سليمة.`, asMysqlDate(48), asMysqlDate(44), engineer.name, `${DEMO_MARKER} تم تأكيد الاستلام في بيئة العرض.`],
   });
+  await connection.execute("UPDATE handoverInvoices SET requesterNameSnapshot = ?, recipientNameSnapshot = ?, recipientDepartmentSnapshot = ?, projectReferenceSnapshot = ?, requestNoteSnapshot = ?, deliveryNote = ? WHERE id = ?", [engineer.name, "المستلم التجريبي", "مختبر الأنظمة المضمنة", "DEMO-DEVICE-01", `${DEMO_MARKER} بيانات طلب تظهر تلقائيًا في الفاتورة.`, `${DEMO_MARKER} تم التسليم من رف A-02 بحالة سليمة.`, deliveredInvoiceId]);
 
   const transactionRows = [
     ["DEMO-MED-001", requests["DEMO-REQ-DELIVERED"], "delivery_confirmed", -4, 18, 14, admin.id, engineer.id, "تم تسليم لوحة واجهة الحساس وإصدار فاتورة العرض."],

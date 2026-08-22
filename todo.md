@@ -127,13 +127,13 @@
 - [x] Add regression coverage for notification-bell copy and the empty or error states included in the editorial audit.
 - [x] Complete and document a screen-by-screen audit of empty and error states across authentication, inventory, requests, invoices, notifications, and management directories.
 - [ ] Verify the refined notification and empty or error-state wording in authenticated Admin UI flows and record evidence for the reviewed surfaces.
-- [ ] Diagnose and fix the reported API/JSON response failure, then add regression coverage for the affected route or contract.
+- [x] Diagnose and fix the reported API/JSON response failure, then add regression coverage for the affected route or contract.
 - [x] Support unlimited email-and-password registrations for both Users and Admins, without an email-specific allowlist.
 - [x] Add a clear registration method selector and prepare a phone-number registration path subject to configured SMS delivery.
 - [ ] Verify all available registration methods, role mapping, and error states without exposing account details.
-- [ ] Enable and implement phone-number registration with SMS OTP after the Supabase SMS provider is configured.
+- [x] Keep phone-number registration out of scope after the user explicitly chose not to offer mobile sign-up; no Supabase SMS configuration was saved.
 - [x] Redesign the REVERSE TECH interface in a classic professional style across sign-in, sidebar, dashboards, forms, tables, and mobile navigation.
-- [ ] Verify the classic responsive interface and email/phone registration flows on desktop and mobile.
+- [x] Verify the classic responsive interface and email-only registration flow on desktop and mobile; phone sign-up was intentionally removed from scope.
 - [x] Create an idempotent Admin-operated demo dataset covering departments, employees, component types, categories, components, products, requests, approvals, handovers, invoices, alerts, and audit records.
 - [x] Run a structured code review focused on authorization, inventory reservation integrity, API contracts, error handling, and regression risk; fix confirmed issues.
 - [ ] Add integration coverage for the seeded Admin and User workflows and verify the populated UI surfaces.
@@ -144,3 +144,10 @@
 - [x] Add an Admin-only Users page that lists all application accounts with role, contact details, access history, and operational activity summaries.
 - [x] Add a per-user Admin activity view covering dispensing requests, handovers, inventory operations, alerts, and audit-log events without exposing private data to normal users.
 - [x] Add and run regression coverage for Users-page authorization, activity scoping, and the complete warehouse request-to-handover flow.
+- [x] Add an API contract regression test confirming unauthenticated tRPC requests return structured JSON rather than an HTML error response.
+- [x] Add structured recipient, department, project/reference, and request-note inputs to dispensing requests so they flow automatically into the handover invoice.
+- [x] Rebuild the handover invoice as a self-contained single-page document with separate identity, request, delivery, item, and confirmation fields plus automatic date/time.
+- [x] Use the supplied REVERSE TECH logo prominently and centrally in the invoice layout and improve the matching Arabic PDF and Excel exports.
+- [x] Add an Admin-managed Companies module with create, edit, archive, search, and company-to-product relationships.
+- [x] Classify inventory products as finished products or work-in-progress products, and define their component bill of materials without duplicating stock records.
+- [x] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.

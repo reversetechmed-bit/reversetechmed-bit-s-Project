@@ -140,7 +140,7 @@ export async function exportReportExcel<T extends Record<string, unknown>>(title
   downloadBlob(await zip.generateAsync({ type: "blob", compression: "DEFLATE" }), `${filePrefix}-${stamp()}.xlsx`);
 }
 
-async function fontAsBase64(url: string) {
+export async function fontAsBase64(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error("تعذر تحميل خط التصدير العربي.");
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -151,7 +151,7 @@ async function fontAsBase64(url: string) {
 
 let pdfFontPromise: Promise<string> | null = null;
 
-function registerArabicFont(pdf: jsPDF, fontBase64: string) {
+export function registerArabicFont(pdf: jsPDF, fontBase64: string) {
   pdf.addFileToVFS("NotoNaskhArabic-Regular.ttf", fontBase64);
   pdf.addFont("NotoNaskhArabic-Regular.ttf", "NotoNaskh", "normal");
   pdf.setFont("NotoNaskh", "normal");
