@@ -112,6 +112,11 @@ function notificationCategory(type: string, isAdmin: boolean) {
   return "تسليم وفاتورة";
 }
 
+function canonicalEmployeeCodeForSignIn(value: string) {
+  const normalized = value.trim().toUpperCase().replace(/\s+/g, "");
+  return /^RT-[A-Z0-9]+(?:-[A-Z0-9]+)+$/.test(normalized) ? normalized : null;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || `${DEFAULT_WIDTH}`, 10));
   const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(isPasswordRecoveryLink);
@@ -168,9 +173,13 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
         return setMessage("تعذر التحقق من ملف الموظف الآن. حاول مرة أخرى أو تواصل مع مسؤول المخزن.");
       }
     }
-    const result = mode === "signin"
+    let result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email: approvedEmail, password })
       : await supabase.auth.signUp({ email: approvedEmail, password: activationCode, options: { data: { registration_source: "employee_directory" }, emailRedirectTo: window.location.origin } });
+    const canonicalEmployeeCode = mode === "signin" ? canonicalEmployeeCodeForSignIn(password) : null;
+    if (mode === "signin" && result.error && canonicalEmployeeCode && canonicalEmployeeCode !== password) {
+      result = await supabase.auth.signInWithPassword({ email: approvedEmail, password: canonicalEmployeeCode });
+    }
     setSubmitting(false);
     if (result.error) {
       const authError = result.error.message.toLowerCase();

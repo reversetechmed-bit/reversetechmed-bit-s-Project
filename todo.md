@@ -199,3 +199,4 @@
 - [x] Diagnose and fix the reported activation failure for Eng Mostafa Mabrouk using the Admin-approved email and employee code without exposing credentials.
 - [x] Reissue Eng Mostafa Mabrouk's initial access code to match RT-ENG-MOSTAFA after explicit approval, then verify the activation state.
 - [x] Diagnose and mitigate Supabase email rate limiting during employee activation, with a clear fallback that does not misreport it as an invalid employee code.
+- [x] Normalize only employee-code-shaped passwords during ordinary sign-in, so the code used at activation remains accepted after confirmation without altering normal passwords.

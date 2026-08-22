@@ -12,6 +12,9 @@ describe("registration method presentation", () => {
     expect(layout).toContain("كود الدخول الذي حدده الأدمن");
     expect(layout).toContain("حد رسائل تأكيد البريد المؤقت في Supabase");
     expect(layout).toContain("الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف");
+    expect(layout).toContain("function canonicalEmployeeCodeForSignIn");
+    expect(layout).toContain("/^RT-[A-Z0-9]+(?:-[A-Z0-9]+)+$/");
+    expect(layout).toContain("canonicalEmployeeCode !== password");
     expect(layout).not.toContain("requested_role: requestedRole");
   });
 
