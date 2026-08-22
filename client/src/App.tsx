@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ComponentTypes from "./pages/ComponentTypes";
+import BackupRestore from "./pages/BackupRestore";
 import Companies from "./pages/Companies";
 import Invoices from "./pages/Invoices";
 import MyRequests from "./pages/MyRequests";
@@ -42,6 +43,7 @@ function Router() {
       <Route path={"/users"} component={() => <WarehouseShell><Users /></WarehouseShell>} />
       <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
       <Route path={"/operations"} component={() => <WarehouseShell><Operations /></WarehouseShell>} />
+      <Route path={"/backup"} component={() => <WarehouseShell><BackupRestore /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

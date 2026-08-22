@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildWarehouseJsonBackup } from "./warehouseBackup";
+import { buildWarehouseJsonBackup, inspectWarehouseJsonBackup } from "./warehouseBackup";
 
 const source = (relativePath: string) => readFileSync(resolve(import.meta.dirname, "..", relativePath), "utf8");
 const sourceData = (overrides: Record<string, unknown> = {}) => ({
@@ -36,10 +36,39 @@ describe("warehouse JSON backup", () => {
 
   it("keeps export restricted to Admin procedures and exposes an explicit download action", () => {
     const router = source("server/routers/organization.ts");
-    const home = source("client/src/pages/Home.tsx");
+    const workspace = source("client/src/pages/BackupRestore.tsx");
     expect(router).toContain("exportJson: adminProcedure");
-    expect(home).toContain("organization.backup.exportJson.useQuery");
-    expect(home).toContain("نسخة احتياطية JSON");
-    expect(home).toContain("application/json;charset=utf-8");
+    expect(workspace).toContain("organization.backup.exportJson.useQuery");
+    expect(workspace).toContain("تنزيل النسخة الاحتياطية JSON");
+    expect(workspace).toContain("application/json;charset=utf-8");
+  });
+
+  it("accepts its own downloaded format for read-only preview and separates supported from operational records", () => {
+    const preview = inspectWarehouseJsonBackup(buildWarehouseJsonBackup(sourceData()));
+    expect(preview.valid).toBe(true);
+    expect(preview.errors).toEqual([]);
+    expect(preview.supportedImportCounts).toMatchObject({ departments: 1, employees: 1, parts: 1, productComponents: 1 });
+    expect(preview.skippedOperationalCounts).toMatchObject({ dispensingRequests: 1, handoverInvoices: 1, inventoryTransactions: 1 });
+    expect(preview.warnings.join(" ")).toContain("لا تُستورد الطلبات");
+  });
+
+  it("rejects uploaded sensitive fields before any restore action", () => {
+    const backup = buildWarehouseJsonBackup(sourceData());
+    const unsafe = { ...backup, data: { ...backup.data, parts: [{ id: 1, partNumber: "RT-001", password: "do-not-import" }] } };
+    const preview = inspectWarehouseJsonBackup(unsafe);
+    expect(preview.valid).toBe(false);
+    expect(preview.errors.join(" ")).toContain("حقلًا حساسًا");
+  });
+
+  it("requires Admin preview and an explicit confirmation gate before merging imported master data", () => {
+    const router = source("server/routers/organization.ts");
+    const restore = source("server/warehouseRestore.ts");
+    const workspace = source("client/src/pages/BackupRestore.tsx");
+    expect(router).toContain("previewImport: adminProcedure");
+    expect(router).toContain("importMasterData: adminProcedure");
+    expect(router).toContain('confirmation: z.literal("MERGE_MASTER_DATA")');
+    expect(restore).not.toContain("initialPasswordHash");
+    expect(workspace).toContain("MERGE_MASTER_DATA");
+    expect(workspace).toContain("لم تُكتب أي بيانات في المخزن حتى الآن");
   });
 });

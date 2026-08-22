@@ -187,3 +187,9 @@
 - [x] Add Vitest coverage for backup completeness, admin authorization, and sensitive-field exclusion.
 - [x] Verify the latest published project source is synchronized with the connected GitHub repository without pushing unapproved changes.
 - [x] Push the latest published project source to the connected GitHub main branch and verify the commit matches.
+- [ ] Perform a read-only live readiness check for Admin and Employee sessions, then request explicit approval before any test write operation.
+- [ ] Assess long-term hosting readiness, operating limits, and backup/continuity safeguards for the warehouse system.
+- [x] Add a clear Admin backup-and-restore workspace with distinct JSON download and JSON upload actions.
+- [x] Validate an uploaded backup in read-only preview mode, show record counts and warnings, and require explicit confirmation before writing any data.
+- [x] Add guarded Admin restore behavior that safely adds or updates supported records without importing credentials, sessions, hashes, or secrets.
+- [x] Add Vitest coverage for backup upload validation, preview, confirmation gating, and sensitive-field exclusion.

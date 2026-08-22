@@ -4,7 +4,8 @@ import { assemblyOrderLines, assemblyOrders, companies, componentTypes, departme
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { enrollmentPasscodeMatches, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
-import { buildWarehouseJsonBackup } from "../warehouseBackup";
+import { buildWarehouseJsonBackup, inspectWarehouseJsonBackup } from "../warehouseBackup";
+import { restoreWarehouseMasterData } from "../warehouseRestore";
 import { z } from "zod";
 
 export const departmentInput = z.object({
@@ -104,6 +105,14 @@ export const organizationRouter = router({
         db.select().from(departments), db.select().from(employeeProfiles), db.select().from(users), db.select().from(inventoryCategories), db.select().from(componentTypes), db.select().from(companies), db.select().from(parts), db.select().from(productComponents), db.select().from(dispensingRequests), db.select().from(handoverInvoices), db.select().from(maintenanceCases), db.select().from(purchaseOrders), db.select().from(purchaseOrderLines), db.select().from(assemblyOrders), db.select().from(assemblyOrderLines), db.select().from(inventoryTransactions), db.select().from(warehouseAlerts), db.select().from(warehouseActivities), db.select().from(warehouseAutomationSettings),
       ]);
       return buildWarehouseJsonBackup({ departments: departmentRows, employeeProfiles: employeeRows, users: userRows, inventoryCategories: categoryRows, componentTypes: componentTypeRows, companies: companyRows, parts: partRows, productComponents: bomRows, dispensingRequests: requestRows, handoverInvoices: invoiceRows, maintenanceCases: maintenanceRows, purchaseOrders: purchaseOrderRows, purchaseOrderLines: purchaseLineRows, assemblyOrders: assemblyOrderRows, assemblyOrderLines: assemblyLineRows, inventoryTransactions: transactionRows, warehouseAlerts: alertRows, warehouseActivities: activityRows, warehouseAutomationSettings: automationRows });
+    }),
+    previewImport: adminProcedure.input(z.object({ backup: z.unknown() })).mutation(({ input }) => inspectWarehouseJsonBackup(input.backup)),
+    importMasterData: adminProcedure.input(z.object({ backup: z.unknown(), confirmation: z.literal("MERGE_MASTER_DATA") })).mutation(async ({ input }) => {
+      const preview = inspectWarehouseJsonBackup(input.backup);
+      if (!preview.valid || !preview.data) throw new TRPCError({ code: "BAD_REQUEST", message: preview.errors[0] ?? "ملف النسخة الاحتياطية غير صالح." });
+      const db = await requireDb();
+      const imported = await db.transaction(tx => restoreWarehouseMasterData(tx, preview.data!));
+      return { imported, warnings: preview.warnings };
     }),
   }),
 

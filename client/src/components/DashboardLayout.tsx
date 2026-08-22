@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   BellRing,
+  DatabaseBackup,
   Boxes,
   Building2,
   ClipboardList,
@@ -57,6 +58,7 @@ const adminMenuItems = [
   { icon: Users, label: "المستخدمون", path: "/users" },
   { icon: History, label: "سجل الحركة", path: "/transactions" },
   { icon: Wrench, label: "عمليات الصيانة والشراء", path: "/operations" },
+  { icon: DatabaseBackup, label: "النسخ والاستعادة", path: "/backup" },
 ];
 
 const engineerMenuItems = [

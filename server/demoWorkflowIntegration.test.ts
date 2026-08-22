@@ -45,8 +45,8 @@ integration("demo warehouse workflow integration", () => {
     expect(await count("SELECT COUNT(*) AS total FROM warehouseAlerts WHERE type IN ('overdue_request', 'receipt_confirmation_pending') AND dedupeKey IS NOT NULL")).toBeGreaterThanOrEqual(2);
   });
 
-  it("keeps the requested engineering and administrator roster as active profiles without demo login passwords", async () => {
-    expect(await count("SELECT COUNT(*) AS total FROM employeeProfiles WHERE employeeCode IN ('RT-ENG-HAMADA', 'RT-ENG-MOSTAFA', 'RT-ENG-MOHAMED-ALI', 'RT-TECH-ABDELMONEM', 'RT-ADMIN-ABDELALIEEM', 'RT-ADMIN-IBRAHIM') AND isActive = 1")).toBe(6);
-    expect(await count("SELECT COUNT(*) AS total FROM employeeProfiles WHERE employeeCode LIKE 'RT-%' AND initialPasswordHash IS NOT NULL")).toBe(0);
+  it("keeps the requested engineering and administrator roster as active profiles with an optional Admin-issued access state", async () => {
+    expect(await count("SELECT COUNT(*) AS total FROM employeeProfiles WHERE fullName IN ('Eng Hamada Mohamed', 'Eng Mostafa Mabrouk', 'Eng Mohamed Ali', 'Sh. Abdelmon''em Eldesouky', 'Eng Abdelalieem Ahmed', 'Eng Ibrahim Eldesouky') AND isActive = 1")).toBe(6);
+    expect(await count("SELECT COUNT(*) AS total FROM employeeProfiles WHERE employeeCode LIKE 'RT-%' AND initialPasswordHash IS NOT NULL AND initialPasswordIssuedAt IS NULL")).toBe(0);
   });
 });
