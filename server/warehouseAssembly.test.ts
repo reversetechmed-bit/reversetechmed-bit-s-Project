@@ -15,4 +15,13 @@ describe("BOM assembly", () => {
     const plan = prepareAssemblyCompletion({ target, bom: [{ componentId: source.id, quantityRequired: 3, source }], quantityToProduce: 2, actorId: 1, assemblyOrderId: 8, assemblyNumber: "RT-ASM-8" });
     expect(plan).toMatchObject({ ok: false });
   });
+
+  it("allows a final operational product but rejects products under review as assembly output", () => {
+    const finalProduct = { ...target, productStage: "final_operational" as const };
+    const finalPlan = prepareAssemblyCompletion({ target: finalProduct, bom: [{ componentId: source.id, quantityRequired: 1, source }], quantityToProduce: 1, actorId: 1, assemblyOrderId: 9, assemblyNumber: "RT-ASM-9" });
+    expect(finalPlan).toMatchObject({ ok: true });
+    const reviewProduct = { ...target, productStage: "under_review" as const };
+    const reviewPlan = prepareAssemblyCompletion({ target: reviewProduct, bom: [{ componentId: source.id, quantityRequired: 1, source }], quantityToProduce: 1, actorId: 1, assemblyOrderId: 10, assemblyNumber: "RT-ASM-10" });
+    expect(reviewPlan).toMatchObject({ ok: false });
+  });
 });

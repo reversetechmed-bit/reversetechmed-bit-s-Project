@@ -33,10 +33,12 @@ describe("employee account linking", () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
-  it("keeps sign-up bound to the employee eligibility check instead of a free display name or requested role", () => {
+  it("keeps sign-up bound to a selected employee and verified approved email or passcode instead of a free role", () => {
     const layout = readFileSync(resolve(import.meta.dirname, "../client/src/components/DashboardLayout.tsx"), "utf8");
-    expect(layout).toContain("organization.enrollment.eligibility.useMutation");
-    expect(layout).toContain("لا يوجد ملف موظف نشط ومُعتمد بهذا البريد");
+    expect(layout).toContain("organization.enrollment.directory.useQuery");
+    expect(layout).toContain("organization.enrollment.claim.useMutation");
+    expect(layout).toContain("اختر اسمك من دليل الموظفين أولًا.");
+    expect(layout).toContain("رمز التفعيل من الأدمن");
     expect(layout).not.toContain("auth-name");
     expect(layout).not.toContain("setRequestedRole");
   });

@@ -65,6 +65,22 @@ export const employeeProfiles = mysqlTable(
   ],
 );
 
+/** Single-use passcode issued by an Admin to let a pre-registered employee claim an approved account identity. */
+export const employeeEnrollmentPasscodes = mysqlTable(
+  "employeeEnrollmentPasscodes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employeeId").notNull().unique().references(() => employeeProfiles.id, { onDelete: "cascade" }),
+    codeHash: varchar("codeHash", { length: 128 }).notNull(),
+    issuedById: int("issuedById").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expiresAt").notNull(),
+    usedAt: timestamp("usedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("employee_passcodes_expiry_idx").on(table.expiresAt)],
+);
+
 /** Four warehouse classifications required by the engineering organization. */
 export const partCategoryValues = ["Medical", "Embedded", "Electronics", "Boards"] as const;
 export const warehouseSectionValues = ["components", "products"] as const;
@@ -118,7 +134,7 @@ export const companies = mysqlTable(
   table => [index("companies_active_name_idx").on(table.isActive, table.name)],
 );
 
-export const productStageValues = ["finished", "work_in_progress"] as const;
+export const productStageValues = ["work_in_progress", "under_review", "under_maintenance", "finished", "final_operational"] as const;
 
 /** Current on-hand inventory for each tracked engineering part. */
 export const parts = mysqlTable(
@@ -460,6 +476,7 @@ export type DispensingRequest = typeof dispensingRequests.$inferSelect;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type Department = typeof departments.$inferSelect;
 export type EmployeeProfile = typeof employeeProfiles.$inferSelect;
+export type EmployeeEnrollmentPasscode = typeof employeeEnrollmentPasscodes.$inferSelect;
 export type ComponentType = typeof componentTypes.$inferSelect;
 export type HandoverInvoice = typeof handoverInvoices.$inferSelect;
 export type MaintenanceCase = typeof maintenanceCases.$inferSelect;

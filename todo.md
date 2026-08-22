@@ -174,3 +174,7 @@
 - [x] Add supplier management and purchase orders linked to shortages, item lines, fulfillment status, and stock receipt.
 - [x] Add BOM assembly orders that atomically consume documented component quantities and produce finished-product stock, with audit records.
 - [x] Add integrated demo scenarios and Vitest coverage for escalations, maintenance/returns, purchase orders, and BOM assembly.
+- [x] Add Admin-issued employee enrollment passcodes with secure one-time verification and optional matching approved email.
+- [x] Add an Arabic activation flow where an employee selects their pre-registered name and verifies their passcode or approved email before creating a password.
+- [x] Expand product lifecycle states to include work in progress, under review, under maintenance, finished, and final operational product with stock and assembly safeguards.
+- [x] Update inventory, companies, BOM assembly, demo data, and tests for the expanded product lifecycle and employee activation flow.

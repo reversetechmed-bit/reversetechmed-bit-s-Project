@@ -5,7 +5,7 @@ export type AssemblyPart = {
   quantity: number;
   reservedQuantity: number;
   warehouseSection: "components" | "products";
-  productStage: "finished" | "work_in_progress" | null;
+  productStage: "work_in_progress" | "under_review" | "under_maintenance" | "finished" | "final_operational" | null;
 };
 
 export type AssemblyBomLine = {
@@ -15,8 +15,8 @@ export type AssemblyBomLine = {
 };
 
 export function prepareAssemblyCompletion(input: { target: AssemblyPart; bom: AssemblyBomLine[]; quantityToProduce: number; actorId: number; assemblyOrderId: number; assemblyNumber: string }) {
-  if (input.target.warehouseSection !== "products" || input.target.productStage !== "finished") {
-    return { ok: false as const, reason: "يمكن تحويل التجميع إلى منتج تام فقط." };
+  if (input.target.warehouseSection !== "products" || (input.target.productStage !== "finished" && input.target.productStage !== "final_operational")) {
+    return { ok: false as const, reason: "يمكن تحويل التجميع إلى منتج تام أو منتج نهائي فعلي فقط." };
   }
   if (!Number.isInteger(input.quantityToProduce) || input.quantityToProduce <= 0) {
     return { ok: false as const, reason: "كمية الإنتاج يجب أن تكون رقمًا صحيحًا موجبًا." };

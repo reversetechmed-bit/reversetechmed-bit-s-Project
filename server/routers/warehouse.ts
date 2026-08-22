@@ -69,6 +69,10 @@ function warehouseSectionLabel(section: "components" | "products") {
   return section === "products" ? "المنتجات" : "المكونات";
 }
 
+function canDispensePart(part: { warehouseSection: "components" | "products"; productStage: (typeof productStageValues)[number] | null }) {
+  return part.warehouseSection === "components" || part.productStage === "finished" || part.productStage === "final_operational";
+}
+
 const engineerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (!canEngineerSubmit(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "المهندسون والمستخدمون فقط يمكنهم إرسال طلبات الصرف." });
@@ -275,6 +279,7 @@ export const warehouseRouter = router({
       const result = await db.transaction(async tx => {
         const [part] = await tx.select().from(parts).where(eq(parts.id, input.partId)).limit(1);
         if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة المطلوبة لم تعد موجودة." });
+        if (!canDispensePart(part)) throw new TRPCError({ code: "CONFLICT", message: "هذا المنتج غير متاح للصرف حاليًا لأنه تحت التشغيل أو المراجعة أو الصيانة." });
         const availableQuantity = part.quantity - part.reservedQuantity;
         if (availableQuantity < input.requestedQuantity) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "الكمية المطلوبة تتجاوز المخزون المتاح." });
@@ -342,6 +347,9 @@ export const warehouseRouter = router({
           if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الصرف غير موجود." });
           if (!canDecideRequest(record.request.status)) {
             throw new TRPCError({ code: "CONFLICT", message: "يمكن اعتماد أو رفض الطلبات المنتظرة فقط." });
+          }
+          if (input.decision === "approved" && !canDispensePart(record.part)) {
+            throw new TRPCError({ code: "CONFLICT", message: "لا يمكن اعتماد صرف منتج قيد التشغيل أو المراجعة أو الصيانة." });
           }
           const availableQuantity = record.part.quantity - record.part.reservedQuantity;
           if (input.decision === "approved" && record.request.requestedQuantity > availableQuantity) {
