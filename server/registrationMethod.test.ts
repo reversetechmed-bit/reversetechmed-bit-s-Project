@@ -4,13 +4,12 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 describe("registration method presentation", () => {
-  it("binds activation to an Admin-created email and initial employee code, with approved-email activation as a constrained alternative", () => {
+  it("binds activation to one Admin-created approved email and initial employee code", () => {
     const layout = source("client/src/components/DashboardLayout.tsx");
     expect(layout).toContain("organization.enrollment.claim.useMutation");
-    expect(layout).toContain("organization.enrollment.eligibility.useMutation");
     expect(layout).toContain('registration_source: "employee_directory"');
-    expect(layout).toContain("كود الدخول من الأدمن");
-    expect(layout).toContain("تفعيل بالبريد المعتمد");
+    expect(layout).toContain("اكتب البريد المسجل وكود الدخول نفسه");
+    expect(layout).toContain("كود الدخول الذي حدده الأدمن");
     expect(layout).toContain("الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف");
     expect(layout).not.toContain("requested_role: requestedRole");
   });

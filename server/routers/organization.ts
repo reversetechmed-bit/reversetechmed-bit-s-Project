@@ -86,9 +86,9 @@ export const organizationRouter = router({
     eligibility: publicProcedure.input(z.object({ email: z.string().trim().email().max(320) })).mutation(async ({ input }) => {
       const db = await requireDb();
       const [employee] = await db.select({ id: employeeProfiles.id, isActive: employeeProfiles.isActive, userId: employeeProfiles.userId, suspendedUntil: employeeProfiles.suspendedUntil, initialPasswordHash: employeeProfiles.initialPasswordHash }).from(employeeProfiles).where(eq(employeeProfiles.email, input.email.trim().toLowerCase())).limit(1);
-      return { eligible: Boolean(employee?.isActive && !employee.userId && !employee.initialPasswordHash && (!employee.suspendedUntil || employee.suspendedUntil <= new Date())) };
+      return { eligible: Boolean(employee?.isActive && !employee.userId && Boolean(employee.initialPasswordHash) && (!employee.suspendedUntil || employee.suspendedUntil <= new Date())) };
     }),
-    claim: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().trim().min(6).max(64) })).mutation(async ({ input }) => {
+    claim: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().trim().min(6).max(96) })).mutation(async ({ input }) => {
       const db = await requireDb();
       const normalizedEmail = input.email.trim().toLowerCase();
       const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.email, normalizedEmail)).limit(1);
@@ -382,7 +382,7 @@ export const organizationRouter = router({
       await db.update(employeeProfiles).set({ isActive: 0 }).where(eq(employeeProfiles.id, input.id));
       return { success: true } as const;
     }),
-    provisionAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), email: z.string().trim().email().max(320), initialPassword: z.string().trim().min(6).max(64) })).mutation(async ({ ctx, input }) => {
+    provisionAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), email: z.string().trim().email().max(320), initialPassword: z.string().trim().min(6).max(96) })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [employee] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.id, input.employeeId)).limit(1);
       if (!employee?.isActive || employee.userId) throw new TRPCError({ code: "CONFLICT", message: "يمكن تجهيز دخول لموظف نشط غير مرتبط بحساب فقط." });
@@ -393,7 +393,7 @@ export const organizationRouter = router({
       } catch {
         throw new TRPCError({ code: "CONFLICT", message: "هذا البريد مستخدم في ملف موظف آخر." });
       }
-      return { success: true as const, employeeName: employee.fullName, email: input.email.trim().toLowerCase(), role: employee.warehouseRole, issuedById: ctx.user.id };
+      return { success: true as const, employeeName: employee.fullName, email: input.email.trim().toLowerCase(), activationCode: initialPassword, role: employee.warehouseRole, issuedById: ctx.user.id };
     }),
     suspendAccess: adminProcedure.input(z.object({ employeeId: z.number().int().positive(), suspendedUntil: z.coerce.date() })).mutation(async ({ input }) => {
       if (input.suspendedUntil <= new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد تاريخًا مستقبليًا لانتهاء التعليق." });

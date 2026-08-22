@@ -194,3 +194,5 @@
 - [x] Add guarded Admin restore behavior that safely adds or updates supported records without importing credentials, sessions, hashes, or secrets.
 - [x] Add Vitest coverage for backup upload validation, preview, confirmation gating, and sensitive-field exclusion.
 - [x] Run a post-backup-restore readiness sweep covering tests, production build, TypeScript, runtime logs, and public sign-in routing.
+- [x] Diagnose and fix inconsistent employee activation using the Admin-approved email and initial employee code, without a functional employee-count limit.
+- [x] Add coverage proving multiple active employees can activate independently with their own approved email and code, while invalid email-code pairs are rejected safely.

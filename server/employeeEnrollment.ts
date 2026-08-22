@@ -6,7 +6,7 @@ export function normalizeEnrollmentPasscode(value: string) {
 }
 
 export function isValidEnrollmentPasscode(value: string) {
-  return /^[A-Z0-9-]{6,32}$/.test(normalizeEnrollmentPasscode(value));
+  return /^[A-Z0-9-]{6,64}$/.test(normalizeEnrollmentPasscode(value));
 }
 
 export function createEnrollmentPasscode() {

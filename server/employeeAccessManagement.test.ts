@@ -24,12 +24,15 @@ describe("employee access management", () => {
     expect(context).toContain("employee.accessRevokedAt");
   });
 
-  it("presents Admin-code activation and constrained approved-email activation without public role selection", () => {
+  it("presents one approved-email-and-code activation path without public role selection", () => {
     const layout = source("client/src/components/DashboardLayout.tsx");
     const organization = source("client/src/pages/Organization.tsx");
-    expect(layout).toContain("كود الدخول من الأدمن");
-    expect(layout).toContain("تفعيل بالبريد المعتمد");
+    expect(layout).toContain("اكتب البريد المسجل وكود الدخول نفسه");
+    expect(layout).toContain("activationCode = password.trim().toUpperCase().replace");
+    expect(layout).not.toContain('setActivationMethod("approved_email")');
+    expect(source("server/routers/organization.ts")).toContain("Boolean(employee.initialPasswordHash)");
     expect(organization).toContain("تجهيز الدخول");
+    expect(organization).toContain("كود الدخول المعتمد:");
     expect(organization).toContain("إلغاء الوصول");
     expect(layout).not.toContain("requested_role: requestedRole");
   });

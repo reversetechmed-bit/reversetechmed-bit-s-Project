@@ -148,19 +148,17 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [activationMethod, setActivationMethod] = useState<"admin_code" | "approved_email">("admin_code");
   const enrollment = trpc.organization.enrollment.claim.useMutation();
-  const emailEligibility = trpc.organization.enrollment.eligibility.useMutation();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
+    const approvedEmail = email.trim().toLowerCase();
+    const activationCode = password.trim().toUpperCase().replace(/\s+/g, "");
     if (mode === "signup") {
       try {
-        const eligibility = activationMethod === "admin_code"
-          ? await enrollment.mutateAsync({ email: email.trim(), password })
-          : await emailEligibility.mutateAsync({ email: email.trim() });
+        const eligibility = await enrollment.mutateAsync({ email: approvedEmail, password: activationCode });
         if (!eligibility.eligible) {
           setSubmitting(false);
           return setMessage("بيانات التفعيل غير صحيحة أو الحساب غير متاح. راجع مسؤول المخزن.");
@@ -171,10 +169,10 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
       }
     }
     const result = mode === "signin"
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password, options: { data: { registration_source: "employee_directory" }, emailRedirectTo: window.location.origin } });
+      ? await supabase.auth.signInWithPassword({ email: approvedEmail, password })
+      : await supabase.auth.signUp({ email: approvedEmail, password: activationCode, options: { data: { registration_source: "employee_directory" }, emailRedirectTo: window.location.origin } });
     setSubmitting(false);
-    if (result.error) return setMessage(result.error.message);
+    if (result.error) return setMessage(result.error.message.toLowerCase().includes("already registered") ? "هذا البريد لديه حساب سابقًا. استخدم «تسجيل الدخول»، أو اطلب من الأدمن إعادة ضبط كلمة المرور من Supabase عند الحاجة." : result.error.message);
     setMessage(mode === "signup" && !result.data.session ? "تم إنشاء الحساب. يُرجى تأكيد بريدك الإلكتروني ثم تسجيل الدخول." : "تم تسجيل الدخول. يجري فتح مساحة العمل…");
   };
 
@@ -227,11 +225,7 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <>
               <div className="rounded-lg border border-[#d9c79d] bg-[#fcf8ef] p-3 text-right">
                 <span className="flex items-center gap-2 text-sm font-bold text-[#0B2E4E]"><Mail className="h-4 w-4 text-[#a97937]" />بريد وكلمة مرور</span>
-                <span className="mt-1 block text-[11px] leading-5 text-slate-600">الأدمن هو من يضيف البريد والدور أولًا. اختر طريقة التفعيل المناسبة لك؛ ولا يقبل النظام بريدًا خارج دليل الموظفين. الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف.</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#f4f0e8] p-1 text-xs font-bold">
-                <button type="button" onClick={() => { setActivationMethod("admin_code"); setMessage(""); }} className={`rounded-md px-3 py-2 transition ${activationMethod === "admin_code" ? "bg-[#17374c] text-white" : "text-[#5b6570]"}`}>كود الدخول من الأدمن</button>
-                <button type="button" onClick={() => { setActivationMethod("approved_email"); setMessage(""); }} className={`rounded-md px-3 py-2 transition ${activationMethod === "approved_email" ? "bg-[#17374c] text-white" : "text-[#5b6570]"}`}>تفعيل بالبريد المعتمد</button>
+                <span className="mt-1 block text-[11px] leading-5 text-slate-600">الأدمن يضيف البريد والدور وكود الدخول أولًا. اكتب البريد المسجل وكود الدخول نفسه؛ ولا يقبل النظام بريدًا خارج دليل الموظفين. الاسم والصلاحية يؤخذان تلقائيًا من ملف الموظف.</span>
               </div>
             </>
           )}
@@ -240,8 +234,8 @@ function SupabaseAuthScreen({ recoveryMode = false, onRecoveryComplete }: { reco
             <Input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="auth-password">{mode === "signup" && activationMethod === "admin_code" ? "كود الدخول الذي حدده الأدمن" : mode === "signup" ? "اختر كلمة مرور جديدة" : "كلمة المرور"}</Label>
-            <Input id="auth-password" type="password" minLength={6} value={password} onChange={event => setPassword(event.target.value)} required />
+            <Label htmlFor="auth-password">{mode === "signup" ? "كود الدخول الذي حدده الأدمن" : "كلمة المرور / كود الدخول"}</Label>
+            <Input id="auth-password" type="password" minLength={6} maxLength={64} value={password} onChange={event => setPassword(event.target.value)} required />
           </div>
             </>
           )}

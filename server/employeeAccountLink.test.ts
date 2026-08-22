@@ -37,7 +37,7 @@ describe("employee account linking", () => {
     const layout = readFileSync(resolve(import.meta.dirname, "../client/src/components/DashboardLayout.tsx"), "utf8");
     expect(layout).toContain("organization.enrollment.claim.useMutation");
     expect(layout).toContain("كود الدخول الذي حدده الأدمن");
-    expect(layout).toContain("organization.enrollment.eligibility.useMutation");
+    expect(layout).toContain("اكتب البريد المسجل وكود الدخول نفسه");
     expect(layout).not.toContain("auth-name");
     expect(layout).not.toContain("setRequestedRole");
   });
