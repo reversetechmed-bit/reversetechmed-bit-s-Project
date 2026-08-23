@@ -5,6 +5,7 @@ const db = {
   insert: vi.fn(() => ({ values: vi.fn(async () => undefined) })),
   select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [{ id: 1 }]) })) })) })),
   update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+  delete: vi.fn(() => ({ where: vi.fn(async () => undefined) })),
   transaction: vi.fn(async (callback) => callback(db)),
 };
 
@@ -43,6 +44,19 @@ describe("organization CRUD procedures", () => {
     await caller.componentTypes.archive({ id: 1 });
     expect(db.insert).toHaveBeenCalled();
     expect(db.update).toHaveBeenCalled();
+  });
+
+  it("prevents deleting a component type that is still assigned to inventory", async () => {
+    const caller = organizationRouter.createCaller(adminContext());
+    await expect(caller.componentTypes.remove({ id: 1 })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("deletes an unreferenced component type", async () => {
+    const one = (rows: unknown[]) => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => rows) })) })) });
+    db.select.mockReturnValueOnce(one([{ id: 1 }])).mockReturnValueOnce(one([]));
+    const caller = organizationRouter.createCaller(adminContext());
+    await expect(caller.componentTypes.remove({ id: 1 })).resolves.toEqual({ success: true });
+    expect(db.delete).toHaveBeenCalled();
   });
 
   it("lets an Admin manage flexible inventory categories", async () => {

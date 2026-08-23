@@ -14,11 +14,11 @@ export function isLowStock(quantity: number, minimumStock: number) {
   return quantity <= minimumStock;
 }
 
-export function validateDelivery(status: string, physicalQuantity: number, reservedQuantity: number, requestedQuantity: number) {
+export function validateDelivery(status: string, physicalQuantity: number, reservedQuantity: number, requestedQuantity: number, custodyQuantity = 0) {
   if (status !== "approved") {
     return { ok: false as const, reason: "Only approved requests can be confirmed as delivered." };
   }
-  if (requestedQuantity <= 0 || physicalQuantity < requestedQuantity) {
+  if (requestedQuantity <= 0 || physicalQuantity - custodyQuantity < requestedQuantity) {
     return { ok: false as const, reason: "There is no longer enough inventory to deliver this request." };
   }
   if (reservedQuantity < requestedQuantity) {

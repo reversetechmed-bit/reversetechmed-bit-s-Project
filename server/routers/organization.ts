@@ -218,24 +218,33 @@ export const organizationRouter = router({
         const [created] = await db.select().from(componentTypes).where(eq(componentTypes.name, input.name)).limit(1);
         return created;
       } catch {
-        throw new TRPCError({ code: "CONFLICT", message: "A component type with this name already exists." });
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل نوع مكون بهذا الاسم." });
       }
     }),
     update: adminProcedure.input(componentTypeInput.extend({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...values } = input;
       const [existing] = await db.select({ id: componentTypes.id }).from(componentTypes).where(eq(componentTypes.id, id)).limit(1);
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Component type not found." });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "نوع المكون غير موجود." });
       try {
         await db.update(componentTypes).set({ name: values.name, description: optionalText(values.description) }).where(eq(componentTypes.id, id));
         return { success: true } as const;
       } catch {
-        throw new TRPCError({ code: "CONFLICT", message: "A component type with this name already exists." });
+        throw new TRPCError({ code: "CONFLICT", message: "يوجد بالفعل نوع مكون بهذا الاسم." });
       }
     }),
     archive: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       await db.update(componentTypes).set({ isActive: 0 }).where(eq(componentTypes.id, input.id));
+      return { success: true } as const;
+    }),
+    remove: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [existing] = await db.select({ id: componentTypes.id }).from(componentTypes).where(eq(componentTypes.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "نوع المكون غير موجود." });
+      const [assignedPart] = await db.select({ id: parts.id }).from(parts).where(eq(parts.componentTypeId, input.id)).limit(1);
+      if (assignedPart) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن حذف نوع مرتبط بقطع مخزون. استخدم الأرشفة للحفاظ على السجل." });
+      await db.delete(componentTypes).where(eq(componentTypes.id, input.id));
       return { success: true } as const;
     }),
   }),

@@ -6,6 +6,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import ComponentTypes from "./pages/ComponentTypes";
 import BackupRestore from "./pages/BackupRestore";
 import Companies from "./pages/Companies";
+import Custody from "./pages/Custody";
 import Invoices from "./pages/Invoices";
 import MyRequests from "./pages/MyRequests";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -37,6 +38,7 @@ function Router() {
       <Route path={"/invoice/:id"} component={() => <WarehouseShell><InvoiceDocument /></WarehouseShell>} />
       <Route path={"/invoices"} component={() => <WarehouseShell><Invoices /></WarehouseShell>} />
       <Route path={"/my-requests"} component={() => <WarehouseShell><MyRequests /></WarehouseShell>} />
+      <Route path={"/custody"} component={() => <WarehouseShell><Custody /></WarehouseShell>} />
       <Route path={"/requests"} component={() => <WarehouseShell><Requests /></WarehouseShell>} />
       <Route path={"/departments"} component={() => <WarehouseShell><Organization initialTab="departments" /></WarehouseShell>} />
       <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />

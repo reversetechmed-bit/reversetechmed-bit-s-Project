@@ -1,0 +1,1 @@
+ALTER TABLE `dispensingRequests` ADD `custodyDueAt` timestamp;

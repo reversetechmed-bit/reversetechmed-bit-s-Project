@@ -158,6 +158,7 @@ export const parts = mysqlTable(
     productStage: mysqlEnum("productStage", productStageValues),
     quantity: int("quantity").notNull().default(0),
     reservedQuantity: int("reservedQuantity").notNull().default(0),
+    custodyQuantity: int("custodyQuantity").notNull().default(0),
     minimumStock: int("minimumStock").notNull().default(0),
     location: varchar("location", { length: 160 }),
     storageShelf: varchar("storageShelf", { length: 80 }),
@@ -197,6 +198,7 @@ export const productComponents = mysqlTable(
 );
 
 export const dispensingStatusValues = ["pending", "approved", "rejected", "delivered"] as const;
+export const requestFulfillmentTypeValues = ["dispense", "custody"] as const;
 
 /** An engineer's request for one stock part and a specific business purpose. */
 export const dispensingRequests = mysqlTable(
@@ -207,6 +209,8 @@ export const dispensingRequests = mysqlTable(
     requestedById: int("requestedById").notNull().references(() => users.id, { onDelete: "restrict" }),
     requestedQuantity: int("requestedQuantity").notNull(),
     purpose: text("purpose").notNull(),
+    fulfillmentType: mysqlEnum("fulfillmentType", requestFulfillmentTypeValues).notNull().default("dispense"),
+    custodyDueAt: timestamp("custodyDueAt"),
     recipientName: varchar("recipientName", { length: 160 }),
     recipientDepartment: varchar("recipientDepartment", { length: 160 }),
     projectReference: varchar("projectReference", { length: 160 }),
@@ -224,6 +228,40 @@ export const dispensingRequests = mysqlTable(
     index("requests_status_idx").on(table.status),
     index("requests_requester_idx").on(table.requestedById),
     index("requests_part_idx").on(table.partId),
+  ],
+);
+
+export const custodyStatusValues = ["active", "returned", "cancelled"] as const;
+
+/** An accountable employee custody assignment. It does not deduct physical stock. */
+export const custodyAssignments = mysqlTable(
+  "custodyAssignments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    custodyNumber: varchar("custodyNumber", { length: 48 }).notNull().unique(),
+    requestId: int("requestId").notNull().unique().references(() => dispensingRequests.id, { onDelete: "restrict" }),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    holderId: int("holderId").notNull().references(() => users.id, { onDelete: "restrict" }),
+    issuedById: int("issuedById").references(() => users.id, { onDelete: "set null" }),
+    returnedById: int("returnedById").references(() => users.id, { onDelete: "set null" }),
+    quantity: int("quantity").notNull(),
+    purpose: text("purpose").notNull(),
+    dueAt: timestamp("dueAt"),
+    status: mysqlEnum("status", custodyStatusValues).notNull().default("active"),
+    issuedAt: timestamp("issuedAt").notNull(),
+    returnedAt: timestamp("returnedAt"),
+    issueNote: text("issueNote"),
+    returnNote: text("returnNote"),
+    partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
+    partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    warehouseSectionSnapshot: mysqlEnum("warehouseSectionSnapshot", warehouseSectionValues).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("custody_holder_status_idx").on(table.holderId, table.status),
+    index("custody_part_status_idx").on(table.partId, table.status),
+    index("custody_due_idx").on(table.status, table.dueAt),
   ],
 );
 
@@ -348,6 +386,8 @@ export const transactionTypeValues = [
   "request_approved",
   "request_rejected",
   "delivery_confirmed",
+  "custody_issued",
+  "custody_returned",
   "maintenance_dispatched",
   "maintenance_returned",
   "purchase_received",
@@ -362,6 +402,7 @@ export const inventoryTransactions = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
     requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    custodyAssignmentId: int("custodyAssignmentId").references(() => custodyAssignments.id, { onDelete: "set null" }),
     maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
     purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
     assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
@@ -380,6 +421,7 @@ export const inventoryTransactions = mysqlTable(
   table => [
     index("transactions_part_idx").on(table.partId),
     index("transactions_request_idx").on(table.requestId),
+    index("transactions_custody_idx").on(table.custodyAssignmentId),
     index("transactions_maintenance_idx").on(table.maintenanceCaseId),
     index("transactions_purchase_order_idx").on(table.purchaseOrderId),
     index("transactions_assembly_order_idx").on(table.assemblyOrderId),
@@ -440,7 +482,7 @@ export const handoverInvoices = mysqlTable(
   table => [index("invoices_issued_at_idx").on(table.issuedAt)],
 );
 
-export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "maintenance_dispatched", "maintenance_returned", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
+export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "custody_issued", "custody_returned", "maintenance_dispatched", "maintenance_returned", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
 
 /** Recent warehouse events shown to the Admin on the control dashboard. */
 export const warehouseActivities = mysqlTable(
@@ -452,6 +494,7 @@ export const warehouseActivities = mysqlTable(
     title: varchar("title", { length: 200 }).notNull(),
     detail: text("detail"),
     requestId: int("requestId").references(() => dispensingRequests.id, { onDelete: "set null" }),
+    custodyAssignmentId: int("custodyAssignmentId").references(() => custodyAssignments.id, { onDelete: "set null" }),
     partId: int("partId").references(() => parts.id, { onDelete: "set null" }),
     maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
     purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
@@ -479,6 +522,7 @@ export const warehouseAutomationSettings = mysqlTable(
 export type Part = typeof parts.$inferSelect;
 export type InsertPart = typeof parts.$inferInsert;
 export type DispensingRequest = typeof dispensingRequests.$inferSelect;
+export type CustodyAssignment = typeof custodyAssignments.$inferSelect;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type Department = typeof departments.$inferSelect;
 export type EmployeeProfile = typeof employeeProfiles.$inferSelect;

@@ -205,3 +205,7 @@
 - [x] Add department filters to the Employees and Users directories, with clear empty states and no exposure of credentials.
 - [x] Add a regression test proving a soft-deleted account cannot obtain an authenticated warehouse session.
 - [x] Fix the logout/account-switch action so a Supabase employee session is fully cleared and the user returns to the warehouse sign-in screen without external redirect.
+- [x] Add an employee custody (عُهدة) workflow that records holder, quantity, purpose, due date, and return state without deducting physical or available stock.
+- [x] Extend requests so the employee selects between consumable dispensing and custody, while identity is derived from the authenticated account instead of a manually entered requester name.
+- [x] Add Admin custody visibility, return confirmation, and history with non-destructive audit records.
+- [x] Rebuild Component Types with search, edit, and safe delete controls in addition to archiving, preserving types still referenced by inventory records.

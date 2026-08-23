@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileText,
   History,
+  HandHeart,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -52,6 +53,7 @@ const adminMenuItems = [
   { icon: Package, label: "المنتجات", path: "/products" },
   { icon: Building2, label: "الشركات", path: "/companies" },
   { icon: ClipboardList, label: "طلبات الصرف", path: "/requests" },
+  { icon: HandHeart, label: "عُهد الموظفين", path: "/custody" },
   { icon: FileText, label: "الفواتير", path: "/invoices" },
   { icon: Building2, label: "الأقسام", path: "/departments" },
   { icon: UsersRound, label: "الموظفون", path: "/employees" },
@@ -66,6 +68,7 @@ const engineerMenuItems = [
   { icon: Boxes, label: "المكونات", path: "/inventory" },
   { icon: Package, label: "المنتجات", path: "/products" },
   { icon: ClipboardList, label: "طلباتي", path: "/my-requests" },
+  { icon: HandHeart, label: "عُهدتي", path: "/custody" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

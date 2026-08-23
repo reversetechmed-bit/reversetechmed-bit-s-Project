@@ -2,7 +2,7 @@ import { isLowStock, validateDelivery } from "./warehouseRules";
 
 export type DeliveryRecord = {
   request: { id: number; status: string; requestedQuantity: number; requestedById: number; purpose: string; recipientName?: string | null; recipientDepartment?: string | null; projectReference?: string | null; requestNote?: string | null };
-  part: { id: number; partNumber: string; name: string; quantity: number; reservedQuantity: number; minimumStock: number; warehouseSection: "components" | "products" };
+  part: { id: number; partNumber: string; name: string; quantity: number; reservedQuantity: number; custodyQuantity: number; minimumStock: number; warehouseSection: "components" | "products" };
   engineer: { id: number; name: string | null };
 };
 
@@ -32,7 +32,8 @@ export type DeliveryPersistence = {
 };
 
 export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number, deliveredAt = new Date(), deliveryNote?: string | null) {
-  const delivery = validateDelivery(record.request.status, record.part.quantity, record.part.reservedQuantity, record.request.requestedQuantity);
+  const custodyQuantity = Math.max(0, record.part.custodyQuantity ?? 0);
+  const delivery = validateDelivery(record.request.status, record.part.quantity, record.part.reservedQuantity, record.request.requestedQuantity, custodyQuantity);
   if (!delivery.ok) return delivery;
 
   const invoiceNumber = `RT-HO-${deliveredAt.toISOString().slice(0, 10).replaceAll("-", "")}-${String(record.request.id).padStart(5, "0")}`;
@@ -41,7 +42,7 @@ export function prepareConfirmedDelivery(record: DeliveryRecord, adminId: number
     quantityAfter: delivery.quantityAfter,
     reservedQuantityAfter: Math.max(0, record.part.reservedQuantity - record.request.requestedQuantity),
     deliveredAt,
-    shouldCreateLowStockAlert: isLowStock(delivery.quantityAfter - Math.max(0, record.part.reservedQuantity - record.request.requestedQuantity), record.part.minimumStock),
+    shouldCreateLowStockAlert: isLowStock(delivery.quantityAfter - Math.max(0, record.part.reservedQuantity - record.request.requestedQuantity) - custodyQuantity, record.part.minimumStock),
     transaction: {
       partId: record.part.id,
       requestId: record.request.id,

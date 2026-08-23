@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   dispensingRequests,
+  custodyAssignments,
   handoverInvoices,
   warehouseSectionValues,
   productStageValues,
@@ -17,6 +18,7 @@ import { notifyOwner } from "../_core/notification";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { executeConfirmedDelivery } from "../warehouseDelivery";
+import { availableInsideWarehouse, validateCustodyIssue, validateCustodyReturn } from "../warehouseCustody";
 import { buildDecisionNotification, buildHandoverNotification } from "../warehouseNotifications";
 import { canDecideRequest, canEngineerSubmit, isLowStock, mustScopeRequestsToRequester } from "../warehouseRules";
 import { z } from "zod";
@@ -44,8 +46,8 @@ const requestInput = z.object({
   partId: z.number().int().positive(),
   requestedQuantity: z.number().int().positive(),
   purpose: z.string().trim().min(3).max(2000),
-  recipientName: z.string().trim().min(2).max(160),
-  recipientDepartment: z.string().trim().max(160).optional(),
+  fulfillmentType: z.enum(["dispense", "custody"]).default("dispense"),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   projectReference: z.string().trim().max(160).optional(),
   requestNote: z.string().trim().max(2000).optional(),
 });
@@ -73,6 +75,14 @@ function canDispensePart(part: { warehouseSection: "components" | "products"; pr
   return part.warehouseSection === "components" || part.productStage === "finished" || part.productStage === "final_operational";
 }
 
+function availableForIssue(part: { quantity: number; reservedQuantity: number; custodyQuantity: number }) {
+  return availableInsideWarehouse(part);
+}
+
+function custodyNumberFor(requestId: number, issuedAt: Date) {
+  return `RT-CUS-${issuedAt.toISOString().slice(0, 10).replaceAll("-", "")}-${String(requestId).padStart(5, "0")}`;
+}
+
 const engineerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (!canEngineerSubmit(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "المهندسون والمستخدمون فقط يمكنهم إرسال طلبات الصرف." });
@@ -93,7 +103,7 @@ export const warehouseRouter = router({
     lowStock: adminProcedure.query(async () => {
       const db = await requireDb();
       const allParts = await db.select().from(parts).orderBy(desc(parts.updatedAt));
-      return allParts.filter(part => part.quantity - part.reservedQuantity <= part.minimumStock);
+      return allParts.filter(part => availableForIssue(part) <= part.minimumStock);
     }),
 
     uploadImage: adminProcedure.input(z.object({ fileName: z.string().trim().min(1).max(120), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(4).max(7_000_000) })).mutation(async ({ ctx, input }) => {
@@ -174,8 +184,8 @@ export const warehouseRouter = router({
         return db.transaction(async tx => {
           const [existing] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);
           if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
-          if (values.quantity < existing.reservedQuantity) {
-            throw new TRPCError({ code: "CONFLICT", message: `لا يمكن خفض الكمية الفعلية إلى أقل من الكمية المحجوزة (${existing.reservedQuantity}).` });
+          if (values.quantity < existing.reservedQuantity + existing.custodyQuantity) {
+            throw new TRPCError({ code: "CONFLICT", message: `لا يمكن خفض الكمية الفعلية إلى أقل من المحجوز والعُهدة القائمة (${existing.reservedQuantity + existing.custodyQuantity}).` });
           }
           if (existing.partNumber !== values.partNumber) {
             const [duplicate] = await tx.select({ id: parts.id }).from(parts).where(eq(parts.partNumber, values.partNumber)).limit(1);
@@ -220,7 +230,7 @@ export const warehouseRouter = router({
           });
           await tx.insert(warehouseActivities).values({ type: "inventory_updated", actorId: ctx.user.id, title: "تحديث سجل مخزون", detail: `تم تحديث ${updated.name} في ${warehouseSectionLabel(updated.warehouseSection)}.`, partId: updated.id });
 
-          if (isLowStock(updated.quantity - updated.reservedQuantity, updated.minimumStock)) {
+          if (isLowStock(availableForIssue(updated), updated.minimumStock)) {
             const [existingAlert] = await tx
               .select({ id: warehouseAlerts.id })
               .from(warehouseAlerts)
@@ -244,8 +254,9 @@ export const warehouseRouter = router({
       const [existing] = await db.select().from(parts).where(eq(parts.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
       const [request] = await db.select({ id: dispensingRequests.id }).from(dispensingRequests).where(eq(dispensingRequests.partId, input.id)).limit(1);
+      const [custody] = await db.select({ id: custodyAssignments.id }).from(custodyAssignments).where(eq(custodyAssignments.partId, input.id)).limit(1);
       const [transaction] = await db.select({ id: inventoryTransactions.id }).from(inventoryTransactions).where(eq(inventoryTransactions.partId, input.id)).limit(1);
-      if (request || transaction) {
+      if (request || custody || transaction) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "لا يمكن حذف القطع ذات الطلبات أو الحركات المسجلة، حفاظًا على سجل التدقيق.",
@@ -280,7 +291,7 @@ export const warehouseRouter = router({
         const [part] = await tx.select().from(parts).where(eq(parts.id, input.partId)).limit(1);
         if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة المطلوبة لم تعد موجودة." });
         if (!canDispensePart(part)) throw new TRPCError({ code: "CONFLICT", message: "هذا المنتج غير متاح للصرف حاليًا لأنه تحت التشغيل أو المراجعة أو الصيانة." });
-        const availableQuantity = part.quantity - part.reservedQuantity;
+        const availableQuantity = availableForIssue(part);
         if (availableQuantity < input.requestedQuantity) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "الكمية المطلوبة تتجاوز المخزون المتاح." });
         }
@@ -292,8 +303,10 @@ export const warehouseRouter = router({
             requestedById: ctx.user.id,
             requestedQuantity: input.requestedQuantity,
             purpose: input.purpose,
-            recipientName: input.recipientName,
-            recipientDepartment: optionalText(input.recipientDepartment),
+            fulfillmentType: input.fulfillmentType,
+            custodyDueAt: input.fulfillmentType === "custody" && input.dueDate ? new Date(`${input.dueDate}T23:59:59.999Z`) : null,
+            recipientName: ctx.user.name || "الموظف المسجل",
+            recipientDepartment: null,
             projectReference: optionalText(input.projectReference),
             requestNote: optionalText(input.requestNote),
           })
@@ -313,22 +326,22 @@ export const warehouseRouter = router({
           partNumberSnapshot: part.partNumber,
           partNameSnapshot: part.name,
           warehouseSectionSnapshot: part.warehouseSection,
-          details: `تم طلب ${input.requestedQuantity} وحدة للمستلم ${input.recipientName}. الغرض: ${input.purpose}`,
+          details: `تم طلب ${input.requestedQuantity} وحدة ${input.fulfillmentType === "custody" ? "كعُهدة" : "للصرف"} بواسطة ${ctx.user.name || "الموظف المسجل"}. الغرض: ${input.purpose}`,
         });
         await tx.insert(warehouseAlerts).values({
           type: "new_request",
-          title: `${warehouseSectionLabel(part.warehouseSection)}: طلب صرف جديد`,
-          body: `طلب ${ctx.user.name || "مهندس"} تسليم ${input.requestedQuantity} × ${part.name} إلى ${input.recipientName}.`,
+          title: `${warehouseSectionLabel(part.warehouseSection)}: طلب ${input.fulfillmentType === "custody" ? "عُهدة" : "صرف"} جديد`,
+          body: `طلب ${ctx.user.name || "مهندس"} ${input.requestedQuantity} × ${part.name} ${input.fulfillmentType === "custody" ? "كعُهدة" : "للصرف"}.`,
           partId: part.id,
           requestId,
         });
-        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: "إرسال طلب صرف", detail: `تم طلب ${input.requestedQuantity} × ${part.name} إلى ${input.recipientName}.`, requestId, partId: part.id });
-        return { requestId, partName: part.name };
+        await tx.insert(warehouseActivities).values({ type: "request_submitted", actorId: ctx.user.id, title: input.fulfillmentType === "custody" ? "إرسال طلب عُهدة" : "إرسال طلب صرف", detail: `تم طلب ${input.requestedQuantity} × ${part.name} ${input.fulfillmentType === "custody" ? "كعُهدة" : "للصرف"}.`, requestId, partId: part.id });
+        return { requestId, partName: part.name, fulfillmentType: input.fulfillmentType };
       });
 
       const notificationSent = await notifyOwner({
         title: "طلب صرف جديد من المخزن",
-        content: `طلب ${ctx.user.name || "مهندس"} تسليم ${input.requestedQuantity} × ${result.partName} إلى ${input.recipientName}.`,
+        content: `طلب ${ctx.user.name || "مهندس"} ${input.requestedQuantity} × ${result.partName} ${result.fulfillmentType === "custody" ? "كعُهدة" : "للصرف"}.`,
       });
       return { ...result, notificationSent };
     }),
@@ -351,7 +364,7 @@ export const warehouseRouter = router({
           if (input.decision === "approved" && !canDispensePart(record.part)) {
             throw new TRPCError({ code: "CONFLICT", message: "لا يمكن اعتماد صرف منتج قيد التشغيل أو المراجعة أو الصيانة." });
           }
-          const availableQuantity = record.part.quantity - record.part.reservedQuantity;
+          const availableQuantity = availableForIssue(record.part);
           if (input.decision === "approved" && record.request.requestedQuantity > availableQuantity) {
             throw new TRPCError({ code: "CONFLICT", message: `الكمية المتاحة للحجز هي ${availableQuantity} فقط، بينما الطلب يحتاج ${record.request.requestedQuantity}.` });
           }
@@ -360,7 +373,7 @@ export const warehouseRouter = router({
             .update(dispensingRequests)
             .set({ status: input.decision, decisionNote: optionalText(input.decisionNote), reviewedById: ctx.user.id, reviewedAt: new Date() })
             .where(eq(dispensingRequests.id, input.id));
-          if (input.decision === "approved") {
+          if (input.decision === "approved" && record.request.fulfillmentType === "dispense") {
             await tx.update(parts).set({ reservedQuantity: record.part.reservedQuantity + record.request.requestedQuantity }).where(eq(parts.id, record.part.id));
           }
           await tx.insert(inventoryTransactions).values({
@@ -375,11 +388,11 @@ export const warehouseRouter = router({
             partNumberSnapshot: record.part.partNumber,
             partNameSnapshot: record.part.name,
             warehouseSectionSnapshot: record.part.warehouseSection,
-            details: input.decision === "approved" ? `تم اعتماد الطلب وحجز ${record.request.requestedQuantity} وحدة بانتظار التسليم الفعلي.` : `تم رفض الطلب.${input.decisionNote ? ` السبب: ${input.decisionNote}` : ""}`,
+            details: input.decision === "approved" ? record.request.fulfillmentType === "custody" ? `تم اعتماد طلب عُهدة لعدد ${record.request.requestedQuantity} وحدة بانتظار تسجيل الحائز.` : `تم اعتماد الطلب وحجز ${record.request.requestedQuantity} وحدة بانتظار التسليم الفعلي.` : `تم رفض الطلب.${input.decisionNote ? ` السبب: ${input.decisionNote}` : ""}`,
           });
-          await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? "اعتماد طلب صرف" : "رفض طلب صرف", detail: `تم ${input.decision === "approved" ? "اعتماد" : "رفض"} طلب ${record.part.name}.`, requestId: record.request.id, partId: record.part.id });
+          await tx.insert(warehouseActivities).values({ type: input.decision === "approved" ? "request_approved" : "request_rejected", actorId: ctx.user.id, title: input.decision === "approved" ? record.request.fulfillmentType === "custody" ? "اعتماد طلب عُهدة" : "اعتماد طلب صرف" : "رفض الطلب", detail: `تم ${input.decision === "approved" ? "اعتماد" : "رفض"} طلب ${record.part.name}.`, requestId: record.request.id, partId: record.part.id });
           await tx.insert(warehouseAlerts).values(buildDecisionNotification({ decision: input.decision, decisionNote: input.decisionNote, partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById }));
-          return { success: true, status: input.decision, reservedQuantity: input.decision === "approved" ? record.part.reservedQuantity + record.request.requestedQuantity : record.part.reservedQuantity, availableQuantity: input.decision === "approved" ? availableQuantity - record.request.requestedQuantity : availableQuantity } as const;
+          return { success: true, status: input.decision, reservedQuantity: input.decision === "approved" && record.request.fulfillmentType === "dispense" ? record.part.reservedQuantity + record.request.requestedQuantity : record.part.reservedQuantity, availableQuantity: input.decision === "approved" && record.request.fulfillmentType === "dispense" ? availableQuantity - record.request.requestedQuantity : availableQuantity } as const;
         });
       }),
 
@@ -398,6 +411,38 @@ export const warehouseRouter = router({
           .where(eq(dispensingRequests.id, input.id))
           .limit(1);
         if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الصرف غير موجود." });
+        if (record.request.fulfillmentType === "custody") {
+          const custodyIssue = validateCustodyIssue(record.request.status, record.part, record.request.requestedQuantity);
+          if (!custodyIssue.ok) throw new TRPCError({ code: "CONFLICT", message: custodyIssue.reason });
+          const [existingCustody] = await tx.select({ id: custodyAssignments.id }).from(custodyAssignments).where(eq(custodyAssignments.requestId, record.request.id)).limit(1);
+          if (existingCustody) throw new TRPCError({ code: "CONFLICT", message: "تم تسجيل هذه العُهدة بالفعل." });
+          const issuedAt = new Date();
+          const custodyNumber = custodyNumberFor(record.request.id, issuedAt);
+          const insertedIds = await tx.insert(custodyAssignments).values({
+            custodyNumber,
+            requestId: record.request.id,
+            partId: record.part.id,
+            holderId: record.request.requestedById,
+            issuedById: ctx.user.id,
+            quantity: record.request.requestedQuantity,
+            purpose: record.request.purpose,
+            dueAt: record.request.custodyDueAt,
+            status: "active",
+            issuedAt,
+            issueNote: optionalText(input.deliveryNote),
+            partNumberSnapshot: record.part.partNumber,
+            partNameSnapshot: record.part.name,
+            warehouseSectionSnapshot: record.part.warehouseSection,
+          }).$returningId();
+          const custodyId = insertedIds[0]?.id;
+          if (!custodyId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر تسجيل العُهدة." });
+          await tx.update(parts).set({ custodyQuantity: custodyIssue.custodyQuantityAfter }).where(eq(parts.id, record.part.id));
+          await tx.update(dispensingRequests).set({ status: "delivered", deliveredById: ctx.user.id, deliveredAt: issuedAt }).where(eq(dispensingRequests.id, record.request.id));
+          await tx.insert(inventoryTransactions).values({ partId: record.part.id, requestId: record.request.id, custodyAssignmentId: custodyId, type: "custody_issued", quantityDelta: 0, quantityBefore: record.part.quantity, quantityAfter: record.part.quantity, actorId: ctx.user.id, engineerId: record.request.requestedById, partNumberSnapshot: record.part.partNumber, partNameSnapshot: record.part.name, warehouseSectionSnapshot: record.part.warehouseSection, details: `تم تسجيل ${record.request.requestedQuantity} وحدة كعُهدة رقم ${custodyNumber} مع ${record.engineer.name || "الموظف"} دون خصم الرصيد الفعلي.` });
+          await tx.insert(warehouseActivities).values({ type: "custody_issued", actorId: ctx.user.id, title: "تسليم عُهدة", detail: `سُجلت ${record.request.requestedQuantity} × ${record.part.name} كعُهدة مع ${record.engineer.name || "الموظف"}.`, requestId: record.request.id, custodyAssignmentId: custodyId, partId: record.part.id });
+          await tx.insert(warehouseAlerts).values({ type: "handover_completed", title: "تم تسجيل عُهدة", body: `سُجلت ${record.request.requestedQuantity} × ${record.part.name} بعهدتك تحت الرقم ${custodyNumber}.`, partId: record.part.id, requestId: record.request.id, recipientUserId: record.request.requestedById });
+          return { success: true, fulfillmentType: "custody" as const, quantityAfter: record.part.quantity, custodyNumber };
+        }
         const deliveryMovement = await executeConfirmedDelivery(record, ctx.user.id, {
           updatePartInventory: async (partId, inventory) => {
             await tx.update(parts).set(inventory).where(eq(parts.id, partId));
@@ -434,7 +479,42 @@ export const warehouseRouter = router({
         }
         await tx.insert(warehouseAlerts).values(buildHandoverNotification({ partId: record.part.id, partName: record.part.name, requestId: record.request.id, recipientUserId: record.request.requestedById, invoiceNumber: deliveryMovement.invoice.invoiceNumber }));
         const { quantityAfter } = deliveryMovement;
-        return { success: true, quantityAfter, invoiceNumber: deliveryMovement.invoice.invoiceNumber } as const;
+        return { success: true, fulfillmentType: "dispense" as const, quantityAfter, invoiceNumber: deliveryMovement.invoice.invoiceNumber } as const;
+      });
+    }),
+  }),
+
+  custody: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      const query = db.select({ custody: custodyAssignments, part: parts, holder: { id: users.id, name: users.name, email: users.email } })
+        .from(custodyAssignments)
+        .innerJoin(parts, eq(custodyAssignments.partId, parts.id))
+        .innerJoin(users, eq(custodyAssignments.holderId, users.id));
+      return ctx.user.role === "admin"
+        ? query.orderBy(desc(custodyAssignments.issuedAt))
+        : query.where(eq(custodyAssignments.holderId, ctx.user.id)).orderBy(desc(custodyAssignments.issuedAt));
+    }),
+
+    confirmReturn: adminProcedure.input(z.object({ id: z.number().int().positive(), returnNote: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      return db.transaction(async tx => {
+        const [record] = await tx.select({ custody: custodyAssignments, part: parts, holder: { id: users.id, name: users.name } })
+          .from(custodyAssignments)
+          .innerJoin(parts, eq(custodyAssignments.partId, parts.id))
+          .innerJoin(users, eq(custodyAssignments.holderId, users.id))
+          .where(eq(custodyAssignments.id, input.id))
+          .limit(1);
+        if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "سجل العُهدة غير موجود." });
+        if (record.custody.status !== "active") throw new TRPCError({ code: "CONFLICT", message: "هذه العُهدة أُعيدت أو أُغلقت سابقًا." });
+        const custodyReturn = validateCustodyReturn(record.part.custodyQuantity, record.custody.quantity);
+        if (!custodyReturn.ok) throw new TRPCError({ code: "CONFLICT", message: custodyReturn.reason });
+        const returnedAt = new Date();
+        await tx.update(custodyAssignments).set({ status: "returned", returnedById: ctx.user.id, returnedAt, returnNote: optionalText(input.returnNote) }).where(eq(custodyAssignments.id, record.custody.id));
+        await tx.update(parts).set({ custodyQuantity: custodyReturn.custodyQuantityAfter }).where(eq(parts.id, record.part.id));
+        await tx.insert(inventoryTransactions).values({ partId: record.part.id, requestId: record.custody.requestId, custodyAssignmentId: record.custody.id, type: "custody_returned", quantityDelta: 0, quantityBefore: record.part.quantity, quantityAfter: record.part.quantity, actorId: ctx.user.id, engineerId: record.holder.id, partNumberSnapshot: record.part.partNumber, partNameSnapshot: record.part.name, warehouseSectionSnapshot: record.part.warehouseSection, details: `تمت إعادة ${record.custody.quantity} وحدة من العُهدة ${record.custody.custodyNumber} بواسطة ${record.holder.name || "الموظف"} دون تغيير الرصيد الفعلي.` });
+        await tx.insert(warehouseActivities).values({ type: "custody_returned", actorId: ctx.user.id, title: "إعادة عُهدة", detail: `أُغلقت العُهدة ${record.custody.custodyNumber} وأعيدت ${record.custody.quantity} × ${record.part.name}.`, requestId: record.custody.requestId, custodyAssignmentId: record.custody.id, partId: record.part.id });
+        return { success: true, custodyNumber: record.custody.custodyNumber } as const;
       });
     }),
   }),
@@ -462,14 +542,15 @@ export const warehouseRouter = router({
       partCount: allParts.length,
       totalUnits: allParts.reduce((sum, part) => sum + part.quantity, 0),
       reservedUnits: allParts.reduce((sum, part) => sum + part.reservedQuantity, 0),
-      availableUnits: allParts.reduce((sum, part) => sum + Math.max(0, part.quantity - part.reservedQuantity), 0),
+      custodyUnits: allParts.reduce((sum, part) => sum + (part.custodyQuantity ?? 0), 0),
+      availableUnits: allParts.reduce((sum, part) => sum + availableForIssue(part), 0),
       componentCount: allParts.filter(part => part.warehouseSection === "components").length,
       componentUnits: allParts.filter(part => part.warehouseSection === "components").reduce((sum, part) => sum + part.quantity, 0),
       productCount: allParts.filter(part => part.warehouseSection === "products").length,
       productUnits: allParts.filter(part => part.warehouseSection === "products").reduce((sum, part) => sum + part.quantity, 0),
       pendingRequests: allRequests.filter(request => request.status === "pending").length,
       overdueRequests,
-      lowStockParts: allParts.filter(part => part.quantity - part.reservedQuantity <= part.minimumStock),
+      lowStockParts: allParts.filter(part => availableForIssue(part) <= part.minimumStock),
       topDispensedParts: Array.from(topDispensedByPart.values()).sort((left, right) => right.quantity - left.quantity).slice(0, 5),
       recentHandovers,
       unreadAlerts,
