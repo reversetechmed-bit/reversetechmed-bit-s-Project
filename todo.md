@@ -225,3 +225,6 @@
 - [x] Add interactive monthly dashboard charts for inventory-count variance trends and open work-order trends.
 - [x] Add advanced dashboard filtering of open work orders by department and priority.
 - [x] Improve the simplified dispensing invoice with a clearly structured, zebra-striped item table in PDF and print views.
+- [x] Add a direct-print control for dispensing invoices using the browser print flow.
+- [x] Add idempotent default company, component, product, and medical-device records for REVERSE TECH and Target.
+- [x] Add three linked Target phototherapy-device product editions with documented BOM relationships and safe default quantities.
