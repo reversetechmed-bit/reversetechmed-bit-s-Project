@@ -228,3 +228,5 @@
 - [x] Add a direct-print control for dispensing invoices using the browser print flow.
 - [x] Add idempotent default company, component, product, and medical-device records for REVERSE TECH and Target.
 - [x] Add three linked Target phototherapy-device product editions with documented BOM relationships and safe default quantities.
+- [x] Write an Arabic promotional voice-over script for the REVERSE TECH warehouse system.
+- [x] Generate and deliver a polished Arabic voice-over audio file for the approved promotional script.
