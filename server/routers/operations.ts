@@ -54,6 +54,28 @@ const maintenanceResolveInput = z.object({
   inboundCondition: z.string().trim().max(2000).optional(),
   diagnosis: z.string().trim().max(2000).optional(),
   resolutionNote: z.string().trim().max(2000).optional(),
+  exitReason: z.string().trim().max(200).optional(),
+  actualCost: z.number().int().min(0).optional(),
+}).superRefine((input, context) => {
+  if (input.disposition !== "return_to_stock" && !input.exitReason?.trim()) {
+    context.addIssue({ code: "custom", path: ["exitReason"], message: "سبب الخروج النهائي من المخزن إلزامي." });
+  }
+});
+
+const maintenanceReturnToWarehouseInput = z.object({
+  id: z.number().int().positive(),
+  inboundCondition: z.string().trim().min(2).max(2000),
+  diagnosis: z.string().trim().max(2000).optional(),
+  resolutionNote: z.string().trim().max(2000).optional(),
+  actualCost: z.number().int().min(0).optional(),
+});
+
+const maintenanceExitWarehouseInput = z.object({
+  id: z.number().int().positive(),
+  disposition: z.enum(["return_to_customer", "cannibalize", "scrap"]),
+  exitReason: z.string().trim().min(2).max(200),
+  diagnosis: z.string().trim().max(2000).optional(),
+  resolutionNote: z.string().trim().max(2000).optional(),
   actualCost: z.number().int().min(0).optional(),
 });
 
@@ -88,6 +110,56 @@ async function requireDb() {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "بيانات العمليات غير متاحة مؤقتًا." });
   return db;
+}
+
+type MaintenanceResolutionInput = z.infer<typeof maintenanceResolveInput>;
+type WarehouseDb = Exclude<Awaited<ReturnType<typeof getDb>>, null>;
+
+async function finalizeMaintenanceCase(db: WarehouseDb, actorId: number, input: MaintenanceResolutionInput) {
+  return db.transaction(async tx => {
+    const [record] = await tx
+      .select({ maintenanceCase: maintenanceCases, part: parts })
+      .from(maintenanceCases)
+      .innerJoin(parts, eq(maintenanceCases.partId, parts.id))
+      .where(eq(maintenanceCases.id, input.id))
+      .limit(1);
+    if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة الصيانة أو المرتجع غير موجودة." });
+    const plan = prepareMaintenanceResolution(record, actorId, input.disposition, new Date(), input.exitReason);
+    if (!plan.ok) throw new TRPCError({ code: "CONFLICT", message: plan.reason });
+    if (plan.returnsToStock) await tx.update(parts).set({ quantity: plan.quantityAfter }).where(eq(parts.id, record.part.id));
+    await tx.update(maintenanceCases).set({
+      status: plan.nextStatus,
+      receivedById: plan.returnsToStock ? actorId : record.maintenanceCase.receivedById,
+      returnedAt: plan.returnsToStock ? plan.resolvedAt : record.maintenanceCase.returnedAt,
+      resolvedAt: plan.resolvedAt,
+      inboundCondition: optionalText(input.inboundCondition) ?? record.maintenanceCase.inboundCondition,
+      diagnosis: optionalText(input.diagnosis) ?? record.maintenanceCase.diagnosis,
+      resolutionNote: optionalText(input.resolutionNote),
+      disposition: input.disposition,
+      exitReason: plan.returnsToStock ? null : optionalText(input.exitReason),
+      actualCost: input.actualCost ?? record.maintenanceCase.actualCost,
+    }).where(eq(maintenanceCases.id, record.maintenanceCase.id));
+    if (plan.transaction) await tx.insert(inventoryTransactions).values(plan.transaction);
+    await tx.insert(warehouseActivities).values({
+      type: "maintenance_resolved",
+      actorId,
+      title: plan.returnsToStock ? "إعادة قطعة إلى المخزون" : "خروج نهائي من المخزن",
+      detail: plan.returnsToStock
+        ? `تمت إعادة ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون بعد الفحص.`
+        : `أُغلقت الحالة ${record.maintenanceCase.caseNumber} بخروج نهائي من المخزن دون إضافة رصيد. المسار: ${input.disposition}. السبب: ${input.exitReason!.trim()}.`,
+      partId: record.part.id,
+      maintenanceCaseId: record.maintenanceCase.id,
+    });
+    if (plan.returnsToStock) await tx.insert(warehouseAlerts).values({
+      type: "maintenance_returned",
+      title: "إعادة قطعة من الصيانة أو العميل",
+      body: `أُعيد ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون من الحالة ${record.maintenanceCase.caseNumber}.`,
+      partId: record.part.id,
+      maintenanceCaseId: record.maintenanceCase.id,
+      dedupeKey: `maintenance-return:${record.maintenanceCase.id}`,
+    });
+    return { success: true, returnedToStock: plan.returnsToStock, quantityAfter: plan.quantityAfter } as const;
+  });
 }
 
 export const operationsRouter = router({
@@ -167,51 +239,20 @@ export const operationsRouter = router({
       return { success: true } as const;
     }),
 
+    /** Backward-compatible advanced resolution endpoint. New UI uses the two explicit actions below. */
     resolve: warehousePermissionProcedure("manage_maintenance").input(maintenanceResolveInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
-      return db.transaction(async tx => {
-        const [record] = await tx
-          .select({ maintenanceCase: maintenanceCases, part: parts })
-          .from(maintenanceCases)
-          .innerJoin(parts, eq(maintenanceCases.partId, parts.id))
-          .where(eq(maintenanceCases.id, input.id))
-          .limit(1);
-        if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة الصيانة أو المرتجع غير موجودة." });
-        const plan = prepareMaintenanceResolution(record, ctx.user.id, input.disposition);
-        if (!plan.ok) throw new TRPCError({ code: "CONFLICT", message: plan.reason });
-        if (plan.returnsToStock) await tx.update(parts).set({ quantity: plan.quantityAfter }).where(eq(parts.id, record.part.id));
-        await tx.update(maintenanceCases).set({
-          status: plan.nextStatus,
-          receivedById: plan.returnsToStock ? ctx.user.id : record.maintenanceCase.receivedById,
-          returnedAt: plan.returnsToStock ? plan.resolvedAt : record.maintenanceCase.returnedAt,
-          resolvedAt: plan.resolvedAt,
-          inboundCondition: optionalText(input.inboundCondition) ?? record.maintenanceCase.inboundCondition,
-          diagnosis: optionalText(input.diagnosis) ?? record.maintenanceCase.diagnosis,
-          resolutionNote: optionalText(input.resolutionNote),
-          disposition: input.disposition,
-          actualCost: input.actualCost ?? record.maintenanceCase.actualCost,
-        }).where(eq(maintenanceCases.id, record.maintenanceCase.id));
-        if (plan.transaction) await tx.insert(inventoryTransactions).values(plan.transaction);
-        await tx.insert(warehouseActivities).values({
-          type: "maintenance_resolved",
-          actorId: ctx.user.id,
-          title: plan.returnsToStock ? "إعادة قطعة إلى المخزون" : "قرار نهائي لحالة صيانة",
-          detail: plan.returnsToStock
-            ? `تمت إعادة ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون بعد الفحص.`
-            : `أُغلقت الحالة ${record.maintenanceCase.caseNumber} دون إضافة رصيد، بقرار ${input.disposition}.`,
-          partId: record.part.id,
-          maintenanceCaseId: record.maintenanceCase.id,
-        });
-        if (plan.returnsToStock) await tx.insert(warehouseAlerts).values({
-          type: "maintenance_returned",
-          title: "إعادة قطعة من الصيانة أو العميل",
-          body: `أُعيد ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون من الحالة ${record.maintenanceCase.caseNumber}.`,
-          partId: record.part.id,
-          maintenanceCaseId: record.maintenanceCase.id,
-          dedupeKey: `maintenance-return:${record.maintenanceCase.id}`,
-        });
-        return { success: true, returnedToStock: plan.returnsToStock, quantityAfter: plan.quantityAfter } as const;
-      });
+      return finalizeMaintenanceCase(db, ctx.user.id, input);
+    }),
+
+    returnToWarehouse: warehousePermissionProcedure("manage_maintenance").input(maintenanceReturnToWarehouseInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      return finalizeMaintenanceCase(db, ctx.user.id, { ...input, disposition: "return_to_stock" });
+    }),
+
+    exitWarehouse: warehousePermissionProcedure("manage_maintenance").input(maintenanceExitWarehouseInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      return finalizeMaintenanceCase(db, ctx.user.id, input);
     }),
 
     dispatch: warehousePermissionProcedure("manage_maintenance").input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {

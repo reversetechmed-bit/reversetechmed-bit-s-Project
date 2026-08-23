@@ -74,12 +74,20 @@ export function prepareMaintenanceReceipt(record: { maintenanceCase: Operational
 }
 
 export type MaintenanceDisposition = "return_to_stock" | "return_to_customer" | "cannibalize" | "scrap";
+export type MaintenanceExitDisposition = Exclude<MaintenanceDisposition, "return_to_stock">;
+
+export function isMaintenanceExitDisposition(disposition: MaintenanceDisposition): disposition is MaintenanceExitDisposition {
+  return disposition !== "return_to_stock";
+}
 
 /** Resolves a maintenance or customer-return case without silently changing stock for non-return decisions. */
-export function prepareMaintenanceResolution(record: { maintenanceCase: OperationalMaintenanceCase; part: OperationalPart }, actorId: number, disposition: MaintenanceDisposition, resolvedAt = new Date()) {
+export function prepareMaintenanceResolution(record: { maintenanceCase: OperationalMaintenanceCase; part: OperationalPart }, actorId: number, disposition: MaintenanceDisposition, resolvedAt = new Date(), exitReason?: string) {
   const resolvableStatuses: OperationalMaintenanceCase["status"][] = ["sent_for_maintenance", "awaiting_inspection", "under_diagnosis", "repair_in_progress", "quality_check"];
   if (!resolvableStatuses.includes(record.maintenanceCase.status)) {
     return { ok: false as const, reason: "لا يمكن تسجيل القرار النهائي لهذه الحالة في وضعها الحالي." };
+  }
+  if (isMaintenanceExitDisposition(disposition) && !exitReason?.trim()) {
+    return { ok: false as const, reason: "سبب الخروج النهائي من المخزن إلزامي لحفظ السجل التدقيقي." };
   }
   const returnsToStock = disposition === "return_to_stock";
   const quantityAfter = returnsToStock ? record.part.quantity + record.maintenanceCase.quantity : record.part.quantity;

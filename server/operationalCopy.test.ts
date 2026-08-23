@@ -51,4 +51,13 @@ describe("operational product copy", () => {
     expect(partForm).toContain("أدخل البيانات الأساسية واختر تصنيف المخزون.");
     expect(partForm).toContain("الصورة يجب أن تكون JPG أو PNG أو WEBP وبحد أقصى 5MB.");
   });
+
+  it("keeps maintenance closure as two explicit, stock-safe actions", () => {
+    const operations = source("client/src/pages/Operations.tsx");
+    expect(operations).toContain("إرجاع إلى المخزن");
+    expect(operations).toContain("خروج نهائي من المخزن");
+    expect(operations).toContain("سبب الخروج النهائي *");
+    expect(operations).toContain("returnToWarehouse");
+    expect(operations).toContain("exitWarehouse");
+  });
 });

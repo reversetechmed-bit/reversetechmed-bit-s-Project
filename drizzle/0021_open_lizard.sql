@@ -1,0 +1,1 @@
+ALTER TABLE `maintenanceCases` ADD `exitReason` varchar(200);

@@ -19,8 +19,19 @@ describe("warehouse operational escalations and maintenance", () => {
   it("changes stock only when the final maintenance decision returns the item to stock", () => {
     const returned = prepareMaintenanceResolution({ maintenanceCase: { id: 3, caseNumber: "RT-MNT-3", type: "maintenance_outbound", status: "quality_check", quantity: 2 }, part }, 4, "return_to_stock");
     expect(returned).toMatchObject({ ok: true, returnsToStock: true, quantityAfter: 12, nextStatus: "returned_to_stock", transaction: { quantityDelta: 2 } });
-    const scrapped = prepareMaintenanceResolution({ maintenanceCase: { id: 4, caseNumber: "RT-MNT-4", type: "maintenance_outbound", status: "under_diagnosis", quantity: 2 }, part }, 4, "scrap");
+    const scrapped = prepareMaintenanceResolution({ maintenanceCase: { id: 4, caseNumber: "RT-MNT-4", type: "maintenance_outbound", status: "under_diagnosis", quantity: 2 }, part }, 4, "scrap", new Date("2026-08-22T10:00:00Z"), "غير صالح للاستخدام بعد الفحص");
     expect(scrapped).toMatchObject({ ok: true, returnsToStock: false, quantityAfter: 10, nextStatus: "closed", transaction: null });
+  });
+
+  it("requires a documented reason and never increases stock for every permanent-exit path", () => {
+    const record = { maintenanceCase: { id: 5, caseNumber: "RT-MNT-5", type: "maintenance_outbound" as const, status: "quality_check" as const, quantity: 2 }, part };
+    const withoutReason = prepareMaintenanceResolution(record, 4, "scrap");
+    expect(withoutReason).toMatchObject({ ok: false, reason: "سبب الخروج النهائي من المخزن إلزامي لحفظ السجل التدقيقي." });
+
+    for (const disposition of ["return_to_customer", "cannibalize", "scrap"] as const) {
+      const exit = prepareMaintenanceResolution(record, 4, disposition, new Date("2026-08-22T10:00:00Z"), "قرار فني موثق");
+      expect(exit).toMatchObject({ ok: true, returnsToStock: false, quantityAfter: 10, nextStatus: "closed", transaction: null });
+    }
   });
 
   it("creates deterministic alerts for low stock, a delayed request, and an unconfirmed receipt", () => {

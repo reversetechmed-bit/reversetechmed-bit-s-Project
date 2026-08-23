@@ -232,3 +232,6 @@
 - [x] Generate and deliver a polished Arabic voice-over audio file for the approved promotional script.
 - [x] Produce a short Arabic promotional video that visually presents the REVERSE TECH warehouse system and its core operational features.
 - [x] Produce a presentation-style video from real REVERSE TECH system pages with the Arabic promotional voice-over mixed in.
+- [x] Add explicit maintenance/return decisions to return an item to warehouse stock or remove it permanently from warehouse availability.
+- [x] Record a mandatory exit reason and audit trail for permanent warehouse removal without accidental stock increase.
+- [x] Add prominent Arabic UI actions for maintenance return-to-stock and permanent exit-from-warehouse decisions.

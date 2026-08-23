@@ -522,6 +522,7 @@ export const maintenanceCases = mysqlTable(
     diagnosis: text("diagnosis"),
     resolutionNote: text("resolutionNote"),
     disposition: mysqlEnum("disposition", maintenanceDispositionValues),
+    exitReason: varchar("exitReason", { length: 200 }),
     estimatedCost: int("estimatedCost"),
     actualCost: int("actualCost"),
     notes: text("notes"),
