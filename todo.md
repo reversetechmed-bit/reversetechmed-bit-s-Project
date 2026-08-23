@@ -231,3 +231,4 @@
 - [x] Write an Arabic promotional voice-over script for the REVERSE TECH warehouse system.
 - [x] Generate and deliver a polished Arabic voice-over audio file for the approved promotional script.
 - [x] Produce a short Arabic promotional video that visually presents the REVERSE TECH warehouse system and its core operational features.
+- [x] Produce a presentation-style video from real REVERSE TECH system pages with the Arabic promotional voice-over mixed in.
