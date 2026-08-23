@@ -27,6 +27,7 @@ describe("standalone Arabic handover invoice PDF", () => {
     const source = readFileSync(new URL("../client/src/lib/handoverInvoiceExport.ts", import.meta.url), "utf8");
     expect(source).toContain('font: "NotoNaskh", fontStyle: "normal"');
     expect(source).not.toContain('fontStyle: "bold"');
+    expect(source).toContain("alternateRowStyles: { fillColor: [247, 251, 255] }");
   });
 
   it("creates a concise readable Arabic handover artifact without an invoice number or brand logo text", () => {

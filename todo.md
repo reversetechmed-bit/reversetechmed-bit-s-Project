@@ -222,3 +222,6 @@
 - [x] Add daily and weekly inventory-count report export to readable Arabic PDF and Excel files.
 - [x] Add live dashboard metrics for open work orders and current approved inventory-count variances.
 - [x] Simplify the dispensing invoice PDF to essential data only, removing the logo and invoice number while preserving Arabic readability.
+- [x] Add interactive monthly dashboard charts for inventory-count variance trends and open work-order trends.
+- [x] Add advanced dashboard filtering of open work orders by department and priority.
+- [x] Improve the simplified dispensing invoice with a clearly structured, zebra-striped item table in PDF and print views.

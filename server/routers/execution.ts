@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { disassemblyLines, disassemblyOrders, disassemblyStatusValues, inventoryTransactions, maintenanceCases, parts, productComponents, serialAssetEvents, serialAssets, warehouseActivities, warehouseAlerts, workOrderLines, workOrders, workOrderStatusValues, workOrderTypeValues } from "../../drizzle/schema";
+import { departments, disassemblyLines, disassemblyOrders, disassemblyStatusValues, inventoryTransactions, maintenanceCases, parts, productComponents, serialAssetEvents, serialAssets, warehouseActivities, warehouseAlerts, workOrderLines, workOrders, workOrderStatusValues, workOrderTypeValues } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, router, warehousePermissionProcedure } from "../_core/trpc";
 import { prepareDisassemblyCompletion, prepareProductionWorkOrderCompletion, validateDisassemblySource, validateWorkOrderTransition } from "../warehouseExecution";
@@ -21,6 +21,7 @@ const workOrderCreateInput = z.object({
   type: z.enum(workOrderTypeValues),
   targetPartId: z.number().int().positive(),
   serialAssetId: z.number().int().positive().nullable().optional(),
+  departmentId: z.number().int().positive().nullable().optional(),
   quantityPlanned: z.number().int().positive().default(1),
   assigneeId: z.number().int().positive().nullable().optional(),
   priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
@@ -40,8 +41,12 @@ export const executionRouter = router({
   workOrders: router({
     list: warehousePermissionProcedure("manage_work_orders").query(async () => {
       const db = await requireDb();
-      const [orders, lines] = await Promise.all([db.select({ order: workOrders, target: parts }).from(workOrders).innerJoin(parts, eq(workOrders.targetPartId, parts.id)).orderBy(desc(workOrders.createdAt)), db.select({ line: workOrderLines, source: parts }).from(workOrderLines).innerJoin(parts, eq(workOrderLines.sourcePartId, parts.id))]);
+      const [orders, lines] = await Promise.all([db.select({ order: workOrders, target: parts, department: departments }).from(workOrders).innerJoin(parts, eq(workOrders.targetPartId, parts.id)).leftJoin(departments, eq(workOrders.departmentId, departments.id)).orderBy(desc(workOrders.createdAt)), db.select({ line: workOrderLines, source: parts }).from(workOrderLines).innerJoin(parts, eq(workOrderLines.sourcePartId, parts.id))]);
       return orders.map(order => ({ ...order, lines: lines.filter(line => line.line.workOrderId === order.order.id) }));
+    }),
+    departments: warehousePermissionProcedure("manage_work_orders").query(async () => {
+      const db = await requireDb();
+      return db.select().from(departments).where(eq(departments.isActive, 1)).orderBy(departments.name);
     }),
     create: warehousePermissionProcedure("manage_work_orders").input(workOrderCreateInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
@@ -55,7 +60,11 @@ export const executionRouter = router({
           if (!asset || asset.partId !== target.id) throw new TRPCError({ code: "BAD_REQUEST", message: "الوحدة التسلسلية لا تنتمي إلى الصنف المستهدف." });
         }
         const now = new Date();
-        const inserted = await tx.insert(workOrders).values({ workOrderNumber: workNumberDraft(), type: input.type, targetPartId: target.id, serialAssetId: input.serialAssetId ?? null, quantityPlanned: input.quantityPlanned, assigneeId: input.assigneeId ?? null, priority: input.priority, dueAt: input.dueAt ? new Date(input.dueAt) : null, notes: optionalText(input.notes), createdById: ctx.user.id, createdAt: now }).$returningId();
+        if (input.departmentId) {
+          const [department] = await tx.select({ id: departments.id }).from(departments).where(eq(departments.id, input.departmentId)).limit(1);
+          if (!department) throw new TRPCError({ code: "NOT_FOUND", message: "القسم المختار غير موجود." });
+        }
+        const inserted = await tx.insert(workOrders).values({ workOrderNumber: workNumberDraft(), type: input.type, targetPartId: target.id, serialAssetId: input.serialAssetId ?? null, departmentId: input.departmentId ?? null, quantityPlanned: input.quantityPlanned, assigneeId: input.assigneeId ?? null, priority: input.priority, dueAt: input.dueAt ? new Date(input.dueAt) : null, notes: optionalText(input.notes), createdById: ctx.user.id, createdAt: now }).$returningId();
         const id = inserted[0]?.id;
         if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر إنشاء أمر العمل." });
         const workOrderNumber = `RT-WO-${now.toISOString().slice(0, 10).replaceAll("-", "")}-${String(id).padStart(5, "0")}`;

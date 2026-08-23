@@ -16,11 +16,14 @@ describe("warehouse dashboard output", () => {
   it("returns recent warehouse activity and most recent user access alongside stock summaries", async () => {
     const activities = [{ activity: { id: 11, title: "Handover confirmed", detail: "ABS Filament delivered", createdAt: new Date() }, actor: { id: 4, name: "Warehouse Admin", email: "admin@reversetech.com" } }];
     const recentAccess = [{ id: 7, name: "Sara Ahmed", email: "sara@reversetech.com", role: "user", lastSignedIn: new Date() }];
-    const selects = [chain([{ id: 1, warehouseSection: "components", quantity: 2, reservedQuantity: 0, minimumStock: 3 }, { id: 2, warehouseSection: "products", quantity: 8, reservedQuantity: 0, minimumStock: 2 }]), chain([{ status: "pending", createdAt: new Date() }, { status: "delivered", createdAt: new Date() }]), chain([{ id: 5, type: "low_stock" }]), chain(activities), chain(recentAccess), chain([]), chain([]), chain([{ status: "in_progress" }]), chain([{ line: { varianceQuantity: 2 }, session: { id: 9, status: "approved", createdAt: new Date() } }])];
+    const now = new Date();
+    const selects = [chain([{ id: 1, warehouseSection: "components", quantity: 2, reservedQuantity: 0, minimumStock: 3 }, { id: 2, warehouseSection: "products", quantity: 8, reservedQuantity: 0, minimumStock: 2 }]), chain([{ status: "pending", createdAt: now }, { status: "delivered", createdAt: now }]), chain([{ id: 5, type: "low_stock" }]), chain(activities), chain(recentAccess), chain([]), chain([]), chain([{ order: { id: 12, status: "in_progress", priority: "high", createdAt: now, completedAt: null, updatedAt: now, workOrderNumber: "RT-WO-00012", departmentId: null }, target: { name: "لوحة تحكم" }, department: null }]), chain([{ line: { varianceQuantity: 2, countedAt: now, updatedAt: now }, session: { id: 9, status: "approved", createdAt: now } }])];
     getDb.mockResolvedValue({ select: vi.fn(() => selects.shift()) });
     const dashboard = await warehouseRouter.createCaller(adminContext()).dashboard();
     expect(dashboard).toMatchObject({ partCount: 2, totalUnits: 10, reservedUnits: 0, availableUnits: 10, componentCount: 1, productCount: 1, pendingRequests: 1, openWorkOrders: 1, currentCountVarianceLines: 1, currentCountVarianceSessions: 1, lowStockParts: [{ id: 1 }], unreadAlerts: [{ id: 5 }], topDispensedParts: [], recentHandovers: [] });
     expect(dashboard.recentActivities).toEqual(activities);
     expect(dashboard.recentAccess).toEqual(recentAccess);
+    expect(dashboard.openWorkOrderDetails).toHaveLength(1);
+    expect(dashboard.monthlyTrend).toHaveLength(30);
   });
 });

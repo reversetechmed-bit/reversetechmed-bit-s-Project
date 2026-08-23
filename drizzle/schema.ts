@@ -325,6 +325,7 @@ export const workOrders = mysqlTable(
     status: mysqlEnum("status", workOrderStatusValues).notNull().default("draft"),
     targetPartId: int("targetPartId").notNull().references(() => parts.id, { onDelete: "restrict" }),
     serialAssetId: int("serialAssetId").references(() => serialAssets.id, { onDelete: "set null" }),
+    departmentId: int("departmentId").references(() => departments.id, { onDelete: "set null" }),
     quantityPlanned: int("quantityPlanned").notNull().default(1),
     assigneeId: int("assigneeId").references(() => users.id, { onDelete: "set null" }),
     priority: mysqlEnum("priority", workOrderPriorityValues).notNull().default("normal"),
@@ -341,7 +342,7 @@ export const workOrders = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  table => [index("work_orders_status_idx").on(table.status, table.createdAt), index("work_orders_assignee_idx").on(table.assigneeId, table.status), index("work_orders_target_idx").on(table.targetPartId)],
+  table => [index("work_orders_status_idx").on(table.status, table.createdAt), index("work_orders_assignee_idx").on(table.assigneeId, table.status), index("work_orders_department_idx").on(table.departmentId, table.status), index("work_orders_target_idx").on(table.targetPartId)],
 );
 
 /** Immutable BOM snapshot recorded when a production work order is released. */

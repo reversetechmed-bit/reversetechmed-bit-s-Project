@@ -1,0 +1,5689 @@
+{
+  "version": "5",
+  "dialect": "mysql",
+  "id": "cd0d69f6-46bc-471a-a58d-d359fad6303d",
+  "prevId": "0dd5cddf-19be-4123-9ec2-4e6fddf2173a",
+  "tables": {
+    "assemblyOrderLines": {
+      "name": "assemblyOrderLines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "assemblyOrderId": {
+          "name": "assemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sourcePartId": {
+          "name": "sourcePartId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityPerUnit": {
+          "name": "quantityPerUnit",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityConsumed": {
+          "name": "quantityConsumed",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "assembly_order_lines_unique_idx": {
+          "name": "assembly_order_lines_unique_idx",
+          "columns": [
+            "assemblyOrderId",
+            "sourcePartId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "assemblyOrderLines_assemblyOrderId_assemblyOrders_id_fk": {
+          "name": "assemblyOrderLines_assemblyOrderId_assemblyOrders_id_fk",
+          "tableFrom": "assemblyOrderLines",
+          "tableTo": "assemblyOrders",
+          "columnsFrom": [
+            "assemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "assemblyOrderLines_sourcePartId_parts_id_fk": {
+          "name": "assemblyOrderLines_sourcePartId_parts_id_fk",
+          "tableFrom": "assemblyOrderLines",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "sourcePartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "assemblyOrderLines_id": {
+          "name": "assemblyOrderLines_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "assemblyOrders": {
+      "name": "assemblyOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "assemblyNumber": {
+          "name": "assemblyNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetProductId": {
+          "name": "targetProductId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityToProduce": {
+          "name": "quantityToProduce",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','completed','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedById": {
+          "name": "completedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedAt": {
+          "name": "completedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "assembly_orders_status_idx": {
+          "name": "assembly_orders_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "assembly_orders_target_idx": {
+          "name": "assembly_orders_target_idx",
+          "columns": [
+            "targetProductId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "assemblyOrders_targetProductId_parts_id_fk": {
+          "name": "assemblyOrders_targetProductId_parts_id_fk",
+          "tableFrom": "assemblyOrders",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "targetProductId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "assemblyOrders_createdById_users_id_fk": {
+          "name": "assemblyOrders_createdById_users_id_fk",
+          "tableFrom": "assemblyOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "assemblyOrders_completedById_users_id_fk": {
+          "name": "assemblyOrders_completedById_users_id_fk",
+          "tableFrom": "assemblyOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "completedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "assemblyOrders_id": {
+          "name": "assemblyOrders_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "assemblyOrders_assemblyNumber_unique": {
+          "name": "assemblyOrders_assemblyNumber_unique",
+          "columns": [
+            "assemblyNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "companies": {
+      "name": "companies",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contactName": {
+          "name": "contactName",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contactPhone": {
+          "name": "contactPhone",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contactEmail": {
+          "name": "contactEmail",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "companies_active_name_idx": {
+          "name": "companies_active_name_idx",
+          "columns": [
+            "isActive",
+            "name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "companies_createdById_users_id_fk": {
+          "name": "companies_createdById_users_id_fk",
+          "tableFrom": "companies",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "companies_id": {
+          "name": "companies_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "companies_name_unique": {
+          "name": "companies_name_unique",
+          "columns": [
+            "name"
+          ]
+        },
+        "companies_code_unique": {
+          "name": "companies_code_unique",
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "componentTypes": {
+      "name": "componentTypes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "component_types_active_idx": {
+          "name": "component_types_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "componentTypes_createdById_users_id_fk": {
+          "name": "componentTypes_createdById_users_id_fk",
+          "tableFrom": "componentTypes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "componentTypes_id": {
+          "name": "componentTypes_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "componentTypes_name_unique": {
+          "name": "componentTypes_name_unique",
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "custodyAssignments": {
+      "name": "custodyAssignments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "custodyNumber": {
+          "name": "custodyNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "holderId": {
+          "name": "holderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuedById": {
+          "name": "issuedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "returnedById": {
+          "name": "returnedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dueAt": {
+          "name": "dueAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('active','returned','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "issuedAt": {
+          "name": "issuedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "returnedAt": {
+          "name": "returnedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "issueNote": {
+          "name": "issueNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "returnNote": {
+          "name": "returnNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "warehouseSectionSnapshot": {
+          "name": "warehouseSectionSnapshot",
+          "type": "enum('components','products')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "custody_holder_status_idx": {
+          "name": "custody_holder_status_idx",
+          "columns": [
+            "holderId",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "custody_part_status_idx": {
+          "name": "custody_part_status_idx",
+          "columns": [
+            "partId",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "custody_due_idx": {
+          "name": "custody_due_idx",
+          "columns": [
+            "status",
+            "dueAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "custodyAssignments_requestId_dispensingRequests_id_fk": {
+          "name": "custodyAssignments_requestId_dispensingRequests_id_fk",
+          "tableFrom": "custodyAssignments",
+          "tableTo": "dispensingRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "custodyAssignments_partId_parts_id_fk": {
+          "name": "custodyAssignments_partId_parts_id_fk",
+          "tableFrom": "custodyAssignments",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "custodyAssignments_holderId_users_id_fk": {
+          "name": "custodyAssignments_holderId_users_id_fk",
+          "tableFrom": "custodyAssignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "holderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "custodyAssignments_issuedById_users_id_fk": {
+          "name": "custodyAssignments_issuedById_users_id_fk",
+          "tableFrom": "custodyAssignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "issuedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "custodyAssignments_returnedById_users_id_fk": {
+          "name": "custodyAssignments_returnedById_users_id_fk",
+          "tableFrom": "custodyAssignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "returnedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "custodyAssignments_id": {
+          "name": "custodyAssignments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "custodyAssignments_custodyNumber_unique": {
+          "name": "custodyAssignments_custodyNumber_unique",
+          "columns": [
+            "custodyNumber"
+          ]
+        },
+        "custodyAssignments_requestId_unique": {
+          "name": "custodyAssignments_requestId_unique",
+          "columns": [
+            "requestId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "departments": {
+      "name": "departments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "departments_active_idx": {
+          "name": "departments_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "departments_id": {
+          "name": "departments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "departments_name_unique": {
+          "name": "departments_name_unique",
+          "columns": [
+            "name"
+          ]
+        },
+        "departments_code_unique": {
+          "name": "departments_code_unique",
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "disassemblyLines": {
+      "name": "disassemblyLines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "disassemblyOrderId": {
+          "name": "disassemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recoveredPartId": {
+          "name": "recoveredPartId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityRecovered": {
+          "name": "quantityRecovered",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "condition": {
+          "name": "condition",
+          "type": "enum('serviceable','quarantine','scrap')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "inspectionNote": {
+          "name": "inspectionNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quantityRestocked": {
+          "name": "quantityRestocked",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "disassembly_lines_uq": {
+          "name": "disassembly_lines_uq",
+          "columns": [
+            "disassemblyOrderId",
+            "recoveredPartId"
+          ],
+          "isUnique": true
+        },
+        "disassembly_lines_part_idx": {
+          "name": "disassembly_lines_part_idx",
+          "columns": [
+            "recoveredPartId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "disassemblyLines_disassemblyOrderId_disassemblyOrders_id_fk": {
+          "name": "disassemblyLines_disassemblyOrderId_disassemblyOrders_id_fk",
+          "tableFrom": "disassemblyLines",
+          "tableTo": "disassemblyOrders",
+          "columnsFrom": [
+            "disassemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "disassemblyLines_recoveredPartId_parts_id_fk": {
+          "name": "disassemblyLines_recoveredPartId_parts_id_fk",
+          "tableFrom": "disassemblyLines",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "recoveredPartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "disassemblyLines_id": {
+          "name": "disassemblyLines_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "disassemblyOrders": {
+      "name": "disassemblyOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "disassemblyNumber": {
+          "name": "disassemblyNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','submitted','approved','completed','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "sourcePartId": {
+          "name": "sourcePartId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sourceSerialAssetId": {
+          "name": "sourceSerialAssetId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sourceMaintenanceCaseId": {
+          "name": "sourceMaintenanceCaseId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedById": {
+          "name": "completedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedAt": {
+          "name": "approvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedAt": {
+          "name": "completedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "disassembly_orders_status_idx": {
+          "name": "disassembly_orders_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "disassembly_orders_source_part_idx": {
+          "name": "disassembly_orders_source_part_idx",
+          "columns": [
+            "sourcePartId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "disassemblyOrders_sourcePartId_parts_id_fk": {
+          "name": "disassemblyOrders_sourcePartId_parts_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "sourcePartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "disassemblyOrders_sourceSerialAssetId_serialAssets_id_fk": {
+          "name": "disassemblyOrders_sourceSerialAssetId_serialAssets_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "serialAssets",
+          "columnsFrom": [
+            "sourceSerialAssetId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "disassemblyOrders_sourceMaintenanceCaseId_maintenanceCases_id_fk": {
+          "name": "disassemblyOrders_sourceMaintenanceCaseId_maintenanceCases_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "maintenanceCases",
+          "columnsFrom": [
+            "sourceMaintenanceCaseId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "disassemblyOrders_createdById_users_id_fk": {
+          "name": "disassemblyOrders_createdById_users_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "disassemblyOrders_approvedById_users_id_fk": {
+          "name": "disassemblyOrders_approvedById_users_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "disassemblyOrders_completedById_users_id_fk": {
+          "name": "disassemblyOrders_completedById_users_id_fk",
+          "tableFrom": "disassemblyOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "completedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "disassemblyOrders_id": {
+          "name": "disassemblyOrders_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "disassemblyOrders_disassemblyNumber_unique": {
+          "name": "disassemblyOrders_disassemblyNumber_unique",
+          "columns": [
+            "disassemblyNumber"
+          ]
+        },
+        "disassemblyOrders_sourceSerialAssetId_unique": {
+          "name": "disassemblyOrders_sourceSerialAssetId_unique",
+          "columns": [
+            "sourceSerialAssetId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "dispensingRequests": {
+      "name": "dispensingRequests",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestedById": {
+          "name": "requestedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestedQuantity": {
+          "name": "requestedQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fulfillmentType": {
+          "name": "fulfillmentType",
+          "type": "enum('dispense','custody')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'dispense'"
+        },
+        "custodyDueAt": {
+          "name": "custodyDueAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientName": {
+          "name": "recipientName",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientDepartment": {
+          "name": "recipientDepartment",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projectReference": {
+          "name": "projectReference",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requestNote": {
+          "name": "requestNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('pending','approved','rejected','delivered')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "decisionNote": {
+          "name": "decisionNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reviewedById": {
+          "name": "reviewedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reviewedAt": {
+          "name": "reviewedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deliveredById": {
+          "name": "deliveredById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deliveredAt": {
+          "name": "deliveredAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "requests_status_idx": {
+          "name": "requests_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "requests_requester_idx": {
+          "name": "requests_requester_idx",
+          "columns": [
+            "requestedById"
+          ],
+          "isUnique": false
+        },
+        "requests_part_idx": {
+          "name": "requests_part_idx",
+          "columns": [
+            "partId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "dispensingRequests_partId_parts_id_fk": {
+          "name": "dispensingRequests_partId_parts_id_fk",
+          "tableFrom": "dispensingRequests",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "dispensingRequests_requestedById_users_id_fk": {
+          "name": "dispensingRequests_requestedById_users_id_fk",
+          "tableFrom": "dispensingRequests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "requestedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "dispensingRequests_reviewedById_users_id_fk": {
+          "name": "dispensingRequests_reviewedById_users_id_fk",
+          "tableFrom": "dispensingRequests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "reviewedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "dispensingRequests_deliveredById_users_id_fk": {
+          "name": "dispensingRequests_deliveredById_users_id_fk",
+          "tableFrom": "dispensingRequests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "deliveredById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "dispensingRequests_id": {
+          "name": "dispensingRequests_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "employeeEnrollmentPasscodes": {
+      "name": "employeeEnrollmentPasscodes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "employeeId": {
+          "name": "employeeId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "codeHash": {
+          "name": "codeHash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuedById": {
+          "name": "issuedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usedAt": {
+          "name": "usedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "employee_passcodes_expiry_idx": {
+          "name": "employee_passcodes_expiry_idx",
+          "columns": [
+            "expiresAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "employeeEnrollmentPasscodes_employeeId_employeeProfiles_id_fk": {
+          "name": "employeeEnrollmentPasscodes_employeeId_employeeProfiles_id_fk",
+          "tableFrom": "employeeEnrollmentPasscodes",
+          "tableTo": "employeeProfiles",
+          "columnsFrom": [
+            "employeeId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "employeeEnrollmentPasscodes_issuedById_users_id_fk": {
+          "name": "employeeEnrollmentPasscodes_issuedById_users_id_fk",
+          "tableFrom": "employeeEnrollmentPasscodes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "issuedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "employeeEnrollmentPasscodes_id": {
+          "name": "employeeEnrollmentPasscodes_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "employeeEnrollmentPasscodes_employeeId_unique": {
+          "name": "employeeEnrollmentPasscodes_employeeId_unique",
+          "columns": [
+            "employeeId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "employeeProfiles": {
+      "name": "employeeProfiles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "fullName": {
+          "name": "fullName",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "employeeCode": {
+          "name": "employeeCode",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jobTitle": {
+          "name": "jobTitle",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "departmentId": {
+          "name": "departmentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "warehouseRole": {
+          "name": "warehouseRole",
+          "type": "enum('admin','engineer','viewer','storekeeper','maintenance_technician','purchasing_officer')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'engineer'"
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "initialPasswordHash": {
+          "name": "initialPasswordHash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "initialPasswordIssuedAt": {
+          "name": "initialPasswordIssuedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "suspendedUntil": {
+          "name": "suspendedUntil",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "accessRevokedAt": {
+          "name": "accessRevokedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "employees_department_idx": {
+          "name": "employees_department_idx",
+          "columns": [
+            "departmentId"
+          ],
+          "isUnique": false
+        },
+        "employees_active_idx": {
+          "name": "employees_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        },
+        "employees_suspension_idx": {
+          "name": "employees_suspension_idx",
+          "columns": [
+            "suspendedUntil"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "employeeProfiles_userId_users_id_fk": {
+          "name": "employeeProfiles_userId_users_id_fk",
+          "tableFrom": "employeeProfiles",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "employeeProfiles_departmentId_departments_id_fk": {
+          "name": "employeeProfiles_departmentId_departments_id_fk",
+          "tableFrom": "employeeProfiles",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "departmentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "employeeProfiles_id": {
+          "name": "employeeProfiles_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "employeeProfiles_userId_unique": {
+          "name": "employeeProfiles_userId_unique",
+          "columns": [
+            "userId"
+          ]
+        },
+        "employeeProfiles_email_unique": {
+          "name": "employeeProfiles_email_unique",
+          "columns": [
+            "email"
+          ]
+        },
+        "employeeProfiles_employeeCode_unique": {
+          "name": "employeeProfiles_employeeCode_unique",
+          "columns": [
+            "employeeCode"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "handoverInvoices": {
+      "name": "handoverInvoices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "invoiceNumber": {
+          "name": "invoiceNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuedById": {
+          "name": "issuedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedById": {
+          "name": "receivedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "warehouseSectionSnapshot": {
+          "name": "warehouseSectionSnapshot",
+          "type": "enum('components','products')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purposeSnapshot": {
+          "name": "purposeSnapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requesterNameSnapshot": {
+          "name": "requesterNameSnapshot",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientNameSnapshot": {
+          "name": "recipientNameSnapshot",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientDepartmentSnapshot": {
+          "name": "recipientDepartmentSnapshot",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "projectReferenceSnapshot": {
+          "name": "projectReferenceSnapshot",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requestNoteSnapshot": {
+          "name": "requestNoteSnapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deliveryNote": {
+          "name": "deliveryNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "issuedAt": {
+          "name": "issuedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receiptConfirmedAt": {
+          "name": "receiptConfirmedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receiptConfirmationName": {
+          "name": "receiptConfirmationName",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receiptNote": {
+          "name": "receiptNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "invoices_issued_at_idx": {
+          "name": "invoices_issued_at_idx",
+          "columns": [
+            "issuedAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "handoverInvoices_requestId_dispensingRequests_id_fk": {
+          "name": "handoverInvoices_requestId_dispensingRequests_id_fk",
+          "tableFrom": "handoverInvoices",
+          "tableTo": "dispensingRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "handoverInvoices_partId_parts_id_fk": {
+          "name": "handoverInvoices_partId_parts_id_fk",
+          "tableFrom": "handoverInvoices",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "handoverInvoices_issuedById_users_id_fk": {
+          "name": "handoverInvoices_issuedById_users_id_fk",
+          "tableFrom": "handoverInvoices",
+          "tableTo": "users",
+          "columnsFrom": [
+            "issuedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "handoverInvoices_receivedById_users_id_fk": {
+          "name": "handoverInvoices_receivedById_users_id_fk",
+          "tableFrom": "handoverInvoices",
+          "tableTo": "users",
+          "columnsFrom": [
+            "receivedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "handoverInvoices_id": {
+          "name": "handoverInvoices_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "handoverInvoices_invoiceNumber_unique": {
+          "name": "handoverInvoices_invoiceNumber_unique",
+          "columns": [
+            "invoiceNumber"
+          ]
+        },
+        "handoverInvoices_requestId_unique": {
+          "name": "handoverInvoices_requestId_unique",
+          "columns": [
+            "requestId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "inventoryCategories": {
+      "name": "inventoryCategories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "colorKey": {
+          "name": "colorKey",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'blue'"
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "inventoryCategories_active_name_idx": {
+          "name": "inventoryCategories_active_name_idx",
+          "columns": [
+            "isActive",
+            "name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "inventoryCategories_createdById_users_id_fk": {
+          "name": "inventoryCategories_createdById_users_id_fk",
+          "tableFrom": "inventoryCategories",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inventoryCategories_id": {
+          "name": "inventoryCategories_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "inventoryCategories_name_unique": {
+          "name": "inventoryCategories_name_unique",
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "inventoryCountLines": {
+      "name": "inventoryCountLines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "sessionId": {
+          "name": "sessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expectedQuantity": {
+          "name": "expectedQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expectedReservedQuantity": {
+          "name": "expectedReservedQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "expectedCustodyQuantity": {
+          "name": "expectedCustodyQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "countedQuantity": {
+          "name": "countedQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "varianceQuantity": {
+          "name": "varianceQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "discrepancyReason": {
+          "name": "discrepancyReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "countedById": {
+          "name": "countedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "countedAt": {
+          "name": "countedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "count_lines_session_part_uq": {
+          "name": "count_lines_session_part_uq",
+          "columns": [
+            "sessionId",
+            "partId"
+          ],
+          "isUnique": true
+        },
+        "count_lines_part_idx": {
+          "name": "count_lines_part_idx",
+          "columns": [
+            "partId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "inventoryCountLines_sessionId_inventoryCountSessions_id_fk": {
+          "name": "inventoryCountLines_sessionId_inventoryCountSessions_id_fk",
+          "tableFrom": "inventoryCountLines",
+          "tableTo": "inventoryCountSessions",
+          "columnsFrom": [
+            "sessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "inventoryCountLines_partId_parts_id_fk": {
+          "name": "inventoryCountLines_partId_parts_id_fk",
+          "tableFrom": "inventoryCountLines",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "inventoryCountLines_countedById_users_id_fk": {
+          "name": "inventoryCountLines_countedById_users_id_fk",
+          "tableFrom": "inventoryCountLines",
+          "tableTo": "users",
+          "columnsFrom": [
+            "countedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inventoryCountLines_id": {
+          "name": "inventoryCountLines_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "inventoryCountSessions": {
+      "name": "inventoryCountSessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "countNumber": {
+          "name": "countNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','open','submitted','approved','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "warehouseSection": {
+          "name": "warehouseSection",
+          "type": "enum('components','products')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "openedById": {
+          "name": "openedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "submittedById": {
+          "name": "submittedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "openedAt": {
+          "name": "openedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "submittedAt": {
+          "name": "submittedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedAt": {
+          "name": "approvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvalNote": {
+          "name": "approvalNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "count_sessions_status_idx": {
+          "name": "count_sessions_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "count_sessions_section_idx": {
+          "name": "count_sessions_section_idx",
+          "columns": [
+            "warehouseSection"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "inventoryCountSessions_openedById_users_id_fk": {
+          "name": "inventoryCountSessions_openedById_users_id_fk",
+          "tableFrom": "inventoryCountSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "openedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryCountSessions_submittedById_users_id_fk": {
+          "name": "inventoryCountSessions_submittedById_users_id_fk",
+          "tableFrom": "inventoryCountSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "submittedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryCountSessions_approvedById_users_id_fk": {
+          "name": "inventoryCountSessions_approvedById_users_id_fk",
+          "tableFrom": "inventoryCountSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inventoryCountSessions_id": {
+          "name": "inventoryCountSessions_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "inventoryCountSessions_countNumber_unique": {
+          "name": "inventoryCountSessions_countNumber_unique",
+          "columns": [
+            "countNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "inventoryTransactions": {
+      "name": "inventoryTransactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custodyAssignmentId": {
+          "name": "custodyAssignmentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "maintenanceCaseId": {
+          "name": "maintenanceCaseId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchaseOrderId": {
+          "name": "purchaseOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assemblyOrderId": {
+          "name": "assemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "inventoryCountSessionId": {
+          "name": "inventoryCountSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "workOrderId": {
+          "name": "workOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "disassemblyOrderId": {
+          "name": "disassemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('part_created','part_updated','request_submitted','request_approved','request_rejected','delivery_confirmed','custody_issued','custody_returned','maintenance_dispatched','maintenance_returned','purchase_received','assembly_consumed','assembly_produced','inventory_count_adjusted','work_order_consumed','work_order_produced','disassembly_source_consumed','disassembly_recovered')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityDelta": {
+          "name": "quantityDelta",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "quantityBefore": {
+          "name": "quantityBefore",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quantityAfter": {
+          "name": "quantityAfter",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actorId": {
+          "name": "actorId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "engineerId": {
+          "name": "engineerId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "warehouseSectionSnapshot": {
+          "name": "warehouseSectionSnapshot",
+          "type": "enum('components','products')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'components'"
+        },
+        "details": {
+          "name": "details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "transactions_part_idx": {
+          "name": "transactions_part_idx",
+          "columns": [
+            "partId"
+          ],
+          "isUnique": false
+        },
+        "transactions_request_idx": {
+          "name": "transactions_request_idx",
+          "columns": [
+            "requestId"
+          ],
+          "isUnique": false
+        },
+        "transactions_custody_idx": {
+          "name": "transactions_custody_idx",
+          "columns": [
+            "custodyAssignmentId"
+          ],
+          "isUnique": false
+        },
+        "transactions_maintenance_idx": {
+          "name": "transactions_maintenance_idx",
+          "columns": [
+            "maintenanceCaseId"
+          ],
+          "isUnique": false
+        },
+        "transactions_purchase_order_idx": {
+          "name": "transactions_purchase_order_idx",
+          "columns": [
+            "purchaseOrderId"
+          ],
+          "isUnique": false
+        },
+        "transactions_assembly_order_idx": {
+          "name": "transactions_assembly_order_idx",
+          "columns": [
+            "assemblyOrderId"
+          ],
+          "isUnique": false
+        },
+        "transactions_count_session_idx": {
+          "name": "transactions_count_session_idx",
+          "columns": [
+            "inventoryCountSessionId"
+          ],
+          "isUnique": false
+        },
+        "transactions_work_order_idx": {
+          "name": "transactions_work_order_idx",
+          "columns": [
+            "workOrderId"
+          ],
+          "isUnique": false
+        },
+        "transactions_disassembly_idx": {
+          "name": "transactions_disassembly_idx",
+          "columns": [
+            "disassemblyOrderId"
+          ],
+          "isUnique": false
+        },
+        "transactions_date_idx": {
+          "name": "transactions_date_idx",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "inventoryTransactions_partId_parts_id_fk": {
+          "name": "inventoryTransactions_partId_parts_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_requestId_dispensingRequests_id_fk": {
+          "name": "inventoryTransactions_requestId_dispensingRequests_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "dispensingRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_custodyAssignmentId_custodyAssignments_id_fk": {
+          "name": "inventoryTransactions_custodyAssignmentId_custodyAssignments_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "custodyAssignments",
+          "columnsFrom": [
+            "custodyAssignmentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_maintenanceCaseId_maintenanceCases_id_fk": {
+          "name": "inventoryTransactions_maintenanceCaseId_maintenanceCases_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "maintenanceCases",
+          "columnsFrom": [
+            "maintenanceCaseId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_purchaseOrderId_purchaseOrders_id_fk": {
+          "name": "inventoryTransactions_purchaseOrderId_purchaseOrders_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "purchaseOrders",
+          "columnsFrom": [
+            "purchaseOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_assemblyOrderId_assemblyOrders_id_fk": {
+          "name": "inventoryTransactions_assemblyOrderId_assemblyOrders_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "assemblyOrders",
+          "columnsFrom": [
+            "assemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_inventoryCountSessionId_inventoryCountSessions_id_fk": {
+          "name": "inventoryTransactions_inventoryCountSessionId_inventoryCountSessions_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "inventoryCountSessions",
+          "columnsFrom": [
+            "inventoryCountSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_workOrderId_workOrders_id_fk": {
+          "name": "inventoryTransactions_workOrderId_workOrders_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "workOrders",
+          "columnsFrom": [
+            "workOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_disassemblyOrderId_disassemblyOrders_id_fk": {
+          "name": "inventoryTransactions_disassemblyOrderId_disassemblyOrders_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "disassemblyOrders",
+          "columnsFrom": [
+            "disassemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_actorId_users_id_fk": {
+          "name": "inventoryTransactions_actorId_users_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "inventoryTransactions_engineerId_users_id_fk": {
+          "name": "inventoryTransactions_engineerId_users_id_fk",
+          "tableFrom": "inventoryTransactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "engineerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "inventoryTransactions_id": {
+          "name": "inventoryTransactions_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "maintenanceCases": {
+      "name": "maintenanceCases",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "caseNumber": {
+          "name": "caseNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('maintenance_outbound','customer_return')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('open','sent_for_maintenance','awaiting_inspection','under_diagnosis','repair_in_progress','quality_check','returned_to_stock','closed','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'open'"
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "customerName": {
+          "name": "customerName",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "customerReference": {
+          "name": "customerReference",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assetSerialNumber": {
+          "name": "assetSerialNumber",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "externalServiceProvider": {
+          "name": "externalServiceProvider",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "externalReference": {
+          "name": "externalReference",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "enum('low','normal','high','urgent')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'normal'"
+        },
+        "outboundCondition": {
+          "name": "outboundCondition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "inboundCondition": {
+          "name": "inboundCondition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "diagnosis": {
+          "name": "diagnosis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resolutionNote": {
+          "name": "resolutionNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "disposition": {
+          "name": "disposition",
+          "type": "enum('return_to_stock','return_to_customer','cannibalize','scrap')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "estimatedCost": {
+          "name": "estimatedCost",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actualCost": {
+          "name": "actualCost",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "dispatchedById": {
+          "name": "dispatchedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedById": {
+          "name": "receivedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sentAt": {
+          "name": "sentAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "returnedAt": {
+          "name": "returnedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resolvedAt": {
+          "name": "resolvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "maintenance_cases_status_idx": {
+          "name": "maintenance_cases_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "maintenance_cases_part_idx": {
+          "name": "maintenance_cases_part_idx",
+          "columns": [
+            "partId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "maintenanceCases_partId_parts_id_fk": {
+          "name": "maintenanceCases_partId_parts_id_fk",
+          "tableFrom": "maintenanceCases",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "maintenanceCases_createdById_users_id_fk": {
+          "name": "maintenanceCases_createdById_users_id_fk",
+          "tableFrom": "maintenanceCases",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "maintenanceCases_dispatchedById_users_id_fk": {
+          "name": "maintenanceCases_dispatchedById_users_id_fk",
+          "tableFrom": "maintenanceCases",
+          "tableTo": "users",
+          "columnsFrom": [
+            "dispatchedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "maintenanceCases_receivedById_users_id_fk": {
+          "name": "maintenanceCases_receivedById_users_id_fk",
+          "tableFrom": "maintenanceCases",
+          "tableTo": "users",
+          "columnsFrom": [
+            "receivedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "maintenanceCases_id": {
+          "name": "maintenanceCases_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "maintenanceCases_caseNumber_unique": {
+          "name": "maintenanceCases_caseNumber_unique",
+          "columns": [
+            "caseNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "parts": {
+      "name": "parts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "partNumber": {
+          "name": "partNumber",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "categoryId": {
+          "name": "categoryId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "warehouseSection": {
+          "name": "warehouseSection",
+          "type": "enum('components','products')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'components'"
+        },
+        "componentTypeId": {
+          "name": "componentTypeId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "companyId": {
+          "name": "companyId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "productStage": {
+          "name": "productStage",
+          "type": "enum('work_in_progress','under_review','under_maintenance','finished','final_operational')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "reservedQuantity": {
+          "name": "reservedQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "custodyQuantity": {
+          "name": "custodyQuantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "minimumStock": {
+          "name": "minimumStock",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "storageShelf": {
+          "name": "storageShelf",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "storageDrawer": {
+          "name": "storageDrawer",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "storageBox": {
+          "name": "storageBox",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "imageUrl": {
+          "name": "imageUrl",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "specifications": {
+          "name": "specifications",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "barcode": {
+          "name": "barcode",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "serialTrackingMode": {
+          "name": "serialTrackingMode",
+          "type": "enum('none','serial')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'none'"
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "parts_category_idx": {
+          "name": "parts_category_idx",
+          "columns": [
+            "category"
+          ],
+          "isUnique": false
+        },
+        "parts_section_idx": {
+          "name": "parts_section_idx",
+          "columns": [
+            "warehouseSection"
+          ],
+          "isUnique": false
+        },
+        "parts_component_type_idx": {
+          "name": "parts_component_type_idx",
+          "columns": [
+            "componentTypeId"
+          ],
+          "isUnique": false
+        },
+        "parts_company_idx": {
+          "name": "parts_company_idx",
+          "columns": [
+            "companyId"
+          ],
+          "isUnique": false
+        },
+        "parts_stock_idx": {
+          "name": "parts_stock_idx",
+          "columns": [
+            "quantity",
+            "minimumStock"
+          ],
+          "isUnique": false
+        },
+        "parts_barcode_idx": {
+          "name": "parts_barcode_idx",
+          "columns": [
+            "barcode"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "parts_categoryId_inventoryCategories_id_fk": {
+          "name": "parts_categoryId_inventoryCategories_id_fk",
+          "tableFrom": "parts",
+          "tableTo": "inventoryCategories",
+          "columnsFrom": [
+            "categoryId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "parts_componentTypeId_componentTypes_id_fk": {
+          "name": "parts_componentTypeId_componentTypes_id_fk",
+          "tableFrom": "parts",
+          "tableTo": "componentTypes",
+          "columnsFrom": [
+            "componentTypeId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "parts_companyId_companies_id_fk": {
+          "name": "parts_companyId_companies_id_fk",
+          "tableFrom": "parts",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "companyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "parts_createdById_users_id_fk": {
+          "name": "parts_createdById_users_id_fk",
+          "tableFrom": "parts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "parts_id": {
+          "name": "parts_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "parts_partNumber_unique": {
+          "name": "parts_partNumber_unique",
+          "columns": [
+            "partNumber"
+          ]
+        },
+        "parts_barcode_unique": {
+          "name": "parts_barcode_unique",
+          "columns": [
+            "barcode"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "productComponents": {
+      "name": "productComponents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "componentId": {
+          "name": "componentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityRequired": {
+          "name": "quantityRequired",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "product_components_unique_idx": {
+          "name": "product_components_unique_idx",
+          "columns": [
+            "productId",
+            "componentId"
+          ],
+          "isUnique": true
+        },
+        "product_components_component_idx": {
+          "name": "product_components_component_idx",
+          "columns": [
+            "componentId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "productComponents_productId_parts_id_fk": {
+          "name": "productComponents_productId_parts_id_fk",
+          "tableFrom": "productComponents",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "productComponents_componentId_parts_id_fk": {
+          "name": "productComponents_componentId_parts_id_fk",
+          "tableFrom": "productComponents",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "componentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "productComponents_id": {
+          "name": "productComponents_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "purchaseOrderLines": {
+      "name": "purchaseOrderLines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "purchaseOrderId": {
+          "name": "purchaseOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityOrdered": {
+          "name": "quantityOrdered",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityReceived": {
+          "name": "quantityReceived",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "shortageQuantitySnapshot": {
+          "name": "shortageQuantitySnapshot",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "shortageReason": {
+          "name": "shortageReason",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "purchase_order_lines_unique_idx": {
+          "name": "purchase_order_lines_unique_idx",
+          "columns": [
+            "purchaseOrderId",
+            "partId"
+          ],
+          "isUnique": true
+        },
+        "purchase_order_lines_part_idx": {
+          "name": "purchase_order_lines_part_idx",
+          "columns": [
+            "partId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseOrderLines_purchaseOrderId_purchaseOrders_id_fk": {
+          "name": "purchaseOrderLines_purchaseOrderId_purchaseOrders_id_fk",
+          "tableFrom": "purchaseOrderLines",
+          "tableTo": "purchaseOrders",
+          "columnsFrom": [
+            "purchaseOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "purchaseOrderLines_partId_parts_id_fk": {
+          "name": "purchaseOrderLines_partId_parts_id_fk",
+          "tableFrom": "purchaseOrderLines",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseOrderLines_id": {
+          "name": "purchaseOrderLines_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "purchaseOrders": {
+      "name": "purchaseOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "orderNumber": {
+          "name": "orderNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "supplierCompanyId": {
+          "name": "supplierCompanyId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','ordered','partially_received','received','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "expectedAt": {
+          "name": "expectedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "orderedAt": {
+          "name": "orderedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedAt": {
+          "name": "receivedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "purchase_orders_status_idx": {
+          "name": "purchase_orders_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "purchase_orders_supplier_idx": {
+          "name": "purchase_orders_supplier_idx",
+          "columns": [
+            "supplierCompanyId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseOrders_supplierCompanyId_companies_id_fk": {
+          "name": "purchaseOrders_supplierCompanyId_companies_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "supplierCompanyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "purchaseOrders_createdById_users_id_fk": {
+          "name": "purchaseOrders_createdById_users_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseOrders_id": {
+          "name": "purchaseOrders_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "purchaseOrders_orderNumber_unique": {
+          "name": "purchaseOrders_orderNumber_unique",
+          "columns": [
+            "orderNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "serialAssetEvents": {
+      "name": "serialAssetEvents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "serialAssetId": {
+          "name": "serialAssetId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('registered','moved','custody_issued','custody_returned','maintenance_opened','work_started','work_completed','installed','disassembled','retired')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fromStatus": {
+          "name": "fromStatus",
+          "type": "enum('in_stock','in_custody','in_maintenance','in_production','installed','retired','cannibalized','scrapped')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "toStatus": {
+          "name": "toStatus",
+          "type": "enum('in_stock','in_custody','in_maintenance','in_production','installed','retired','cannibalized','scrapped')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "holderId": {
+          "name": "holderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actorId": {
+          "name": "actorId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "serial_asset_events_asset_idx": {
+          "name": "serial_asset_events_asset_idx",
+          "columns": [
+            "serialAssetId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "serialAssetEvents_serialAssetId_serialAssets_id_fk": {
+          "name": "serialAssetEvents_serialAssetId_serialAssets_id_fk",
+          "tableFrom": "serialAssetEvents",
+          "tableTo": "serialAssets",
+          "columnsFrom": [
+            "serialAssetId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "serialAssetEvents_locationId_storageLocations_id_fk": {
+          "name": "serialAssetEvents_locationId_storageLocations_id_fk",
+          "tableFrom": "serialAssetEvents",
+          "tableTo": "storageLocations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "serialAssetEvents_holderId_users_id_fk": {
+          "name": "serialAssetEvents_holderId_users_id_fk",
+          "tableFrom": "serialAssetEvents",
+          "tableTo": "users",
+          "columnsFrom": [
+            "holderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "serialAssetEvents_actorId_users_id_fk": {
+          "name": "serialAssetEvents_actorId_users_id_fk",
+          "tableFrom": "serialAssetEvents",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "serialAssetEvents_id": {
+          "name": "serialAssetEvents_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "serialAssets": {
+      "name": "serialAssets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "serialNumber": {
+          "name": "serialNumber",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('in_stock','in_custody','in_maintenance','in_production','installed','retired','cannibalized','scrapped')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'in_stock'"
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currentHolderId": {
+          "name": "currentHolderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assetCondition": {
+          "name": "assetCondition",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "manufacturerSerial": {
+          "name": "manufacturerSerial",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "acquiredAt": {
+          "name": "acquiredAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "serial_assets_part_status_idx": {
+          "name": "serial_assets_part_status_idx",
+          "columns": [
+            "partId",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "serial_assets_holder_idx": {
+          "name": "serial_assets_holder_idx",
+          "columns": [
+            "currentHolderId"
+          ],
+          "isUnique": false
+        },
+        "serial_assets_location_idx": {
+          "name": "serial_assets_location_idx",
+          "columns": [
+            "locationId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "serialAssets_partId_parts_id_fk": {
+          "name": "serialAssets_partId_parts_id_fk",
+          "tableFrom": "serialAssets",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "serialAssets_locationId_storageLocations_id_fk": {
+          "name": "serialAssets_locationId_storageLocations_id_fk",
+          "tableFrom": "serialAssets",
+          "tableTo": "storageLocations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "serialAssets_currentHolderId_users_id_fk": {
+          "name": "serialAssets_currentHolderId_users_id_fk",
+          "tableFrom": "serialAssets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "currentHolderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "serialAssets_createdById_users_id_fk": {
+          "name": "serialAssets_createdById_users_id_fk",
+          "tableFrom": "serialAssets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "serialAssets_id": {
+          "name": "serialAssets_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "serialAssets_serialNumber_unique": {
+          "name": "serialAssets_serialNumber_unique",
+          "columns": [
+            "serialNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "storageLocations": {
+      "name": "storageLocations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "barcode": {
+          "name": "barcode",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "shelf": {
+          "name": "shelf",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "drawer": {
+          "name": "drawer",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "box": {
+          "name": "box",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "storage_locations_active_idx": {
+          "name": "storage_locations_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        },
+        "storage_locations_barcode_idx": {
+          "name": "storage_locations_barcode_idx",
+          "columns": [
+            "barcode"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "storageLocations_createdById_users_id_fk": {
+          "name": "storageLocations_createdById_users_id_fk",
+          "tableFrom": "storageLocations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storageLocations_id": {
+          "name": "storageLocations_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "storageLocations_code_unique": {
+          "name": "storageLocations_code_unique",
+          "columns": [
+            "code"
+          ]
+        },
+        "storageLocations_barcode_unique": {
+          "name": "storageLocations_barcode_unique",
+          "columns": [
+            "barcode"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "openId": {
+          "name": "openId",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "loginMethod": {
+          "name": "loginMethod",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "enum('user','admin')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'user'"
+        },
+        "requestedRole": {
+          "name": "requestedRole",
+          "type": "enum('user','admin')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'user'"
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        },
+        "lastSignedIn": {
+          "name": "lastSignedIn",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "users_id": {
+          "name": "users_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "users_openId_unique": {
+          "name": "users_openId_unique",
+          "columns": [
+            "openId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "warehouseActivities": {
+      "name": "warehouseActivities",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('inventory_created','inventory_updated','request_submitted','request_approved','request_rejected','handover_completed','handover_receipt_confirmed','custody_issued','custody_returned','maintenance_dispatched','maintenance_returned','maintenance_resolved','purchase_order_created','purchase_received','assembly_completed','inventory_count_opened','inventory_count_approved','work_order_updated','work_order_completed','disassembly_completed')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actorId": {
+          "name": "actorId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custodyAssignmentId": {
+          "name": "custodyAssignmentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "maintenanceCaseId": {
+          "name": "maintenanceCaseId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchaseOrderId": {
+          "name": "purchaseOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assemblyOrderId": {
+          "name": "assemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "inventoryCountSessionId": {
+          "name": "inventoryCountSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "workOrderId": {
+          "name": "workOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "disassemblyOrderId": {
+          "name": "disassemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "warehouse_activity_date_idx": {
+          "name": "warehouse_activity_date_idx",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "warehouseActivities_actorId_users_id_fk": {
+          "name": "warehouseActivities_actorId_users_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_requestId_dispensingRequests_id_fk": {
+          "name": "warehouseActivities_requestId_dispensingRequests_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "dispensingRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_custodyAssignmentId_custodyAssignments_id_fk": {
+          "name": "warehouseActivities_custodyAssignmentId_custodyAssignments_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "custodyAssignments",
+          "columnsFrom": [
+            "custodyAssignmentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_partId_parts_id_fk": {
+          "name": "warehouseActivities_partId_parts_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_maintenanceCaseId_maintenanceCases_id_fk": {
+          "name": "warehouseActivities_maintenanceCaseId_maintenanceCases_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "maintenanceCases",
+          "columnsFrom": [
+            "maintenanceCaseId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_purchaseOrderId_purchaseOrders_id_fk": {
+          "name": "warehouseActivities_purchaseOrderId_purchaseOrders_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "purchaseOrders",
+          "columnsFrom": [
+            "purchaseOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_assemblyOrderId_assemblyOrders_id_fk": {
+          "name": "warehouseActivities_assemblyOrderId_assemblyOrders_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "assemblyOrders",
+          "columnsFrom": [
+            "assemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_inventoryCountSessionId_inventoryCountSessions_id_fk": {
+          "name": "warehouseActivities_inventoryCountSessionId_inventoryCountSessions_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "inventoryCountSessions",
+          "columnsFrom": [
+            "inventoryCountSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_workOrderId_workOrders_id_fk": {
+          "name": "warehouseActivities_workOrderId_workOrders_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "workOrders",
+          "columnsFrom": [
+            "workOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseActivities_disassemblyOrderId_disassemblyOrders_id_fk": {
+          "name": "warehouseActivities_disassemblyOrderId_disassemblyOrders_id_fk",
+          "tableFrom": "warehouseActivities",
+          "tableTo": "disassemblyOrders",
+          "columnsFrom": [
+            "disassemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "warehouseActivities_id": {
+          "name": "warehouseActivities_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "warehouseAlerts": {
+      "name": "warehouseAlerts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('new_request','low_stock','request_approved','request_rejected','handover_completed','overdue_request','receipt_confirmation_pending','maintenance_returned','purchase_received','assembly_completed','inventory_count_submitted','inventory_count_approved','work_order_completed','disassembly_completed','scheduled_report')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partId": {
+          "name": "partId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "maintenanceCaseId": {
+          "name": "maintenanceCaseId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchaseOrderId": {
+          "name": "purchaseOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assemblyOrderId": {
+          "name": "assemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "inventoryCountSessionId": {
+          "name": "inventoryCountSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "workOrderId": {
+          "name": "workOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "disassemblyOrderId": {
+          "name": "disassemblyOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recipientUserId": {
+          "name": "recipientUserId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "dedupeKey": {
+          "name": "dedupeKey",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isRead": {
+          "name": "isRead",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "alerts_unread_idx": {
+          "name": "alerts_unread_idx",
+          "columns": [
+            "isRead",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "alerts_recipient_idx": {
+          "name": "alerts_recipient_idx",
+          "columns": [
+            "recipientUserId",
+            "isRead"
+          ],
+          "isUnique": false
+        },
+        "alerts_type_part_idx": {
+          "name": "alerts_type_part_idx",
+          "columns": [
+            "type",
+            "partId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "warehouseAlerts_partId_parts_id_fk": {
+          "name": "warehouseAlerts_partId_parts_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "partId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_requestId_dispensingRequests_id_fk": {
+          "name": "warehouseAlerts_requestId_dispensingRequests_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "dispensingRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_maintenanceCaseId_maintenanceCases_id_fk": {
+          "name": "warehouseAlerts_maintenanceCaseId_maintenanceCases_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "maintenanceCases",
+          "columnsFrom": [
+            "maintenanceCaseId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_purchaseOrderId_purchaseOrders_id_fk": {
+          "name": "warehouseAlerts_purchaseOrderId_purchaseOrders_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "purchaseOrders",
+          "columnsFrom": [
+            "purchaseOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_assemblyOrderId_assemblyOrders_id_fk": {
+          "name": "warehouseAlerts_assemblyOrderId_assemblyOrders_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "assemblyOrders",
+          "columnsFrom": [
+            "assemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_inventoryCountSessionId_inventoryCountSessions_id_fk": {
+          "name": "warehouseAlerts_inventoryCountSessionId_inventoryCountSessions_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "inventoryCountSessions",
+          "columnsFrom": [
+            "inventoryCountSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_workOrderId_workOrders_id_fk": {
+          "name": "warehouseAlerts_workOrderId_workOrders_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "workOrders",
+          "columnsFrom": [
+            "workOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_disassemblyOrderId_disassemblyOrders_id_fk": {
+          "name": "warehouseAlerts_disassemblyOrderId_disassemblyOrders_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "disassemblyOrders",
+          "columnsFrom": [
+            "disassemblyOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "warehouseAlerts_recipientUserId_users_id_fk": {
+          "name": "warehouseAlerts_recipientUserId_users_id_fk",
+          "tableFrom": "warehouseAlerts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "recipientUserId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "warehouseAlerts_id": {
+          "name": "warehouseAlerts_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "warehouseAlerts_dedupeKey_unique": {
+          "name": "warehouseAlerts_dedupeKey_unique",
+          "columns": [
+            "dedupeKey"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "warehouseAutomationSettings": {
+      "name": "warehouseAutomationSettings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "settingKey": {
+          "name": "settingKey",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scheduleCronTaskUid": {
+          "name": "scheduleCronTaskUid",
+          "type": "varchar(65)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cronExpression": {
+          "name": "cronExpression",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isEnabled": {
+          "name": "isEnabled",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "warehouse_automation_enabled_idx": {
+          "name": "warehouse_automation_enabled_idx",
+          "columns": [
+            "isEnabled"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "warehouseAutomationSettings_id": {
+          "name": "warehouseAutomationSettings_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "warehouseAutomationSettings_settingKey_unique": {
+          "name": "warehouseAutomationSettings_settingKey_unique",
+          "columns": [
+            "settingKey"
+          ]
+        },
+        "warehouseAutomationSettings_scheduleCronTaskUid_unique": {
+          "name": "warehouseAutomationSettings_scheduleCronTaskUid_unique",
+          "columns": [
+            "scheduleCronTaskUid"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "warehouseReportSchedules": {
+      "name": "warehouseReportSchedules",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reportType": {
+          "name": "reportType",
+          "type": "enum('low_stock','custody_overdue','maintenance_aging','count_variances','open_work_orders','serial_status')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "frequency": {
+          "name": "frequency",
+          "type": "enum('daily','weekly')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "weekday": {
+          "name": "weekday",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "runHourUtc": {
+          "name": "runHourUtc",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 6
+        },
+        "recipientUserId": {
+          "name": "recipientUserId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "lastRunAt": {
+          "name": "lastRunAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "nextRunAt": {
+          "name": "nextRunAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "report_schedules_due_idx": {
+          "name": "report_schedules_due_idx",
+          "columns": [
+            "isActive",
+            "nextRunAt"
+          ],
+          "isUnique": false
+        },
+        "report_schedules_recipient_idx": {
+          "name": "report_schedules_recipient_idx",
+          "columns": [
+            "recipientUserId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "warehouseReportSchedules_recipientUserId_users_id_fk": {
+          "name": "warehouseReportSchedules_recipientUserId_users_id_fk",
+          "tableFrom": "warehouseReportSchedules",
+          "tableTo": "users",
+          "columnsFrom": [
+            "recipientUserId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "warehouseReportSchedules_createdById_users_id_fk": {
+          "name": "warehouseReportSchedules_createdById_users_id_fk",
+          "tableFrom": "warehouseReportSchedules",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "warehouseReportSchedules_id": {
+          "name": "warehouseReportSchedules_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "workOrderLines": {
+      "name": "workOrderLines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "workOrderId": {
+          "name": "workOrderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sourcePartId": {
+          "name": "sourcePartId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityPerUnit": {
+          "name": "quantityPerUnit",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityRequired": {
+          "name": "quantityRequired",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityConsumed": {
+          "name": "quantityConsumed",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "partNumberSnapshot": {
+          "name": "partNumberSnapshot",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "partNameSnapshot": {
+          "name": "partNameSnapshot",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "work_order_lines_uq": {
+          "name": "work_order_lines_uq",
+          "columns": [
+            "workOrderId",
+            "sourcePartId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "workOrderLines_workOrderId_workOrders_id_fk": {
+          "name": "workOrderLines_workOrderId_workOrders_id_fk",
+          "tableFrom": "workOrderLines",
+          "tableTo": "workOrders",
+          "columnsFrom": [
+            "workOrderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workOrderLines_sourcePartId_parts_id_fk": {
+          "name": "workOrderLines_sourcePartId_parts_id_fk",
+          "tableFrom": "workOrderLines",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "sourcePartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workOrderLines_id": {
+          "name": "workOrderLines_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "workOrders": {
+      "name": "workOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "workOrderNumber": {
+          "name": "workOrderNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('production','repair')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','released','in_progress','quality_check','completed','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "targetPartId": {
+          "name": "targetPartId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "serialAssetId": {
+          "name": "serialAssetId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "departmentId": {
+          "name": "departmentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quantityPlanned": {
+          "name": "quantityPlanned",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "assigneeId": {
+          "name": "assigneeId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "enum('low','normal','high','urgent')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'normal'"
+        },
+        "dueAt": {
+          "name": "dueAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "releasedAt": {
+          "name": "releasedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "startedAt": {
+          "name": "startedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qualityCheckedById": {
+          "name": "qualityCheckedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qualityCheckedAt": {
+          "name": "qualityCheckedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qualityOutcome": {
+          "name": "qualityOutcome",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedById": {
+          "name": "completedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completedAt": {
+          "name": "completedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "work_orders_status_idx": {
+          "name": "work_orders_status_idx",
+          "columns": [
+            "status",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "work_orders_assignee_idx": {
+          "name": "work_orders_assignee_idx",
+          "columns": [
+            "assigneeId",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "work_orders_department_idx": {
+          "name": "work_orders_department_idx",
+          "columns": [
+            "departmentId",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "work_orders_target_idx": {
+          "name": "work_orders_target_idx",
+          "columns": [
+            "targetPartId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "workOrders_targetPartId_parts_id_fk": {
+          "name": "workOrders_targetPartId_parts_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "parts",
+          "columnsFrom": [
+            "targetPartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workOrders_serialAssetId_serialAssets_id_fk": {
+          "name": "workOrders_serialAssetId_serialAssets_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "serialAssets",
+          "columnsFrom": [
+            "serialAssetId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workOrders_departmentId_departments_id_fk": {
+          "name": "workOrders_departmentId_departments_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "departmentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workOrders_assigneeId_users_id_fk": {
+          "name": "workOrders_assigneeId_users_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigneeId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workOrders_qualityCheckedById_users_id_fk": {
+          "name": "workOrders_qualityCheckedById_users_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "qualityCheckedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workOrders_completedById_users_id_fk": {
+          "name": "workOrders_completedById_users_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "completedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workOrders_createdById_users_id_fk": {
+          "name": "workOrders_createdById_users_id_fk",
+          "tableFrom": "workOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workOrders_id": {
+          "name": "workOrders_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "workOrders_workOrderNumber_unique": {
+          "name": "workOrders_workOrderNumber_unique",
+          "columns": [
+            "workOrderNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    }
+  },
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {},
+    "indexes": {}
+  }
+}
