@@ -4,6 +4,10 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { organizationRouter } from "./routers/organization";
 import { operationsRouter } from "./routers/operations";
+import { inventoryCountsRouter } from "./routers/inventoryCounts";
+import { executionRouter } from "./routers/execution";
+import { reportsRouter } from "./routers/reports";
+import { traceabilityRouter } from "./routers/traceability";
 import { warehouseRouter } from "./routers/warehouse";
 
 export const appRouter = router({
@@ -21,6 +25,10 @@ export const appRouter = router({
   }),
   organization: organizationRouter,
   operations: operationsRouter,
+  inventoryCounts: inventoryCountsRouter,
+  execution: executionRouter,
+  reports: reportsRouter,
+  traceability: traceabilityRouter,
   warehouse: warehouseRouter,
 });
 

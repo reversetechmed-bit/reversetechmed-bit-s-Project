@@ -119,3 +119,11 @@
   @media (min-width: 640px) { .container { padding-left: 1.5rem; padding-right: 1.5rem; } }
   @media (min-width: 1024px) { .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; } }
 }
+
+@media print {
+  body { background: white !important; }
+  body * { visibility: hidden !important; }
+  .label-sheet, .label-sheet * { visibility: visible !important; }
+  .label-sheet { position: absolute; inset: 0; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6mm !important; padding: 6mm !important; }
+  .label-card { break-inside: avoid; box-shadow: none !important; min-height: 42mm !important; }
+}

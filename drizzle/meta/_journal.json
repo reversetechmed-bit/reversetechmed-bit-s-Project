@@ -127,6 +127,20 @@
       "when": 1787474988342,
       "tag": "0017_legal_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1787477981578,
+      "tag": "0018_sharp_sabretooth",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1787478089545,
+      "tag": "0019_yielding_the_santerians",
+      "breakpoints": true
     }
   ]
 }

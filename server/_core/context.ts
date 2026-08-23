@@ -4,14 +4,17 @@ import { employeeProfiles, type User, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { getSupabaseAccessToken, isSupabaseAccount } from "../supabaseAuth";
 import { sdk } from "./sdk";
+import type { WarehouseRole } from "../warehousePermissions";
+
+export type AuthenticatedWarehouseUser = User & { warehouseRole?: WarehouseRole };
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
-  user: User | null;
+  user: AuthenticatedWarehouseUser | null;
 };
 
-async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req"]): Promise<User | null> {
+async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req"]): Promise<AuthenticatedWarehouseUser | null> {
   const token = getSupabaseAccessToken(req.headers.authorization);
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -37,7 +40,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
       await db.update(users).set({ name: employee.fullName, email: account.email, role, requestedRole, lastSignedIn: new Date() }).where(eq(users.id, existing.id));
       if (!employee.userId || employee.initialPasswordHash) await db.update(employeeProfiles).set({ userId: existing.id, initialPasswordHash: null }).where(eq(employeeProfiles.id, employee.id));
       const [refreshed] = await db.select().from(users).where(eq(users.id, existing.id)).limit(1);
-      return refreshed ?? existing;
+      return { ...(refreshed ?? existing), warehouseRole: employee.warehouseRole };
     }
 
     await db.insert(users).values({
@@ -51,7 +54,7 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
     });
     const [created] = await db.select().from(users).where(eq(users.openId, account.id)).limit(1);
     if (created && employee && !employee.userId) await db.update(employeeProfiles).set({ userId: created.id, initialPasswordHash: null }).where(eq(employeeProfiles.id, employee.id));
-    return created ?? null;
+    return created ? { ...created, warehouseRole: employee.warehouseRole } : null;
   } catch {
     return null;
   }
@@ -60,12 +63,12 @@ async function authenticateSupabaseRequest(req: CreateExpressContextOptions["req
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  let user: User | null = null;
+  let user: AuthenticatedWarehouseUser | null = null;
 
   user = await authenticateSupabaseRequest(opts.req);
   if (!user) {
     try {
-      user = await sdk.authenticateRequest(opts.req);
+      user = await sdk.authenticateRequest(opts.req) as AuthenticatedWarehouseUser;
     } catch {
       user = null;
     }

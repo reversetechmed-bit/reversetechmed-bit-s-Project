@@ -212,3 +212,10 @@
 - [x] Review and refine the maintenance and customer-return workflow with clearer intake, diagnosis, disposition, and stock-impact states.
 - [x] Model board products as finished or in-progress items with documented BOM components and an optional parent device or higher-level product relationship.
 - [x] Add safe nested product/BOM handling so a board can be assembled from components and associated with a device without duplicating or silently consuming stock.
+- [x] Add unique barcode and QR identifiers with printable labels for components, products, and storage locations.
+- [x] Add serial-number tracking for individually traceable boards and devices, including status, current location or holder, and lifecycle history.
+- [x] Add periodic inventory-count sessions with expected-versus-counted differences, review notes, and an Admin-only approval that writes auditable adjustments.
+- [x] Add production and repair work orders with assignee, priority, workflow stage, linked product or serial item, and quality-check outcome.
+- [x] Add controlled device or product disassembly that returns only selected reusable components to stock with source and condition records.
+- [x] Add granular warehouse access roles and permissions while preserving existing Admin, User, and Viewer behavior.
+- [x] Add configurable recurring operational reports for shortages, overdue custody, open maintenance, and count discrepancies.

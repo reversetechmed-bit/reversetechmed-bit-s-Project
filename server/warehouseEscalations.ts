@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { dispensingRequests, handoverInvoices, parts, warehouseAlerts } from "../drizzle/schema";
 import { getDb } from "./db";
 import { buildOperationalEscalations } from "./warehouseOperations";
+import { runDueWarehouseReports } from "./warehouseReports";
 
 export async function runOperationalEscalationSweep(now = new Date()) {
   const db = await getDb();
   if (!db) throw new Error("Operational escalation database is unavailable.");
-  return db.transaction(async tx => {
+  const escalation = await db.transaction(async tx => {
     const [allParts, requestRows, invoiceRows] = await Promise.all([
       tx.select().from(parts),
       tx.select().from(dispensingRequests),
@@ -22,4 +23,6 @@ export async function runOperationalEscalationSweep(now = new Date()) {
     }
     return { evaluated: alerts.length, created } as const;
   });
+  const reports = await runDueWarehouseReports(now);
+  return { ...escalation, reports };
 }

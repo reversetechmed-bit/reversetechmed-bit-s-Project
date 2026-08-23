@@ -6,6 +6,7 @@ import {
   handoverInvoices,
   warehouseSectionValues,
   productStageValues,
+  serialTrackingModeValues,
   parts,
   inventoryCategories,
   inventoryTransactions,
@@ -21,6 +22,7 @@ import { executeConfirmedDelivery } from "../warehouseDelivery";
 import { availableInsideWarehouse, validateCustodyIssue, validateCustodyReturn } from "../warehouseCustody";
 import { buildDecisionNotification, buildHandoverNotification } from "../warehouseNotifications";
 import { canDecideRequest, canEngineerSubmit, isLowStock, mustScopeRequestsToRequester } from "../warehouseRules";
+import { makePartBarcode, normalizeWarehouseBarcode } from "../warehouseTraceability";
 import { z } from "zod";
 
 const partInput = z.object({
@@ -40,6 +42,8 @@ const partInput = z.object({
   storageBox: z.string().trim().max(80).optional(),
   imageUrl: z.string().trim().max(500).optional(),
   specifications: z.string().trim().max(4000).optional(),
+  barcode: z.string().trim().max(100).optional(),
+  serialTrackingMode: z.enum(serialTrackingModeValues).optional(),
 });
 
 const requestInput = z.object({
@@ -136,15 +140,23 @@ export const warehouseRouter = router({
             componentTypeId: input.warehouseSection === "components" ? input.componentTypeId ?? null : null,
             companyId: input.warehouseSection === "products" ? input.companyId ?? null : null,
             productStage: input.warehouseSection === "products" ? input.productStage ?? "finished" : null,
+            barcode: input.barcode ? normalizeWarehouseBarcode(input.barcode) : null,
+            serialTrackingMode: input.serialTrackingMode ?? "none",
             createdById: ctx.user.id,
           });
-          const [created] = await tx
+          let [created] = await tx
             .select()
             .from(parts)
             .where(eq(parts.partNumber, input.partNumber))
             .limit(1);
 
           if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر إنشاء القطعة." });
+          if (!created.barcode) {
+            await tx.update(parts).set({ barcode: makePartBarcode(created) }).where(eq(parts.id, created.id));
+            const [withBarcode] = await tx.select().from(parts).where(eq(parts.id, created.id)).limit(1);
+            if (!withBarcode) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذّر تجهيز باركود الصنف." });
+            created = withBarcode;
+          }
 
           await tx.insert(inventoryTransactions).values({
             partId: created.id,
@@ -211,6 +223,8 @@ export const warehouseRouter = router({
               componentTypeId: values.warehouseSection === "components" ? values.componentTypeId ?? null : null,
               companyId: values.warehouseSection === "products" ? values.companyId ?? null : null,
               productStage: values.warehouseSection === "products" ? values.productStage ?? "finished" : null,
+              barcode: values.barcode ? normalizeWarehouseBarcode(values.barcode) : existing.barcode,
+              serialTrackingMode: values.serialTrackingMode ?? existing.serialTrackingMode,
             })
             .where(eq(parts.id, id));
           const [updated] = await tx.select().from(parts).where(eq(parts.id, id)).limit(1);

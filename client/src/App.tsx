@@ -6,6 +6,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import ComponentTypes from "./pages/ComponentTypes";
 import BackupRestore from "./pages/BackupRestore";
 import Companies from "./pages/Companies";
+import Execution from "./pages/Execution";
 import Custody from "./pages/Custody";
 import Invoices from "./pages/Invoices";
 import MyRequests from "./pages/MyRequests";
@@ -13,12 +14,15 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Inventory from "./pages/Inventory";
+import InventoryCounts from "./pages/InventoryCounts";
 import InventoryCategories from "./pages/InventoryCategories";
 import InvoiceDocument from "./pages/InvoiceDocument";
 import Organization from "./pages/Organization";
 import Operations from "./pages/Operations";
 import Requests from "./pages/Requests";
+import Reports from "./pages/Reports";
 import Transactions from "./pages/Transactions";
+import Traceability from "./pages/Traceability";
 import Users from "./pages/Users";
 
 function WarehouseShell({ children }: { children: React.ReactNode }) {
@@ -35,6 +39,7 @@ function Router() {
       <Route path={"/component-types"} component={() => <WarehouseShell><ComponentTypes /></WarehouseShell>} />
       <Route path={"/companies"} component={() => <WarehouseShell><Companies /></WarehouseShell>} />
       <Route path={"/inventory-categories"} component={() => <WarehouseShell><InventoryCategories /></WarehouseShell>} />
+      <Route path={"/inventory-counts"} component={() => <WarehouseShell><InventoryCounts /></WarehouseShell>} />
       <Route path={"/invoice/:id"} component={() => <WarehouseShell><InvoiceDocument /></WarehouseShell>} />
       <Route path={"/invoices"} component={() => <WarehouseShell><Invoices /></WarehouseShell>} />
       <Route path={"/my-requests"} component={() => <WarehouseShell><MyRequests /></WarehouseShell>} />
@@ -44,7 +49,10 @@ function Router() {
       <Route path={"/employees"} component={() => <WarehouseShell><Organization initialTab="employees" /></WarehouseShell>} />
       <Route path={"/users"} component={() => <WarehouseShell><Users /></WarehouseShell>} />
       <Route path={"/transactions"} component={() => <WarehouseShell><Transactions /></WarehouseShell>} />
+      <Route path={"/traceability"} component={() => <WarehouseShell><Traceability /></WarehouseShell>} />
       <Route path={"/operations"} component={() => <WarehouseShell><Operations /></WarehouseShell>} />
+      <Route path={"/execution"} component={() => <WarehouseShell><Execution /></WarehouseShell>} />
+      <Route path={"/reports"} component={() => <WarehouseShell><Reports /></WarehouseShell>} />
       <Route path={"/backup"} component={() => <WarehouseShell><BackupRestore /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

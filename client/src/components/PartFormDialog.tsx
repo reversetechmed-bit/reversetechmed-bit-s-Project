@@ -10,37 +10,184 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export type EditablePart = {
-  id: number; partNumber: string; name: string; description: string | null; category: string; categoryId: number | null;
-  warehouseSection: "components" | "products"; componentTypeId: number | null; companyId: number | null; productStage: "work_in_progress" | "under_review" | "under_maintenance" | "finished" | "final_operational" | null;
-  quantity: number; reservedQuantity: number; minimumStock: number; location: string | null; storageShelf: string | null; storageDrawer: string | null; storageBox: string | null; imageUrl: string | null; specifications: string | null;
+  id: number;
+  partNumber: string;
+  name: string;
+  description: string | null;
+  category: string;
+  categoryId: number | null;
+  warehouseSection: "components" | "products";
+  componentTypeId: number | null;
+  companyId: number | null;
+  productStage: "work_in_progress" | "under_review" | "under_maintenance" | "finished" | "final_operational" | null;
+  quantity: number;
+  reservedQuantity: number;
+  minimumStock: number;
+  location: string | null;
+  storageShelf: string | null;
+  storageDrawer: string | null;
+  storageBox: string | null;
+  imageUrl: string | null;
+  specifications: string | null;
+  barcode: string | null;
+  serialTrackingMode: "none" | "serial";
 };
-type PartFormValues = Omit<EditablePart, "id" | "category" | "reservedQuantity" | "description" | "location" | "storageShelf" | "storageDrawer" | "storageBox" | "imageUrl" | "specifications" | "productStage"> & { description: string; location: string; storageShelf: string; storageDrawer: string; storageBox: string; imageUrl: string; specifications: string; productStage: NonNullable<EditablePart["productStage"]> };
-const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error("تعذر قراءة ملف الصورة.")); reader.onload = () => resolve(String(reader.result).split(",")[1] || ""); reader.readAsDataURL(file); });
 
-export default function PartFormDialog({ open, onOpenChange, part, defaultSection, saving, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; part: EditablePart | null; defaultSection: "components" | "products"; saving: boolean; onSave: (values: PartFormValues) => void }) {
+type PartFormValues = {
+  partNumber: string;
+  name: string;
+  description: string;
+  categoryId: number | null;
+  warehouseSection: "components" | "products";
+  componentTypeId: number | null;
+  companyId: number | null;
+  productStage: NonNullable<EditablePart["productStage"]>;
+  quantity: number;
+  minimumStock: number;
+  location: string;
+  storageShelf: string;
+  storageDrawer: string;
+  storageBox: string;
+  imageUrl: string;
+  specifications: string;
+  barcode: string;
+  serialTrackingMode: "none" | "serial";
+};
+
+const readAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("تعذر قراءة ملف الصورة."));
+  reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+  reader.readAsDataURL(file);
+});
+
+export default function PartFormDialog({ open, onOpenChange, part, defaultSection, saving, onSave }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  part: EditablePart | null;
+  defaultSection: "components" | "products";
+  saving: boolean;
+  onSave: (values: PartFormValues) => void;
+}) {
   const { data: componentTypes } = trpc.organization.componentTypes.list.useQuery();
   const { data: categories } = trpc.organization.inventoryCategories.list.useQuery();
   const { data: companies } = trpc.organization.companies.list.useQuery();
-  const blank = (): PartFormValues => ({ partNumber: "", name: "", categoryId: null, warehouseSection: defaultSection, componentTypeId: null, companyId: null, productStage: "finished", quantity: 0, minimumStock: 0, description: "", location: "", storageShelf: "", storageDrawer: "", storageBox: "", imageUrl: "", specifications: "" });
+  const blank = (): PartFormValues => ({
+    partNumber: "", name: "", description: "", categoryId: null, warehouseSection: defaultSection,
+    componentTypeId: null, companyId: null, productStage: "finished", quantity: 0, minimumStock: 0,
+    location: "", storageShelf: "", storageDrawer: "", storageBox: "", imageUrl: "", specifications: "",
+    barcode: "", serialTrackingMode: "none",
+  });
   const [form, setForm] = useState<PartFormValues>(blank());
   const [imageFile, setImageFile] = useState<File | null>(null);
   const uploadImage = trpc.warehouse.inventory.uploadImage.useMutation();
+
   useEffect(() => {
-    setForm(part ? { partNumber: part.partNumber, name: part.name, categoryId: part.categoryId, warehouseSection: part.warehouseSection, componentTypeId: part.componentTypeId, companyId: part.companyId, productStage: part.productStage ?? "finished", quantity: part.quantity, minimumStock: part.minimumStock, description: part.description ?? "", location: part.location ?? "", storageShelf: part.storageShelf ?? "", storageDrawer: part.storageDrawer ?? "", storageBox: part.storageBox ?? "", imageUrl: part.imageUrl ?? "", specifications: part.specifications ?? "" } : blank());
+    setForm(part ? {
+      partNumber: part.partNumber, name: part.name, description: part.description ?? "", categoryId: part.categoryId,
+      warehouseSection: part.warehouseSection, componentTypeId: part.componentTypeId, companyId: part.companyId,
+      productStage: part.productStage ?? "finished", quantity: part.quantity, minimumStock: part.minimumStock,
+      location: part.location ?? "", storageShelf: part.storageShelf ?? "", storageDrawer: part.storageDrawer ?? "",
+      storageBox: part.storageBox ?? "", imageUrl: part.imageUrl ?? "", specifications: part.specifications ?? "",
+      barcode: part.barcode ?? "", serialTrackingMode: part.serialTrackingMode,
+    } : blank());
     setImageFile(null);
   }, [part, open, defaultSection]);
+
   const set = <K extends keyof PartFormValues>(key: K, value: PartFormValues[K]) => setForm(current => ({ ...current, [key]: value }));
   const singular = form.warehouseSection === "products" ? "منتج" : "مكون";
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.partNumber.trim() || !form.name.trim() || !form.categoryId) return toast.error("أدخل البيانات الأساسية واختر تصنيف المخزون.");
     let imageUrl = form.imageUrl.trim();
     if (imageFile) {
       if (imageFile.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(imageFile.type)) return toast.error("الصورة يجب أن تكون JPG أو PNG أو WEBP وبحد أقصى 5MB.");
-      try { imageUrl = (await uploadImage.mutateAsync({ fileName: imageFile.name, contentType: imageFile.type as "image/jpeg" | "image/png" | "image/webp", base64: await readAsBase64(imageFile) })).url; } catch { return toast.error("تعذر رفع الصورة."); }
+      try {
+        imageUrl = (await uploadImage.mutateAsync({ fileName: imageFile.name, contentType: imageFile.type as "image/jpeg" | "image/png" | "image/webp", base64: await readAsBase64(imageFile) })).url;
+      } catch {
+        return toast.error("تعذر رفع الصورة.");
+      }
     }
-    onSave({ ...form, partNumber: form.partNumber.trim(), name: form.name.trim(), imageUrl });
+    onSave({ ...form, partNumber: form.partNumber.trim(), name: form.name.trim(), barcode: form.barcode.trim(), imageUrl });
   };
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto p-0"><DialogHeader className="border-b border-[#d9d0bf] bg-[#fcf8ef] px-6 pb-5 pt-6"><p className="eyebrow">{form.warehouseSection === "products" ? "دليل المنتجات" : "دليل المكونات"}</p><DialogTitle className="text-xl text-[#18354a]">{part ? `تعديل ${singular}` : `إضافة ${singular}`}</DialogTitle><DialogDescription>تُستخدم بيانات الشركة وحالة المنتج لتوثيق المنتج ومساره التشغيلي بدقة.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-5 p-6"><div className="grid gap-4 sm:grid-cols-2"><Field label={`كود الـ${singular}`}><Input value={form.partNumber} onChange={event => set("partNumber", event.target.value)} required /></Field><Field label="الاسم"><Input value={form.name} onChange={event => set("name", event.target.value)} required /></Field></div><div className="grid gap-4 sm:grid-cols-2"><Field label="تصنيف المخزون"><Select value={form.categoryId ? String(form.categoryId) : "unselected"} onValueChange={value => set("categoryId", value === "unselected" ? null : Number(value))}><SelectTrigger><SelectValue placeholder="اختر تصنيفًا" /></SelectTrigger><SelectContent><SelectItem value="unselected">اختر تصنيفًا</SelectItem>{categories?.filter(item => item.isActive || item.id === form.categoryId).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name}{item.isActive ? "" : " (مؤرشف)"}</SelectItem>)}</SelectContent></Select></Field><Field label="وصف موقع إضافي"><Input value={form.location} onChange={event => set("location", event.target.value)} placeholder="منطقة الاستلام أو موقع خاص" /></Field></div>{form.warehouseSection === "products" && <section className="rounded-xl border border-[#d9d0bf] bg-[#fcf8ef] p-4"><h3 className="font-heading text-sm font-bold text-[#17374c]">تعريف المنتج والعلاقة بالشركة</h3><div className="mt-3 grid gap-4 sm:grid-cols-2"><Field label="الشركة المرتبط بها المنتج"><Select value={form.companyId ? String(form.companyId) : "no-company"} onValueChange={value => set("companyId", value === "no-company" ? null : Number(value))}><SelectTrigger><SelectValue placeholder="اختر شركة" /></SelectTrigger><SelectContent><SelectItem value="no-company">دون شركة محددة</SelectItem>{companies?.filter(item => item.isActive || item.id === form.companyId).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name} · {item.code}</SelectItem>)}</SelectContent></Select></Field><Field label="حالة المنتج"><Select value={form.productStage} onValueChange={value => set("productStage", value as PartFormValues["productStage"])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="work_in_progress">منتج تحت التشغيل</SelectItem><SelectItem value="under_review">منتج قيد المراجعة</SelectItem><SelectItem value="under_maintenance">منتج تحت الصيانة</SelectItem><SelectItem value="finished">منتج تام</SelectItem><SelectItem value="final_operational">منتج فعلي نهائي</SelectItem></SelectContent></Select><p className="mt-1 text-[11px] text-slate-500">أضف مكونات المنتج من وحدة الشركات بعد حفظ المنتج.</p></Field></div></section>}<section className="rounded-xl border border-[#d9d0bf] bg-white p-4"><h3 className="text-sm font-bold text-[#18354a]">مكان التخزين المنظم <span className="font-normal text-slate-400">اختياري</span></h3><div className="mt-3 grid gap-3 sm:grid-cols-3"><Field label="رف"><Input value={form.storageShelf} onChange={event => set("storageShelf", event.target.value)} placeholder="A-03" /></Field><Field label="درج"><Input value={form.storageDrawer} onChange={event => set("storageDrawer", event.target.value)} placeholder="D-02" /></Field><Field label="صندوق"><Input value={form.storageBox} onChange={event => set("storageBox", event.target.value)} placeholder="B-11" /></Field></div></section>{form.warehouseSection === "components" && <Field label="نوع المكون"><Select value={form.componentTypeId ? String(form.componentTypeId) : "untyped"} onValueChange={value => set("componentTypeId", value === "untyped" ? null : Number(value))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="untyped">عام / دون نوع</SelectItem>{componentTypes?.filter(item => item.isActive).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent></Select></Field>}<div className="grid gap-4 sm:grid-cols-2"><Field label="الكمية الفعلية"><Input type="number" min="0" value={form.quantity} onChange={event => set("quantity", Math.max(0, Number(event.target.value)))} required /></Field><Field label="الحد الأدنى"><Input type="number" min="0" value={form.minimumStock} onChange={event => set("minimumStock", Math.max(0, Number(event.target.value)))} required /></Field></div><section className="rounded-xl border border-[#d9d0bf] p-4"><div className="flex items-center gap-2"><ImagePlus className="h-4 w-4 text-[#a97937]" /><h3 className="text-sm font-bold text-[#18354a]">صورة {singular} <span className="font-normal text-slate-400">اختياري</span></h3></div><div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]"><Input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setImageFile(event.target.files?.[0] || null)} /><span className="self-center text-xs text-slate-500">JPG / PNG / WEBP · حتى 5MB</span></div><Field label="أو رابط صورة" className="mt-3"><Input dir="ltr" value={form.imageUrl} onChange={event => set("imageUrl", event.target.value)} placeholder="https://… أو /manus-storage/…" /></Field></section><Field label="الوصف العام"><Textarea value={form.description} onChange={event => set("description", event.target.value)} rows={3} /></Field><Field label="المواصفات الفنية"><Textarea value={form.specifications} onChange={event => set("specifications", event.target.value)} rows={3} placeholder="الجهد، الأبعاد، الإصدار، التوافق…" /></Field><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button><Button type="submit" disabled={saving || uploadImage.isPending} className="bg-[#a97937] text-white hover:bg-[#8c622a]">{saving || uploadImage.isPending ? "يجري الحفظ…" : part ? "حفظ التعديلات" : `إضافة ${singular}`}</Button></DialogFooter></form></DialogContent></Dialog>;
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto p-0">
+      <DialogHeader className="border-b border-[#d9d0bf] bg-[#fcf8ef] px-6 pb-5 pt-6">
+        <p className="eyebrow">{form.warehouseSection === "products" ? "دليل المنتجات" : "دليل المكونات"}</p>
+        <DialogTitle className="text-xl text-[#18354a]">{part ? `تعديل ${singular}` : `إضافة ${singular}`}</DialogTitle>
+        <DialogDescription>تُستخدم بيانات الشركة وحالة المنتج لتوثيق المنتج ومساره التشغيلي بدقة.</DialogDescription>
+      </DialogHeader>
+      <form onSubmit={submit} className="space-y-5 p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={`كود الـ${singular}`}><Input value={form.partNumber} onChange={event => set("partNumber", event.target.value)} required /></Field>
+          <Field label="الاسم"><Input value={form.name} onChange={event => set("name", event.target.value)} required /></Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="تصنيف المخزون">
+            <Select value={form.categoryId ? String(form.categoryId) : "unselected"} onValueChange={value => set("categoryId", value === "unselected" ? null : Number(value))}>
+              <SelectTrigger><SelectValue placeholder="اختر تصنيفًا" /></SelectTrigger>
+              <SelectContent><SelectItem value="unselected">اختر تصنيفًا</SelectItem>{categories?.filter(item => item.isActive || item.id === form.categoryId).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name}{item.isActive ? "" : " (مؤرشف)"}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          <Field label="وصف موقع إضافي"><Input value={form.location} onChange={event => set("location", event.target.value)} placeholder="منطقة الاستلام أو موقع خاص" /></Field>
+        </div>
+        <section className="rounded-xl border border-[#d9d0bf] bg-[#fcf8ef] p-4">
+          <h3 className="font-heading text-sm font-bold text-[#17374c]">التعريف والتتبع</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Field label="باركود داخلي"><Input dir="ltr" value={form.barcode} onChange={event => set("barcode", event.target.value)} placeholder="يُنشأ تلقائيًا عند تركه فارغًا" /></Field>
+            <Field label="تتبع تسلسلي">
+              <Select value={form.serialTrackingMode} onValueChange={value => set("serialTrackingMode", value as PartFormValues["serialTrackingMode"])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="none">لا يحتاج رقمًا تسلسليًا</SelectItem><SelectItem value="serial">لكل وحدة رقم تسلسلي</SelectItem></SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] text-slate-500">فعّل التتبع للوحات والأجهزة؛ لا يغيّر ذلك الرصيد الفعلي.</p>
+            </Field>
+          </div>
+        </section>
+        {form.warehouseSection === "products" && <section className="rounded-xl border border-[#d9d0bf] bg-[#fcf8ef] p-4">
+          <h3 className="font-heading text-sm font-bold text-[#17374c]">تعريف المنتج والعلاقة بالشركة</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Field label="الشركة المرتبط بها المنتج">
+              <Select value={form.companyId ? String(form.companyId) : "no-company"} onValueChange={value => set("companyId", value === "no-company" ? null : Number(value))}>
+                <SelectTrigger><SelectValue placeholder="اختر شركة" /></SelectTrigger>
+                <SelectContent><SelectItem value="no-company">دون شركة محددة</SelectItem>{companies?.filter(item => item.isActive || item.id === form.companyId).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name} · {item.code}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="حالة المنتج">
+              <Select value={form.productStage} onValueChange={value => set("productStage", value as PartFormValues["productStage"])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="work_in_progress">منتج تحت التشغيل</SelectItem><SelectItem value="under_review">منتج قيد المراجعة</SelectItem><SelectItem value="under_maintenance">منتج تحت الصيانة</SelectItem><SelectItem value="finished">منتج تام</SelectItem><SelectItem value="final_operational">منتج فعلي نهائي</SelectItem></SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] text-slate-500">أضف مكونات المنتج من وحدة الشركات بعد حفظ المنتج.</p>
+            </Field>
+          </div>
+        </section>}
+        <section className="rounded-xl border border-[#d9d0bf] bg-white p-4">
+          <h3 className="text-sm font-bold text-[#18354a]">مكان التخزين المنظم <span className="font-normal text-slate-400">اختياري</span></h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3"><Field label="رف"><Input value={form.storageShelf} onChange={event => set("storageShelf", event.target.value)} placeholder="A-03" /></Field><Field label="درج"><Input value={form.storageDrawer} onChange={event => set("storageDrawer", event.target.value)} placeholder="D-02" /></Field><Field label="صندوق"><Input value={form.storageBox} onChange={event => set("storageBox", event.target.value)} placeholder="B-11" /></Field></div>
+        </section>
+        {form.warehouseSection === "components" && <Field label="نوع المكون">
+          <Select value={form.componentTypeId ? String(form.componentTypeId) : "untyped"} onValueChange={value => set("componentTypeId", value === "untyped" ? null : Number(value))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="untyped">عام / دون نوع</SelectItem>{componentTypes?.filter(item => item.isActive).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </Field>}
+        <div className="grid gap-4 sm:grid-cols-2"><Field label="الكمية الفعلية"><Input type="number" min="0" value={form.quantity} onChange={event => set("quantity", Math.max(0, Number(event.target.value)))} required /></Field><Field label="الحد الأدنى"><Input type="number" min="0" value={form.minimumStock} onChange={event => set("minimumStock", Math.max(0, Number(event.target.value)))} required /></Field></div>
+        <section className="rounded-xl border border-[#d9d0bf] p-4">
+          <div className="flex items-center gap-2"><ImagePlus className="h-4 w-4 text-[#a97937]" /><h3 className="text-sm font-bold text-[#18354a]">صورة {singular} <span className="font-normal text-slate-400">اختياري</span></h3></div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]"><Input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setImageFile(event.target.files?.[0] || null)} /><span className="self-center text-xs text-slate-500">JPG / PNG / WEBP · حتى 5MB</span></div>
+          <Field label="أو رابط صورة" className="mt-3"><Input dir="ltr" value={form.imageUrl} onChange={event => set("imageUrl", event.target.value)} placeholder="https://… أو /manus-storage/…" /></Field>
+        </section>
+        <Field label="الوصف العام"><Textarea value={form.description} onChange={event => set("description", event.target.value)} rows={3} /></Field>
+        <Field label="المواصفات الفنية"><Textarea value={form.specifications} onChange={event => set("specifications", event.target.value)} rows={3} placeholder="الجهد، الأبعاد، الإصدار، التوافق…" /></Field>
+        <DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button><Button type="submit" disabled={saving || uploadImage.isPending} className="bg-[#a97937] text-white hover:bg-[#8c622a]">{saving || uploadImage.isPending ? "يجري الحفظ…" : part ? "حفظ التعديلات" : `إضافة ${singular}`}</Button></DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>;
 }
-function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) { return <div className={`space-y-2 ${className}`}><Label>{label}</Label>{children}</div>; }
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return <div className={`space-y-2 ${className}`}><Label>{label}</Label>{children}</div>;
+}

@@ -9,7 +9,10 @@ import {
   Boxes,
   Building2,
   ClipboardList,
+  ClipboardCheck,
   FileText,
+  FileBarChart2,
+  Factory,
   History,
   HandHeart,
   LayoutDashboard,
@@ -17,6 +20,7 @@ import {
   Mail,
   Package,
   PanelRight,
+  QrCode,
   Wrench,
   Shapes,
   Tags,
@@ -50,6 +54,7 @@ const adminMenuItems = [
   { icon: Boxes, label: "المكونات", path: "/inventory" },
   { icon: Shapes, label: "أنواع المكونات", path: "/component-types" },
   { icon: Tags, label: "تصنيفات المخزون", path: "/inventory-categories" },
+  { icon: ClipboardCheck, label: "الجرد والفروقات", path: "/inventory-counts" },
   { icon: Package, label: "المنتجات", path: "/products" },
   { icon: Building2, label: "الشركات", path: "/companies" },
   { icon: ClipboardList, label: "طلبات الصرف", path: "/requests" },
@@ -59,7 +64,10 @@ const adminMenuItems = [
   { icon: UsersRound, label: "الموظفون", path: "/employees" },
   { icon: Users, label: "المستخدمون", path: "/users" },
   { icon: History, label: "سجل الحركة", path: "/transactions" },
+  { icon: QrCode, label: "الباركود والتتبع", path: "/traceability" },
   { icon: Wrench, label: "عمليات الصيانة والشراء", path: "/operations" },
+  { icon: Factory, label: "أوامر العمل والتشليح", path: "/execution" },
+  { icon: FileBarChart2, label: "التقارير الدورية", path: "/reports" },
   { icon: DatabaseBackup, label: "النسخ والاستعادة", path: "/backup" },
 ];
 
@@ -69,6 +77,38 @@ const engineerMenuItems = [
   { icon: Package, label: "المنتجات", path: "/products" },
   { icon: ClipboardList, label: "طلباتي", path: "/my-requests" },
   { icon: HandHeart, label: "عُهدتي", path: "/custody" },
+  { icon: QrCode, label: "باركود وتتبع", path: "/traceability" },
+];
+
+const storekeeperMenuItems = [
+  { icon: LayoutDashboard, label: "لوحة المتابعة", path: "/" },
+  { icon: Boxes, label: "المكونات", path: "/inventory" },
+  { icon: Package, label: "المنتجات", path: "/products" },
+  { icon: ClipboardCheck, label: "الجرد والفروقات", path: "/inventory-counts" },
+  { icon: QrCode, label: "الباركود والتتبع", path: "/traceability" },
+];
+
+const maintenanceMenuItems = [
+  { icon: LayoutDashboard, label: "لوحة المتابعة", path: "/" },
+  { icon: Boxes, label: "المكونات", path: "/inventory" },
+  { icon: Package, label: "المنتجات", path: "/products" },
+  { icon: Wrench, label: "عمليات الصيانة", path: "/operations" },
+  { icon: Factory, label: "أوامر العمل والتشليح", path: "/execution" },
+  { icon: QrCode, label: "الباركود والتتبع", path: "/traceability" },
+];
+
+const purchasingMenuItems = [
+  { icon: LayoutDashboard, label: "لوحة المتابعة", path: "/" },
+  { icon: Boxes, label: "المكونات", path: "/inventory" },
+  { icon: Package, label: "المنتجات", path: "/products" },
+  { icon: Wrench, label: "المشتريات والتوريد", path: "/operations" },
+];
+
+const viewerMenuItems = [
+  { icon: LayoutDashboard, label: "لوحة المتابعة", path: "/" },
+  { icon: Boxes, label: "المكونات", path: "/inventory" },
+  { icon: Package, label: "المنتجات", path: "/products" },
+  { icon: QrCode, label: "باركود وتتبع", path: "/traceability" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -278,7 +318,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: { children: React
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const menuItems = user?.role === "admin" ? adminMenuItems : engineerMenuItems;
+  const operationalRole = user?.role === "admin" ? "admin" : user?.warehouseRole ?? "engineer";
+  const menuItems = operationalRole === "admin" ? adminMenuItems : operationalRole === "storekeeper" ? storekeeperMenuItems : operationalRole === "maintenance_technician" ? maintenanceMenuItems : operationalRole === "purchasing_officer" ? purchasingMenuItems : operationalRole === "viewer" ? viewerMenuItems : engineerMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const requestRoute = user?.role === "admin" ? "/requests" : "/my-requests";
   const utils = trpc.useUtils();

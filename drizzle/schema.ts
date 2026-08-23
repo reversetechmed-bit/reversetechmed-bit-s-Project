@@ -42,7 +42,7 @@ export const departments = mysqlTable(
   table => [index("departments_active_idx").on(table.isActive)],
 );
 
-export const employeeWarehouseRoleValues = ["admin", "engineer", "viewer"] as const;
+export const employeeWarehouseRoleValues = ["admin", "engineer", "viewer", "storekeeper", "maintenance_technician", "purchasing_officer"] as const;
 
 /** Employee directory, which can be created before the employee activates a login account. */
 export const employeeProfiles = mysqlTable(
@@ -141,6 +141,7 @@ export const companies = mysqlTable(
 );
 
 export const productStageValues = ["work_in_progress", "under_review", "under_maintenance", "finished", "final_operational"] as const;
+export const serialTrackingModeValues = ["none", "serial"] as const;
 
 /** Current on-hand inventory for each tracked engineering part. */
 export const parts = mysqlTable(
@@ -166,6 +167,8 @@ export const parts = mysqlTable(
     storageBox: varchar("storageBox", { length: 80 }),
     imageUrl: varchar("imageUrl", { length: 500 }),
     specifications: text("specifications"),
+    barcode: varchar("barcode", { length: 100 }).unique(),
+    serialTrackingMode: mysqlEnum("serialTrackingMode", serialTrackingModeValues).notNull().default("none"),
     createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -176,7 +179,71 @@ export const parts = mysqlTable(
     index("parts_component_type_idx").on(table.componentTypeId),
     index("parts_company_idx").on(table.companyId),
     index("parts_stock_idx").on(table.quantity, table.minimumStock),
+    index("parts_barcode_idx").on(table.barcode),
   ],
+);
+
+/** Physical locations may be labelled and scanned independently of item barcodes. */
+export const storageLocations = mysqlTable(
+  "storageLocations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    code: varchar("code", { length: 64 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    barcode: varchar("barcode", { length: 100 }).notNull().unique(),
+    shelf: varchar("shelf", { length: 80 }),
+    drawer: varchar("drawer", { length: 80 }),
+    box: varchar("box", { length: 80 }),
+    notes: text("notes"),
+    isActive: int("isActive").notNull().default(1),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("storage_locations_active_idx").on(table.isActive), index("storage_locations_barcode_idx").on(table.barcode)],
+);
+
+export const serialAssetStatusValues = ["in_stock", "in_custody", "in_maintenance", "in_production", "installed", "retired", "cannibalized", "scrapped"] as const;
+
+/** Individually tracked boards and devices. Creating the record alone never changes item quantity. */
+export const serialAssets = mysqlTable(
+  "serialAssets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    serialNumber: varchar("serialNumber", { length: 160 }).notNull().unique(),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", serialAssetStatusValues).notNull().default("in_stock"),
+    locationId: int("locationId").references(() => storageLocations.id, { onDelete: "set null" }),
+    currentHolderId: int("currentHolderId").references(() => users.id, { onDelete: "set null" }),
+    assetCondition: varchar("assetCondition", { length: 160 }),
+    manufacturerSerial: varchar("manufacturerSerial", { length: 160 }),
+    acquiredAt: timestamp("acquiredAt"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("serial_assets_part_status_idx").on(table.partId, table.status), index("serial_assets_holder_idx").on(table.currentHolderId), index("serial_assets_location_idx").on(table.locationId)],
+);
+
+export const serialAssetEventTypeValues = ["registered", "moved", "custody_issued", "custody_returned", "maintenance_opened", "work_started", "work_completed", "installed", "disassembled", "retired"] as const;
+
+/** Append-only lifecycle history for a serial asset. */
+export const serialAssetEvents = mysqlTable(
+  "serialAssetEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    serialAssetId: int("serialAssetId").notNull().references(() => serialAssets.id, { onDelete: "cascade" }),
+    type: mysqlEnum("type", serialAssetEventTypeValues).notNull(),
+    fromStatus: mysqlEnum("fromStatus", serialAssetStatusValues),
+    toStatus: mysqlEnum("toStatus", serialAssetStatusValues),
+    locationId: int("locationId").references(() => storageLocations.id, { onDelete: "set null" }),
+    holderId: int("holderId").references(() => users.id, { onDelete: "set null" }),
+    actorId: int("actorId").references(() => users.id, { onDelete: "set null" }),
+    note: text("note"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("serial_asset_events_asset_idx").on(table.serialAssetId, table.createdAt)],
 );
 
 /** Bill of materials for a warehouse product. Component rows remain the single source of truth for stock. */
@@ -195,6 +262,169 @@ export const productComponents = mysqlTable(
     uniqueIndex("product_components_unique_idx").on(table.productId, table.componentId),
     index("product_components_component_idx").on(table.componentId),
   ],
+);
+
+export const inventoryCountSessionStatusValues = ["draft", "open", "submitted", "approved", "cancelled"] as const;
+
+/** A frozen stock expectation used to reconcile physical counts without changing stock during counting. */
+export const inventoryCountSessions = mysqlTable(
+  "inventoryCountSessions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    countNumber: varchar("countNumber", { length: 48 }).notNull().unique(),
+    status: mysqlEnum("status", inventoryCountSessionStatusValues).notNull().default("draft"),
+    warehouseSection: mysqlEnum("warehouseSection", warehouseSectionValues),
+    openedById: int("openedById").references(() => users.id, { onDelete: "set null" }),
+    submittedById: int("submittedById").references(() => users.id, { onDelete: "set null" }),
+    approvedById: int("approvedById").references(() => users.id, { onDelete: "set null" }),
+    openedAt: timestamp("openedAt"),
+    submittedAt: timestamp("submittedAt"),
+    approvedAt: timestamp("approvedAt"),
+    notes: text("notes"),
+    approvalNote: text("approvalNote"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("count_sessions_status_idx").on(table.status, table.createdAt), index("count_sessions_section_idx").on(table.warehouseSection)],
+);
+
+/** One frozen expected quantity and one physical count per part within an inventory count session. */
+export const inventoryCountLines = mysqlTable(
+  "inventoryCountLines",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: int("sessionId").notNull().references(() => inventoryCountSessions.id, { onDelete: "cascade" }),
+    partId: int("partId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    expectedQuantity: int("expectedQuantity").notNull(),
+    expectedReservedQuantity: int("expectedReservedQuantity").notNull().default(0),
+    expectedCustodyQuantity: int("expectedCustodyQuantity").notNull().default(0),
+    countedQuantity: int("countedQuantity"),
+    varianceQuantity: int("varianceQuantity"),
+    discrepancyReason: text("discrepancyReason"),
+    countedById: int("countedById").references(() => users.id, { onDelete: "set null" }),
+    countedAt: timestamp("countedAt"),
+    partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
+    partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("count_lines_session_part_uq").on(table.sessionId, table.partId), index("count_lines_part_idx").on(table.partId)],
+);
+
+export const workOrderTypeValues = ["production", "repair"] as const;
+export const workOrderStatusValues = ["draft", "released", "in_progress", "quality_check", "completed", "cancelled"] as const;
+export const workOrderPriorityValues = ["low", "normal", "high", "urgent"] as const;
+
+/** Production and repair execution card. Stock changes remain guarded by the completion operation. */
+export const workOrders = mysqlTable(
+  "workOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workOrderNumber: varchar("workOrderNumber", { length: 48 }).notNull().unique(),
+    type: mysqlEnum("type", workOrderTypeValues).notNull(),
+    status: mysqlEnum("status", workOrderStatusValues).notNull().default("draft"),
+    targetPartId: int("targetPartId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    serialAssetId: int("serialAssetId").references(() => serialAssets.id, { onDelete: "set null" }),
+    quantityPlanned: int("quantityPlanned").notNull().default(1),
+    assigneeId: int("assigneeId").references(() => users.id, { onDelete: "set null" }),
+    priority: mysqlEnum("priority", workOrderPriorityValues).notNull().default("normal"),
+    dueAt: timestamp("dueAt"),
+    releasedAt: timestamp("releasedAt"),
+    startedAt: timestamp("startedAt"),
+    qualityCheckedById: int("qualityCheckedById").references(() => users.id, { onDelete: "set null" }),
+    qualityCheckedAt: timestamp("qualityCheckedAt"),
+    qualityOutcome: varchar("qualityOutcome", { length: 64 }),
+    completedById: int("completedById").references(() => users.id, { onDelete: "set null" }),
+    completedAt: timestamp("completedAt"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("work_orders_status_idx").on(table.status, table.createdAt), index("work_orders_assignee_idx").on(table.assigneeId, table.status), index("work_orders_target_idx").on(table.targetPartId)],
+);
+
+/** Immutable BOM snapshot recorded when a production work order is released. */
+export const workOrderLines = mysqlTable(
+  "workOrderLines",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workOrderId: int("workOrderId").notNull().references(() => workOrders.id, { onDelete: "cascade" }),
+    sourcePartId: int("sourcePartId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityPerUnit: int("quantityPerUnit").notNull(),
+    quantityRequired: int("quantityRequired").notNull(),
+    quantityConsumed: int("quantityConsumed").notNull().default(0),
+    partNumberSnapshot: varchar("partNumberSnapshot", { length: 100 }).notNull(),
+    partNameSnapshot: varchar("partNameSnapshot", { length: 200 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("work_order_lines_uq").on(table.workOrderId, table.sourcePartId)],
+);
+
+export const disassemblyStatusValues = ["draft", "submitted", "approved", "completed", "cancelled"] as const;
+export const recoveredConditionValues = ["serviceable", "quarantine", "scrap"] as const;
+
+/** Controlled one-time disassembly of a returned, retired, or otherwise eligible source. */
+export const disassemblyOrders = mysqlTable(
+  "disassemblyOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    disassemblyNumber: varchar("disassemblyNumber", { length: 48 }).notNull().unique(),
+    status: mysqlEnum("status", disassemblyStatusValues).notNull().default("draft"),
+    sourcePartId: int("sourcePartId").references(() => parts.id, { onDelete: "restrict" }),
+    sourceSerialAssetId: int("sourceSerialAssetId").unique().references(() => serialAssets.id, { onDelete: "restrict" }),
+    sourceMaintenanceCaseId: int("sourceMaintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
+    reason: text("reason").notNull(),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    approvedById: int("approvedById").references(() => users.id, { onDelete: "set null" }),
+    completedById: int("completedById").references(() => users.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approvedAt"),
+    completedAt: timestamp("completedAt"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("disassembly_orders_status_idx").on(table.status, table.createdAt), index("disassembly_orders_source_part_idx").on(table.sourcePartId)],
+);
+
+/** Components recovered from a single disassembly; only serviceable lines may be restocked. */
+export const disassemblyLines = mysqlTable(
+  "disassemblyLines",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    disassemblyOrderId: int("disassemblyOrderId").notNull().references(() => disassemblyOrders.id, { onDelete: "cascade" }),
+    recoveredPartId: int("recoveredPartId").notNull().references(() => parts.id, { onDelete: "restrict" }),
+    quantityRecovered: int("quantityRecovered").notNull(),
+    condition: mysqlEnum("condition", recoveredConditionValues).notNull(),
+    inspectionNote: text("inspectionNote"),
+    quantityRestocked: int("quantityRestocked").notNull().default(0),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("disassembly_lines_uq").on(table.disassemblyOrderId, table.recoveredPartId), index("disassembly_lines_part_idx").on(table.recoveredPartId)],
+);
+
+export const warehouseReportTypeValues = ["low_stock", "custody_overdue", "maintenance_aging", "count_variances", "open_work_orders", "serial_status"] as const;
+export const warehouseReportFrequencyValues = ["daily", "weekly"] as const;
+
+/** Admin-configurable in-app operational report schedule; execution is handled by the existing Heartbeat sweep. */
+export const warehouseReportSchedules = mysqlTable(
+  "warehouseReportSchedules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 160 }).notNull(),
+    reportType: mysqlEnum("reportType", warehouseReportTypeValues).notNull(),
+    frequency: mysqlEnum("frequency", warehouseReportFrequencyValues).notNull(),
+    weekday: int("weekday"),
+    runHourUtc: int("runHourUtc").notNull().default(6),
+    recipientUserId: int("recipientUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    isActive: int("isActive").notNull().default(1),
+    lastRunAt: timestamp("lastRunAt"),
+    nextRunAt: timestamp("nextRunAt").notNull(),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("report_schedules_due_idx").on(table.isActive, table.nextRunAt), index("report_schedules_recipient_idx").on(table.recipientUserId)],
 );
 
 export const dispensingStatusValues = ["pending", "approved", "rejected", "delivered"] as const;
@@ -405,6 +635,11 @@ export const transactionTypeValues = [
   "purchase_received",
   "assembly_consumed",
   "assembly_produced",
+  "inventory_count_adjusted",
+  "work_order_consumed",
+  "work_order_produced",
+  "disassembly_source_consumed",
+  "disassembly_recovered",
 ] as const;
 
 /** Immutable audit records. A delivery creates the only negative quantity movement. */
@@ -418,6 +653,9 @@ export const inventoryTransactions = mysqlTable(
     maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
     purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
     assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
+    inventoryCountSessionId: int("inventoryCountSessionId").references(() => inventoryCountSessions.id, { onDelete: "set null" }),
+    workOrderId: int("workOrderId").references(() => workOrders.id, { onDelete: "set null" }),
+    disassemblyOrderId: int("disassemblyOrderId").references(() => disassemblyOrders.id, { onDelete: "set null" }),
     type: mysqlEnum("type", transactionTypeValues).notNull(),
     quantityDelta: int("quantityDelta").notNull().default(0),
     quantityBefore: int("quantityBefore"),
@@ -437,11 +675,14 @@ export const inventoryTransactions = mysqlTable(
     index("transactions_maintenance_idx").on(table.maintenanceCaseId),
     index("transactions_purchase_order_idx").on(table.purchaseOrderId),
     index("transactions_assembly_order_idx").on(table.assemblyOrderId),
+    index("transactions_count_session_idx").on(table.inventoryCountSessionId),
+    index("transactions_work_order_idx").on(table.workOrderId),
+    index("transactions_disassembly_idx").on(table.disassemblyOrderId),
     index("transactions_date_idx").on(table.createdAt),
   ],
 );
 
-export const alertTypeValues = ["new_request", "low_stock", "request_approved", "request_rejected", "handover_completed", "overdue_request", "receipt_confirmation_pending", "maintenance_returned", "purchase_received", "assembly_completed"] as const;
+export const alertTypeValues = ["new_request", "low_stock", "request_approved", "request_rejected", "handover_completed", "overdue_request", "receipt_confirmation_pending", "maintenance_returned", "purchase_received", "assembly_completed", "inventory_count_submitted", "inventory_count_approved", "work_order_completed", "disassembly_completed", "scheduled_report"] as const;
 
 /** Admin-facing in-app alerts, retained until marked as read. */
 export const warehouseAlerts = mysqlTable(
@@ -456,6 +697,9 @@ export const warehouseAlerts = mysqlTable(
     maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
     purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
     assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
+    inventoryCountSessionId: int("inventoryCountSessionId").references(() => inventoryCountSessions.id, { onDelete: "set null" }),
+    workOrderId: int("workOrderId").references(() => workOrders.id, { onDelete: "set null" }),
+    disassemblyOrderId: int("disassemblyOrderId").references(() => disassemblyOrders.id, { onDelete: "set null" }),
     recipientUserId: int("recipientUserId").references(() => users.id, { onDelete: "cascade" }),
     dedupeKey: varchar("dedupeKey", { length: 160 }).unique(),
     isRead: int("isRead").notNull().default(0),
@@ -494,7 +738,7 @@ export const handoverInvoices = mysqlTable(
   table => [index("invoices_issued_at_idx").on(table.issuedAt)],
 );
 
-export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "custody_issued", "custody_returned", "maintenance_dispatched", "maintenance_returned", "maintenance_resolved", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
+export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "custody_issued", "custody_returned", "maintenance_dispatched", "maintenance_returned", "maintenance_resolved", "purchase_order_created", "purchase_received", "assembly_completed", "inventory_count_opened", "inventory_count_approved", "work_order_updated", "work_order_completed", "disassembly_completed"] as const;
 
 /** Recent warehouse events shown to the Admin on the control dashboard. */
 export const warehouseActivities = mysqlTable(
@@ -511,6 +755,9 @@ export const warehouseActivities = mysqlTable(
     maintenanceCaseId: int("maintenanceCaseId").references(() => maintenanceCases.id, { onDelete: "set null" }),
     purchaseOrderId: int("purchaseOrderId").references(() => purchaseOrders.id, { onDelete: "set null" }),
     assemblyOrderId: int("assemblyOrderId").references(() => assemblyOrders.id, { onDelete: "set null" }),
+    inventoryCountSessionId: int("inventoryCountSessionId").references(() => inventoryCountSessions.id, { onDelete: "set null" }),
+    workOrderId: int("workOrderId").references(() => workOrders.id, { onDelete: "set null" }),
+    disassemblyOrderId: int("disassemblyOrderId").references(() => disassemblyOrders.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => [index("warehouse_activity_date_idx").on(table.createdAt)],
