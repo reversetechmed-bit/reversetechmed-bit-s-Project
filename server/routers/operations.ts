@@ -20,7 +20,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
-import { buildOperationalEscalations, prepareMaintenanceDispatch, prepareMaintenanceReceipt } from "../warehouseOperations";
+import { buildOperationalEscalations, prepareMaintenanceDispatch, prepareMaintenanceReceipt, prepareMaintenanceResolution } from "../warehouseOperations";
 import { preparePurchaseReceipt } from "../warehousePurchasing";
 import { prepareAssemblyCompletion } from "../warehouseAssembly";
 import { runOperationalEscalationSweep } from "../warehouseEscalations";
@@ -32,8 +32,29 @@ const maintenanceCreateInput = z.object({
   quantity: z.number().int().positive(),
   customerName: z.string().trim().max(200).optional(),
   customerReference: z.string().trim().max(160).optional(),
+  assetSerialNumber: z.string().trim().max(160).optional(),
+  externalServiceProvider: z.string().trim().max(200).optional(),
+  externalReference: z.string().trim().max(160).optional(),
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   outboundCondition: z.string().trim().max(2000).optional(),
+  estimatedCost: z.number().int().min(0).optional(),
   notes: z.string().trim().max(2000).optional(),
+});
+
+const maintenanceProgressInput = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(["under_diagnosis", "repair_in_progress", "quality_check"]),
+  diagnosis: z.string().trim().max(2000).optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+const maintenanceResolveInput = z.object({
+  id: z.number().int().positive(),
+  disposition: z.enum(["return_to_stock", "return_to_customer", "cannibalize", "scrap"]),
+  inboundCondition: z.string().trim().max(2000).optional(),
+  diagnosis: z.string().trim().max(2000).optional(),
+  resolutionNote: z.string().trim().max(2000).optional(),
+  actualCost: z.number().int().min(0).optional(),
 });
 
 const purchaseOrderCreateInput = z.object({
@@ -98,7 +119,12 @@ export const operationsRouter = router({
           quantity: input.quantity,
           customerName: optionalText(input.customerName),
           customerReference: optionalText(input.customerReference),
+          assetSerialNumber: optionalText(input.assetSerialNumber),
+          externalServiceProvider: optionalText(input.externalServiceProvider),
+          externalReference: optionalText(input.externalReference),
+          priority: input.priority,
           outboundCondition: optionalText(input.outboundCondition),
+          estimatedCost: input.estimatedCost ?? null,
           notes: optionalText(input.notes),
           createdById: ctx.user.id,
           createdAt,
@@ -116,6 +142,75 @@ export const operationsRouter = router({
           maintenanceCaseId: id,
         });
         return { id, caseNumber } as const;
+      });
+    }),
+
+    progress: adminProcedure.input(maintenanceProgressInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const [record] = await db.select().from(maintenanceCases).where(eq(maintenanceCases.id, input.id)).limit(1);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة الصيانة أو المرتجع غير موجودة." });
+      if (["returned_to_stock", "closed", "cancelled"].includes(record.status)) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن تحديث حالة منتهية أو ملغاة." });
+      if (record.type === "maintenance_outbound" && record.status === "open") throw new TRPCError({ code: "CONFLICT", message: "يجب إخراج القطعة للصيانة أولًا قبل تسجيل التشخيص." });
+      await db.update(maintenanceCases).set({
+        status: input.status,
+        diagnosis: optionalText(input.diagnosis) ?? record.diagnosis,
+        notes: optionalText(input.notes) ?? record.notes,
+      }).where(eq(maintenanceCases.id, record.id));
+      await db.insert(warehouseActivities).values({
+        type: "maintenance_resolved",
+        actorId: ctx.user.id,
+        title: "تحديث حالة الصيانة",
+        detail: `تم تحديث الحالة ${record.caseNumber} إلى ${input.status}.`,
+        partId: record.partId,
+        maintenanceCaseId: record.id,
+      });
+      return { success: true } as const;
+    }),
+
+    resolve: adminProcedure.input(maintenanceResolveInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      return db.transaction(async tx => {
+        const [record] = await tx
+          .select({ maintenanceCase: maintenanceCases, part: parts })
+          .from(maintenanceCases)
+          .innerJoin(parts, eq(maintenanceCases.partId, parts.id))
+          .where(eq(maintenanceCases.id, input.id))
+          .limit(1);
+        if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة الصيانة أو المرتجع غير موجودة." });
+        const plan = prepareMaintenanceResolution(record, ctx.user.id, input.disposition);
+        if (!plan.ok) throw new TRPCError({ code: "CONFLICT", message: plan.reason });
+        if (plan.returnsToStock) await tx.update(parts).set({ quantity: plan.quantityAfter }).where(eq(parts.id, record.part.id));
+        await tx.update(maintenanceCases).set({
+          status: plan.nextStatus,
+          receivedById: plan.returnsToStock ? ctx.user.id : record.maintenanceCase.receivedById,
+          returnedAt: plan.returnsToStock ? plan.resolvedAt : record.maintenanceCase.returnedAt,
+          resolvedAt: plan.resolvedAt,
+          inboundCondition: optionalText(input.inboundCondition) ?? record.maintenanceCase.inboundCondition,
+          diagnosis: optionalText(input.diagnosis) ?? record.maintenanceCase.diagnosis,
+          resolutionNote: optionalText(input.resolutionNote),
+          disposition: input.disposition,
+          actualCost: input.actualCost ?? record.maintenanceCase.actualCost,
+        }).where(eq(maintenanceCases.id, record.maintenanceCase.id));
+        if (plan.transaction) await tx.insert(inventoryTransactions).values(plan.transaction);
+        await tx.insert(warehouseActivities).values({
+          type: "maintenance_resolved",
+          actorId: ctx.user.id,
+          title: plan.returnsToStock ? "إعادة قطعة إلى المخزون" : "قرار نهائي لحالة صيانة",
+          detail: plan.returnsToStock
+            ? `تمت إعادة ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون بعد الفحص.`
+            : `أُغلقت الحالة ${record.maintenanceCase.caseNumber} دون إضافة رصيد، بقرار ${input.disposition}.`,
+          partId: record.part.id,
+          maintenanceCaseId: record.maintenanceCase.id,
+        });
+        if (plan.returnsToStock) await tx.insert(warehouseAlerts).values({
+          type: "maintenance_returned",
+          title: "إعادة قطعة من الصيانة أو العميل",
+          body: `أُعيد ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون من الحالة ${record.maintenanceCase.caseNumber}.`,
+          partId: record.part.id,
+          maintenanceCaseId: record.maintenanceCase.id,
+          dedupeKey: `maintenance-return:${record.maintenanceCase.id}`,
+        });
+        return { success: true, returnedToStock: plan.returnsToStock, quantityAfter: plan.quantityAfter } as const;
       });
     }),
 

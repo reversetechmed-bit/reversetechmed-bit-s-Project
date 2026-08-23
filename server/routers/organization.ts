@@ -6,6 +6,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "../
 import { evaluateEmployeeEnrollmentClaim, hashEnrollmentPasscode, isValidEnrollmentPasscode, normalizeEnrollmentPasscode } from "../employeeEnrollment";
 import { buildWarehouseJsonBackup, inspectWarehouseJsonBackup } from "../warehouseBackup";
 import { restoreWarehouseMasterData } from "../warehouseRestore";
+import { createsProductBomCycle } from "../productBomRules";
 import { z } from "zod";
 
 export const departmentInput = z.object({
@@ -163,6 +164,8 @@ export const organizationRouter = router({
         const validComponents = await tx.select({ id: parts.id, warehouseSection: parts.warehouseSection, productStage: parts.productStage }).from(parts);
         const validIds = new Set(validComponents.filter(component => component.warehouseSection === "components" || (component.warehouseSection === "products" && component.productStage === "work_in_progress")).map(component => component.id));
         if (input.components.some(component => !validIds.has(component.componentId))) throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن ربط المنتج بمكونات المخزون أو المنتجات تحت التشغيل فقط." });
+        const existingEdges = await tx.select({ productId: productComponents.productId, componentId: productComponents.componentId }).from(productComponents);
+        if (createsProductBomCycle(product.id, input.components.map(component => component.componentId), existingEdges)) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن حفظ قائمة مواد تُنشئ حلقة بين لوحة وجهاز أو منتجين." });
         await tx.delete(productComponents).where(eq(productComponents.productId, product.id));
         if (input.components.length) await tx.insert(productComponents).values(input.components.map(component => ({ productId: product.id, componentId: component.componentId, quantityRequired: component.quantityRequired, notes: optionalText(component.notes) })));
         return { success: true } as const;

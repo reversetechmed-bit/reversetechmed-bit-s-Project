@@ -266,7 +266,9 @@ export const custodyAssignments = mysqlTable(
 );
 
 export const maintenanceCaseTypeValues = ["maintenance_outbound", "customer_return"] as const;
-export const maintenanceCaseStatusValues = ["open", "sent_for_maintenance", "awaiting_inspection", "returned_to_stock", "closed", "cancelled"] as const;
+export const maintenanceCaseStatusValues = ["open", "sent_for_maintenance", "awaiting_inspection", "under_diagnosis", "repair_in_progress", "quality_check", "returned_to_stock", "closed", "cancelled"] as const;
+export const maintenancePriorityValues = ["low", "normal", "high", "urgent"] as const;
+export const maintenanceDispositionValues = ["return_to_stock", "return_to_customer", "cannibalize", "scrap"] as const;
 
 /** Controlled custody record for parts sent to maintenance or returned from a customer. */
 export const maintenanceCases = mysqlTable(
@@ -280,14 +282,24 @@ export const maintenanceCases = mysqlTable(
     quantity: int("quantity").notNull(),
     customerName: varchar("customerName", { length: 200 }),
     customerReference: varchar("customerReference", { length: 160 }),
+    assetSerialNumber: varchar("assetSerialNumber", { length: 160 }),
+    externalServiceProvider: varchar("externalServiceProvider", { length: 200 }),
+    externalReference: varchar("externalReference", { length: 160 }),
+    priority: mysqlEnum("priority", maintenancePriorityValues).notNull().default("normal"),
     outboundCondition: text("outboundCondition"),
     inboundCondition: text("inboundCondition"),
+    diagnosis: text("diagnosis"),
+    resolutionNote: text("resolutionNote"),
+    disposition: mysqlEnum("disposition", maintenanceDispositionValues),
+    estimatedCost: int("estimatedCost"),
+    actualCost: int("actualCost"),
     notes: text("notes"),
     createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
     dispatchedById: int("dispatchedById").references(() => users.id, { onDelete: "set null" }),
     receivedById: int("receivedById").references(() => users.id, { onDelete: "set null" }),
     sentAt: timestamp("sentAt"),
     returnedAt: timestamp("returnedAt"),
+    resolvedAt: timestamp("resolvedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -482,7 +494,7 @@ export const handoverInvoices = mysqlTable(
   table => [index("invoices_issued_at_idx").on(table.issuedAt)],
 );
 
-export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "custody_issued", "custody_returned", "maintenance_dispatched", "maintenance_returned", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
+export const warehouseActivityTypeValues = ["inventory_created", "inventory_updated", "request_submitted", "request_approved", "request_rejected", "handover_completed", "handover_receipt_confirmed", "custody_issued", "custody_returned", "maintenance_dispatched", "maintenance_returned", "maintenance_resolved", "purchase_order_created", "purchase_received", "assembly_completed"] as const;
 
 /** Recent warehouse events shown to the Admin on the control dashboard. */
 export const warehouseActivities = mysqlTable(

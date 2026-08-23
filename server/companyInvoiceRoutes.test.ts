@@ -13,7 +13,7 @@ describe("companies and independent invoice routes", () => {
   });
   it("keeps company/product/BOM actions and independent invoice exports wired to typed tRPC procedures", () => {
     const companies = source("client/src/pages/Companies.tsx"); const invoice = source("client/src/pages/InvoiceDocument.tsx");
-    expect(companies).toContain("trpc.organization.companies.create.useMutation"); expect(companies).toContain("trpc.organization.productComponents.replace.useMutation"); expect(companies).toContain("قائمة مكونات المنتج");
+    expect(companies).toContain("trpc.organization.companies.create.useMutation"); expect(companies).toContain("trpc.organization.productComponents.replace.useMutation"); expect(companies).toContain("قائمة مواد المنتج"); expect(companies).toContain("لوحة تحت التشغيل");
     expect(invoice).toContain("trpc.warehouse.invoices.get.useQuery"); expect(invoice).toContain("exportHandoverInvoicePdf"); expect(invoice).toContain("exportHandoverInvoiceExcel");
   });
 });

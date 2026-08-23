@@ -209,3 +209,6 @@
 - [x] Extend requests so the employee selects between consumable dispensing and custody, while identity is derived from the authenticated account instead of a manually entered requester name.
 - [x] Add Admin custody visibility, return confirmation, and history with non-destructive audit records.
 - [x] Rebuild Component Types with search, edit, and safe delete controls in addition to archiving, preserving types still referenced by inventory records.
+- [x] Review and refine the maintenance and customer-return workflow with clearer intake, diagnosis, disposition, and stock-impact states.
+- [x] Model board products as finished or in-progress items with documented BOM components and an optional parent device or higher-level product relationship.
+- [x] Add safe nested product/BOM handling so a board can be assembled from components and associated with a device without duplicating or silently consuming stock.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOperationalEscalations, prepareMaintenanceDispatch, prepareMaintenanceReceipt } from "./warehouseOperations";
+import { buildOperationalEscalations, prepareMaintenanceDispatch, prepareMaintenanceReceipt, prepareMaintenanceResolution } from "./warehouseOperations";
 
 const part = { id: 7, partNumber: "RT-PART-7", name: "وحدة اختبار", quantity: 10, reservedQuantity: 2, minimumStock: 3, warehouseSection: "components" as const };
 
@@ -14,6 +14,13 @@ describe("warehouse operational escalations and maintenance", () => {
     expect(outgoing).toMatchObject({ ok: true, quantityAfter: 6, transaction: { type: "maintenance_dispatched", quantityDelta: -4 } });
     const incoming = prepareMaintenanceReceipt({ maintenanceCase: { id: 2, caseNumber: "RT-RMA-1", type: "customer_return", status: "awaiting_inspection", quantity: 3 }, part }, 4, new Date("2026-08-22T09:00:00Z"));
     expect(incoming).toMatchObject({ ok: true, quantityAfter: 13, transaction: { type: "maintenance_returned", quantityDelta: 3 } });
+  });
+
+  it("changes stock only when the final maintenance decision returns the item to stock", () => {
+    const returned = prepareMaintenanceResolution({ maintenanceCase: { id: 3, caseNumber: "RT-MNT-3", type: "maintenance_outbound", status: "quality_check", quantity: 2 }, part }, 4, "return_to_stock");
+    expect(returned).toMatchObject({ ok: true, returnsToStock: true, quantityAfter: 12, nextStatus: "returned_to_stock", transaction: { quantityDelta: 2 } });
+    const scrapped = prepareMaintenanceResolution({ maintenanceCase: { id: 4, caseNumber: "RT-MNT-4", type: "maintenance_outbound", status: "under_diagnosis", quantity: 2 }, part }, 4, "scrap");
+    expect(scrapped).toMatchObject({ ok: true, returnsToStock: false, quantityAfter: 10, nextStatus: "closed", transaction: null });
   });
 
   it("creates deterministic alerts for low stock, a delayed request, and an unconfirmed receipt", () => {

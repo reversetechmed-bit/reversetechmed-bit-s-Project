@@ -25,7 +25,7 @@ describe("product component catalog", () => {
     responses.push([{ bom: { productId: 12, componentId: 4, quantityRequired: 2 }, component: { id: 4, name: "ESP32" } }]);
     const caller = organizationRouter.createCaller(contextFor("admin"));
     await expect(caller.productComponents.list({ productId: 12 })).resolves.toHaveLength(1);
-    responses.push([{ id: 12, warehouseSection: "products" }], [{ id: 4, warehouseSection: "components", productStage: null }, { id: 5, warehouseSection: "products", productStage: "work_in_progress" }]);
+    responses.push([{ id: 12, warehouseSection: "products" }], [{ id: 4, warehouseSection: "components", productStage: null }, { id: 5, warehouseSection: "products", productStage: "work_in_progress" }], []);
     await expect(caller.productComponents.replace({ productId: 12, components: [{ componentId: 4, quantityRequired: 2, notes: "رئيسي" }, { componentId: 5, quantityRequired: 1 }] })).resolves.toEqual({ success: true });
     expect(transactionDb.delete).toHaveBeenCalled();
     expect(transactionDb.insert).toHaveBeenCalled();

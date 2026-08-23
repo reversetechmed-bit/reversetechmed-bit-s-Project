@@ -12,7 +12,7 @@ export type OperationalMaintenanceCase = {
   id: number;
   caseNumber: string;
   type: "maintenance_outbound" | "customer_return";
-  status: "open" | "sent_for_maintenance" | "awaiting_inspection" | "returned_to_stock" | "closed" | "cancelled";
+  status: "open" | "sent_for_maintenance" | "awaiting_inspection" | "under_diagnosis" | "repair_in_progress" | "quality_check" | "returned_to_stock" | "closed" | "cancelled";
   quantity: number;
 };
 
@@ -70,6 +70,38 @@ export function prepareMaintenanceReceipt(record: { maintenanceCase: Operational
       warehouseSectionSnapshot: record.part.warehouseSection,
       details: `تمت إعادة ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون من الحالة ${record.maintenanceCase.caseNumber}.`,
     },
+  };
+}
+
+export type MaintenanceDisposition = "return_to_stock" | "return_to_customer" | "cannibalize" | "scrap";
+
+/** Resolves a maintenance or customer-return case without silently changing stock for non-return decisions. */
+export function prepareMaintenanceResolution(record: { maintenanceCase: OperationalMaintenanceCase; part: OperationalPart }, actorId: number, disposition: MaintenanceDisposition, resolvedAt = new Date()) {
+  const resolvableStatuses: OperationalMaintenanceCase["status"][] = ["sent_for_maintenance", "awaiting_inspection", "under_diagnosis", "repair_in_progress", "quality_check"];
+  if (!resolvableStatuses.includes(record.maintenanceCase.status)) {
+    return { ok: false as const, reason: "لا يمكن تسجيل القرار النهائي لهذه الحالة في وضعها الحالي." };
+  }
+  const returnsToStock = disposition === "return_to_stock";
+  const quantityAfter = returnsToStock ? record.part.quantity + record.maintenanceCase.quantity : record.part.quantity;
+  return {
+    ok: true as const,
+    returnsToStock,
+    quantityAfter,
+    resolvedAt,
+    nextStatus: returnsToStock ? "returned_to_stock" as const : "closed" as const,
+    transaction: returnsToStock ? {
+      partId: record.part.id,
+      maintenanceCaseId: record.maintenanceCase.id,
+      type: "maintenance_returned" as const,
+      quantityDelta: record.maintenanceCase.quantity,
+      quantityBefore: record.part.quantity,
+      quantityAfter,
+      actorId,
+      partNumberSnapshot: record.part.partNumber,
+      partNameSnapshot: record.part.name,
+      warehouseSectionSnapshot: record.part.warehouseSection,
+      details: `تمت إعادة ${record.maintenanceCase.quantity} × ${record.part.name} إلى المخزون بقرار نهائي للحالة ${record.maintenanceCase.caseNumber}.`,
+    } : null,
   };
 }
 
