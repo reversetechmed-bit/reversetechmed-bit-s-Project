@@ -230,3 +230,4 @@
 - [x] Add three linked Target phototherapy-device product editions with documented BOM relationships and safe default quantities.
 - [x] Write an Arabic promotional voice-over script for the REVERSE TECH warehouse system.
 - [x] Generate and deliver a polished Arabic voice-over audio file for the approved promotional script.
+- [x] Produce a short Arabic promotional video that visually presents the REVERSE TECH warehouse system and its core operational features.
