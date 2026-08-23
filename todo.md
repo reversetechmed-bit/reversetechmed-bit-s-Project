@@ -153,7 +153,7 @@
 - [x] Add and verify database, API, UI, export, and seeded-data coverage for the new invoice metadata and company/product/component relationships.
 - [x] Add regression tests for company CRUD and product-component list/replace procedures plus the Companies and InvoiceDocument UI routes.
 - [x] Explicitly inspect and document the integrated hosting publish path and settings before the next deployment-ready checkpoint.
-- [ ] Verify the rendered Companies and InvoiceDocument pages in an authenticated Admin session and record visual evidence without changing operational records.
+- [x] Verify the rendered Companies and InvoiceDocument pages in an authenticated Admin session and record visual evidence without changing operational records.
 - [x] Diagnose and fix distorted Arabic glyphs in the standalone handover-invoice PDF using an embedded Arabic-capable font and RTL-safe rendering path.
 - [x] Generate and inspect a representative Arabic standalone-invoice PDF, then add a regression test for its embedded font and readable Arabic content.
 - [x] Enforce a one-to-one relationship between each warehouse user account and an approved employee profile, preventing unlinked external accounts.
