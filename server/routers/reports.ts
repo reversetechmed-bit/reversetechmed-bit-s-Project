@@ -15,7 +15,7 @@ export const reportsRouter = router({
   schedules: router({
     list: warehousePermissionProcedure("manage_reports").query(async () => { const db = await requireDb(); return db.select().from(warehouseReportSchedules).orderBy(desc(warehouseReportSchedules.createdAt)); }),
     create: warehousePermissionProcedure("manage_reports").input(scheduleInput).mutation(async ({ ctx, input }) => {
-      if (input.frequency === "weekly" && input.weekday === null) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر يومًا أسبوعيًا للتقرير الأسبوعي." });
+      if (input.frequency === "weekly" && input.weekday == null) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر يومًا أسبوعيًا للتقرير الأسبوعي." });
       const db = await requireDb(); const now = new Date(); const nextRunAt = calculateNextReportRun({ frequency: input.frequency, runHourUtc: input.runHourUtc, weekday: input.frequency === "weekly" ? input.weekday : null, now });
       const inserted = await db.insert(warehouseReportSchedules).values({ name: input.name, reportType: input.reportType, frequency: input.frequency, weekday: input.frequency === "weekly" ? input.weekday ?? null : null, runHourUtc: input.runHourUtc, recipientUserId: ctx.user.id, createdById: ctx.user.id, nextRunAt }).$returningId();
       return { id: inserted[0]?.id, nextRunAt } as const;
