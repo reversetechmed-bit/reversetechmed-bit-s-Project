@@ -10,6 +10,9 @@ import {
   parts,
   inventoryCategories,
   inventoryTransactions,
+  inventoryCountLines,
+  inventoryCountSessions,
+  workOrders,
   users,
   warehouseAlerts,
   warehouseActivities,
@@ -535,7 +538,7 @@ export const warehouseRouter = router({
 
   dashboard: adminProcedure.query(async () => {
     const db = await requireDb();
-    const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess, deliveryTransactions, recentHandovers] = await Promise.all([
+    const [allParts, allRequests, unreadAlerts, recentActivities, recentAccess, deliveryTransactions, recentHandovers, allWorkOrders, countLineRows] = await Promise.all([
       db.select().from(parts).orderBy(desc(parts.updatedAt)),
       db.select().from(dispensingRequests).orderBy(desc(dispensingRequests.createdAt)),
       db.select().from(warehouseAlerts).where(and(eq(warehouseAlerts.isRead, 0), isNull(warehouseAlerts.recipientUserId))).orderBy(desc(warehouseAlerts.createdAt)),
@@ -543,6 +546,8 @@ export const warehouseRouter = router({
       db.select({ id: users.id, name: users.name, email: users.email, lastSignedIn: users.lastSignedIn, role: users.role }).from(users).orderBy(desc(users.lastSignedIn)).limit(6),
       db.select().from(inventoryTransactions).where(eq(inventoryTransactions.type, "delivery_confirmed")).orderBy(desc(inventoryTransactions.createdAt)).limit(500),
       db.select({ invoice: handoverInvoices, receiver: { id: users.id, name: users.name, email: users.email } }).from(handoverInvoices).innerJoin(users, eq(handoverInvoices.receivedById, users.id)).orderBy(desc(handoverInvoices.issuedAt)).limit(6),
+      db.select().from(workOrders).orderBy(desc(workOrders.createdAt)),
+      db.select({ line: inventoryCountLines, session: inventoryCountSessions }).from(inventoryCountLines).innerJoin(inventoryCountSessions, eq(inventoryCountLines.sessionId, inventoryCountSessions.id)),
     ]);
     const topDispensedByPart = new Map<number, { partId: number; partName: string; partNumber: string; quantity: number }>();
     for (const transaction of deliveryTransactions) {
@@ -551,7 +556,11 @@ export const warehouseRouter = router({
       topDispensedByPart.set(transaction.partId, current);
     }
     const overdueThreshold = Date.now() - 48 * 60 * 60 * 1000;
+    const countVarianceThreshold = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const overdueRequests = allRequests.filter(request => (request.status === "pending" || request.status === "approved") && request.createdAt.getTime() < overdueThreshold);
+    const openWorkOrders = allWorkOrders.filter(order => !["completed", "cancelled"].includes(order.status));
+    const currentCountVarianceRows = countLineRows.filter(row => row.session.status !== "cancelled" && row.session.createdAt.getTime() >= countVarianceThreshold && row.line.varianceQuantity !== null && row.line.varianceQuantity !== 0);
+    const currentCountVarianceSessionIds = new Set(currentCountVarianceRows.map(row => row.session.id));
     return {
       partCount: allParts.length,
       totalUnits: allParts.reduce((sum, part) => sum + part.quantity, 0),
@@ -563,6 +572,10 @@ export const warehouseRouter = router({
       productCount: allParts.filter(part => part.warehouseSection === "products").length,
       productUnits: allParts.filter(part => part.warehouseSection === "products").reduce((sum, part) => sum + part.quantity, 0),
       pendingRequests: allRequests.filter(request => request.status === "pending").length,
+      openWorkOrders: openWorkOrders.length,
+      openWorkOrdersByStatus: openWorkOrders.reduce<Record<string, number>>((summary, order) => ({ ...summary, [order.status]: (summary[order.status] ?? 0) + 1 }), {}),
+      currentCountVarianceLines: currentCountVarianceRows.length,
+      currentCountVarianceSessions: currentCountVarianceSessionIds.size,
       overdueRequests,
       lowStockParts: allParts.filter(part => availableForIssue(part) <= part.minimumStock),
       topDispensedParts: Array.from(topDispensedByPart.values()).sort((left, right) => right.quantity - left.quantity).slice(0, 5),

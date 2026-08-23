@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { categoryMeta, formatDate, requestStatusMeta } from "@/lib/warehouse";
 import { trpc } from "@/lib/trpc";
-import { Activity, ArrowLeft, Boxes, ClipboardCheck, ClipboardList, Clock3, DatabaseBackup, Handshake, PackageOpen, TriangleAlert, TrendingUp, UsersRound, Warehouse } from "lucide-react";
+import { Activity, ArrowLeft, Boxes, ClipboardCheck, ClipboardList, Clock3, DatabaseBackup, Factory, Handshake, PackageOpen, TriangleAlert, TrendingUp, UsersRound, Warehouse } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -11,7 +11,7 @@ export default function Home() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
-  const { data: dashboard, isLoading: dashboardLoading } = trpc.warehouse.dashboard.useQuery(undefined, { enabled: isAdmin });
+  const { data: dashboard, isLoading: dashboardLoading } = trpc.warehouse.dashboard.useQuery(undefined, { enabled: isAdmin, refetchInterval: 30_000, refetchIntervalInBackground: false });
   const { data: parts, isLoading: partsLoading } = trpc.warehouse.inventory.list.useQuery();
   const { data: requests, isLoading: requestsLoading } = trpc.warehouse.requests.list.useQuery();
   const backup = trpc.organization.backup.exportJson.useQuery(undefined, { enabled: false });
@@ -49,10 +49,12 @@ function AdminOverview({ dashboard, loading, requests, requestsLoading, setLocat
     { label: "متاح للصرف", value: dashboard?.availableUnits ?? 0, note: "بعد خصم المحجوز", icon: PackageOpen, color: "text-[#00A58D] bg-[#E7F8F4]" },
     { label: "طلبات متأخرة", value: dashboard?.overdueRequests?.length ?? 0, note: "أكثر من 48 ساعة", icon: Clock3, color: "text-amber-700 bg-amber-50" },
     { label: "مخزون يحتاج متابعة", value: dashboard?.lowStockParts?.length ?? 0, note: "المتاح عند الحد الأدنى", icon: TriangleAlert, color: "text-rose-700 bg-rose-50" },
+    { label: "أوامر عمل معلقة", value: dashboard?.openWorkOrders ?? 0, note: "إنتاج أو إصلاح لم يكتمل", icon: Factory, color: "text-[#7650B7] bg-[#F4F0FF]" },
+    { label: "فروقات جرد حالية", value: dashboard?.currentCountVarianceLines ?? 0, note: `${dashboard?.currentCountVarianceSessions ?? 0} جلسة خلال 7 أيام`, icon: ClipboardCheck, color: "text-[#C74D00] bg-[#FFF3EB]" },
   ];
   const recent = (requests ?? []).slice(0, 4);
   return <>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{cards.map(card => <MetricCard key={card.label} {...card} loading={loading} />)}</section>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">{cards.map(card => <MetricCard key={card.label} {...card} loading={loading} />)}</section>
     <section className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
       <div className="panel overflow-hidden"><PanelHeading eyebrow="قائمة الطلبات" title="أحدث طلبات المهندسين" action={<Button variant="ghost" size="sm" onClick={() => setLocation("/requests")} className="text-slate-600">عرض الكل <ArrowLeft className="mr-1 h-3.5 w-3.5" /></Button>} /><div className="divide-y divide-slate-100">{requestsLoading && <div className="p-6"><Skeleton className="h-14 w-full" /></div>}{!requestsLoading && recent.map(({ request, part, engineer }: any) => { const status = requestStatusMeta[request.status]; return <div key={request.id} className="flex items-center gap-4 p-5"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100"><ClipboardCheck className="h-4 w-4 text-slate-600" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{part.name} <span className="font-normal text-slate-500">× {request.requestedQuantity}</span></p><p className="mt-1 truncate text-xs text-slate-500">{engineer.name || engineer.email || "مهندس"} · {formatDate(request.createdAt, false)}</p></div><StatusBadge className={part.warehouseSection === "products" ? "border-[#FFD3B7] bg-[#FFF3EB] text-[#C74D00]" : "border-[#BEECDD] bg-[#E7F8F4] text-[#008E7A]"}>{part.warehouseSection === "products" ? "منتج" : "مكون"}</StatusBadge><StatusBadge className={status.className}>{status.label}</StatusBadge></div>; })}{!requestsLoading && !recent.length && <Empty label="لا توجد طلبات مسجلة حتى الآن." />}</div></div>
       <div className="panel overflow-hidden"><PanelHeading eyebrow="تنبيه تشغيلي" title="طلبات تحتاج متابعة" /><div className="divide-y divide-slate-100">{loading && <div className="p-5"><Skeleton className="h-16 w-full" /></div>}{!loading && dashboard?.overdueRequests?.map((request: any) => <div key={request.id} className="p-4"><div className="flex items-center justify-between gap-3"><p className="font-mono text-xs text-[#0178D4]">طلب #{request.id}</p><StatusBadge className={requestStatusMeta[request.status].className}>{requestStatusMeta[request.status].label}</StatusBadge></div><p className="mt-2 text-xs text-slate-500">قُدّم في {formatDate(request.createdAt)}</p></div>)}{!loading && !dashboard?.overdueRequests?.length && <div className="p-8 text-center text-sm text-slate-500">لا توجد طلبات مفتوحة تجاوزت 48 ساعة.</div>}</div></div>

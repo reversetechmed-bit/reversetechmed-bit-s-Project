@@ -219,3 +219,6 @@
 - [x] Add controlled device or product disassembly that returns only selected reusable components to stock with source and condition records.
 - [x] Add granular warehouse access roles and permissions while preserving existing Admin, User, and Viewer behavior.
 - [x] Add configurable recurring operational reports for shortages, overdue custody, open maintenance, and count discrepancies.
+- [x] Add daily and weekly inventory-count report export to readable Arabic PDF and Excel files.
+- [x] Add live dashboard metrics for open work orders and current approved inventory-count variances.
+- [x] Simplify the dispensing invoice PDF to essential data only, removing the logo and invoice number while preserving Arabic readability.

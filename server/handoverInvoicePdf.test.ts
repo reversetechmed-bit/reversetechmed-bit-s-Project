@@ -29,13 +29,13 @@ describe("standalone Arabic handover invoice PDF", () => {
     expect(source).not.toContain('fontStyle: "bold"');
   });
 
-  it("creates a readable Arabic artifact with a central invoice identity and Latin part code", () => {
+  it("creates a concise readable Arabic handover artifact without an invoice number or brand logo text", () => {
     const artifactPath = process.env.INVOICE_PDF_ARTIFACT || join(tmpdir(), `reverse-tech-invoice-${Date.now()}.pdf`);
     const pdf = buildHandoverInvoicePdfDocument(record, font);
     writeFileSync(artifactPath, Buffer.from(pdf.output("arraybuffer")));
     const extracted = execFileSync("pdftotext", ["-layout", artifactPath, "-"], { encoding: "utf8" });
-    expect(extracted).toContain("REVERSE TECH");
-    expect(extracted).toContain("INV-AR-001");
+    expect(extracted).not.toContain("REVERSE TECH");
+    expect(extracted).not.toContain("INV-AR-001");
     expect(extracted).toContain("REV-003");
     expect(extracted).toMatch(/[\uFB50-\uFDFF\uFE70-\uFEFF]/);
   });
