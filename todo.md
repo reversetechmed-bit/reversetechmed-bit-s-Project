@@ -69,11 +69,11 @@
 - [x] Verify the authenticated normal-user request action and dialog in both Components and Products catalogues.
 - [x] Translate remaining export titles, column labels, PDF metadata, and section labels to Arabic.
 - [x] Verify the Components request-action implementation and table column; the current user dataset contains no available Component row to open the dialog, while the identical shared dialog was exercised successfully from an available Product row.
-- [ ] Sign in with the Admin account in the app UI and verify access to admin-only pages and actions, then save the final checkpoint.
+- [x] Sign in with the Admin account in the app UI and verify access to admin-only pages and actions, then save the final checkpoint.
 - [x] Verify the target GitHub repository access and synchronize the current project source safely.
 - [x] Assess compatible hosting for the full-stack application and select the integrated hosting rather than Firebase static hosting.
 - [x] Prepare and verify the checkpoint for deployment through the integrated full-stack hosting instead of Firebase.
-- [ ] Verify the Admin account in the authenticated app UI on admin-only routes and actions, then re-run readiness checks.
+- [x] Verify the Admin account in the authenticated app UI on admin-only routes and actions, then re-run readiness checks.
 - [x] Confirm the integrated hosting publish path and settings, then save the final deployment-ready checkpoint.
 - [x] Replace the current Arabic typography with a clear commercial font pairing suited to warehouse dashboards and validate RTL readability.
 - [x] Add an always-discoverable logout and account-switch action for both desktop and mobile dashboard navigation.
