@@ -19,7 +19,7 @@ import {
   inventoryTransactions,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, router, warehousePermissionProcedure } from "../_core/trpc";
 import { buildOperationalEscalations, prepareMaintenanceDispatch, prepareMaintenanceReceipt, prepareMaintenanceResolution } from "../warehouseOperations";
 import { preparePurchaseReceipt } from "../warehousePurchasing";
 import { prepareAssemblyCompletion } from "../warehouseAssembly";
@@ -92,7 +92,7 @@ async function requireDb() {
 
 export const operationsRouter = router({
   maintenance: router({
-    list: adminProcedure.query(async () => {
+    list: warehousePermissionProcedure("manage_maintenance").query(async () => {
       const db = await requireDb();
       return db
         .select({ maintenanceCase: maintenanceCases, part: parts, createdBy: { id: users.id, name: users.name } })
@@ -102,7 +102,7 @@ export const operationsRouter = router({
         .orderBy(desc(maintenanceCases.createdAt));
     }),
 
-    create: adminProcedure.input(maintenanceCreateInput).mutation(async ({ ctx, input }) => {
+    create: warehousePermissionProcedure("manage_maintenance").input(maintenanceCreateInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [part] = await tx.select().from(parts).where(eq(parts.id, input.partId)).limit(1);
@@ -145,7 +145,7 @@ export const operationsRouter = router({
       });
     }),
 
-    progress: adminProcedure.input(maintenanceProgressInput).mutation(async ({ ctx, input }) => {
+    progress: warehousePermissionProcedure("manage_maintenance").input(maintenanceProgressInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const [record] = await db.select().from(maintenanceCases).where(eq(maintenanceCases.id, input.id)).limit(1);
       if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة الصيانة أو المرتجع غير موجودة." });
@@ -167,7 +167,7 @@ export const operationsRouter = router({
       return { success: true } as const;
     }),
 
-    resolve: adminProcedure.input(maintenanceResolveInput).mutation(async ({ ctx, input }) => {
+    resolve: warehousePermissionProcedure("manage_maintenance").input(maintenanceResolveInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [record] = await tx
@@ -214,7 +214,7 @@ export const operationsRouter = router({
       });
     }),
 
-    dispatch: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    dispatch: warehousePermissionProcedure("manage_maintenance").input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [record] = await tx
@@ -241,7 +241,7 @@ export const operationsRouter = router({
       });
     }),
 
-    receiveToStock: adminProcedure.input(z.object({ id: z.number().int().positive(), inboundCondition: z.string().trim().min(2).max(2000), notes: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+    receiveToStock: warehousePermissionProcedure("manage_maintenance").input(z.object({ id: z.number().int().positive(), inboundCondition: z.string().trim().min(2).max(2000), notes: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [record] = await tx
@@ -282,7 +282,7 @@ export const operationsRouter = router({
       });
     }),
 
-    close: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+    close: warehousePermissionProcedure("manage_maintenance").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       const [record] = await db.select().from(maintenanceCases).where(eq(maintenanceCases.id, input.id)).limit(1);
       if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "حالة العملية غير موجودة." });
@@ -293,7 +293,7 @@ export const operationsRouter = router({
   }),
 
   purchasing: router({
-    list: adminProcedure.query(async () => {
+    list: warehousePermissionProcedure("manage_purchasing").query(async () => {
       const db = await requireDb();
       const [orders, lines] = await Promise.all([
         db.select({ order: purchaseOrders, supplier: companies }).from(purchaseOrders).innerJoin(companies, eq(purchaseOrders.supplierCompanyId, companies.id)).orderBy(desc(purchaseOrders.createdAt)),
@@ -302,7 +302,7 @@ export const operationsRouter = router({
       return orders.map(order => ({ ...order, lines: lines.filter(line => line.line.purchaseOrderId === order.order.id) }));
     }),
 
-    create: adminProcedure.input(purchaseOrderCreateInput).mutation(async ({ ctx, input }) => {
+    create: warehousePermissionProcedure("manage_purchasing").input(purchaseOrderCreateInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const partIds = new Set(input.lines.map(line => line.partId));
       if (partIds.size !== input.lines.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تكرار القطعة في بنود أمر الشراء." });
@@ -349,7 +349,7 @@ export const operationsRouter = router({
       });
     }),
 
-    markOrdered: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+    markOrdered: warehousePermissionProcedure("manage_purchasing").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       const [order] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.id)).limit(1);
       if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "أمر الشراء غير موجود." });
@@ -359,7 +359,7 @@ export const operationsRouter = router({
       return { success: true, orderedAt } as const;
     }),
 
-    receive: adminProcedure.input(z.object({ id: z.number().int().positive(), lines: z.array(z.object({ lineId: z.number().int().positive(), quantityReceived: z.number().int().positive() })).min(1).max(100) })).mutation(async ({ ctx, input }) => {
+    receive: warehousePermissionProcedure("manage_purchasing").input(z.object({ id: z.number().int().positive(), lines: z.array(z.object({ lineId: z.number().int().positive(), quantityReceived: z.number().int().positive() })).min(1).max(100) })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [order] = await tx.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.id)).limit(1);
@@ -404,7 +404,7 @@ export const operationsRouter = router({
       });
     }),
 
-    cancel: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+    cancel: warehousePermissionProcedure("manage_purchasing").input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const db = await requireDb();
       const [order] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.id)).limit(1);
       if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "أمر الشراء غير موجود." });
@@ -415,7 +415,7 @@ export const operationsRouter = router({
   }),
 
   assembly: router({
-    list: adminProcedure.query(async () => {
+    list: warehousePermissionProcedure("manage_work_orders").query(async () => {
       const db = await requireDb();
       const [orders, lines] = await Promise.all([
         db.select({ order: assemblyOrders, target: parts }).from(assemblyOrders).innerJoin(parts, eq(assemblyOrders.targetProductId, parts.id)).orderBy(desc(assemblyOrders.createdAt)),
@@ -424,7 +424,7 @@ export const operationsRouter = router({
       return orders.map(order => ({ ...order, lines: lines.filter(line => line.line.assemblyOrderId === order.order.id) }));
     }),
 
-    createAndComplete: adminProcedure.input(z.object({ targetProductId: z.number().int().positive(), quantityToProduce: z.number().int().positive(), notes: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+    createAndComplete: warehousePermissionProcedure("manage_work_orders").input(z.object({ targetProductId: z.number().int().positive(), quantityToProduce: z.number().int().positive(), notes: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       return db.transaction(async tx => {
         const [target] = await tx.select().from(parts).where(eq(parts.id, input.targetProductId)).limit(1);
