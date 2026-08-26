@@ -242,7 +242,7 @@
 - [x] Add an Arabic Excel export for daily printer-run usage with printer, order, filament, grams, start/end timestamps, and notes.
 - [x] Add regression coverage confirming the 3D Printing Lab exposes the daily printer-usage Excel export and its run-log dataset.
 - [x] Add tests for Admin-only access and filament gram calculations before publishing the 3D Printing Lab module.
-- [ ] Fix the failed deletion of part 300006 by preserving linked operational records and returning a clear Arabic safe-delete or archive message.
-- [ ] Add regression coverage for referenced-part deletion and safe archive fallback.
-- [ ] Verify the deletion fix with TypeScript, tests, and production build before publishing.
+- [x] Fix the failed deletion of part 300006 by preserving linked operational records and returning a clear Arabic safe-delete or archive message.
+- [x] Add regression coverage for referenced-part deletion and safe archive fallback.
+- [x] Verify the deletion fix with TypeScript, tests, and production build before publishing.
 

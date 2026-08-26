@@ -13,6 +13,14 @@ import {
   inventoryCountLines,
   inventoryCountSessions,
   workOrders,
+  workOrderLines,
+  productComponents,
+  serialAssets,
+  disassemblyOrders,
+  disassemblyLines,
+  purchaseOrderLines,
+  assemblyOrderLines,
+  maintenanceCases,
   departments,
   users,
   warehouseAlerts,
@@ -272,16 +280,46 @@ export const warehouseRouter = router({
       const db = await requireDb();
       const [existing] = await db.select().from(parts).where(eq(parts.id, input.id)).limit(1);
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "القطعة غير موجودة." });
-      const [request] = await db.select({ id: dispensingRequests.id }).from(dispensingRequests).where(eq(dispensingRequests.partId, input.id)).limit(1);
-      const [custody] = await db.select({ id: custodyAssignments.id }).from(custodyAssignments).where(eq(custodyAssignments.partId, input.id)).limit(1);
-      const [transaction] = await db.select({ id: inventoryTransactions.id }).from(inventoryTransactions).where(eq(inventoryTransactions.partId, input.id)).limit(1);
-      if (request || custody || transaction) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "لا يمكن حذف القطع ذات الطلبات أو الحركات المسجلة، حفاظًا على سجل التدقيق.",
-        });
+
+      const [request, custody, transaction, countLine, serialAsset, bomProduct, bomComponent, workOrderTarget, workOrderSource, disassemblySource, disassemblyRecovered, purchaseLine, assemblyLine, maintenance] = await Promise.all([
+        db.select({ id: dispensingRequests.id }).from(dispensingRequests).where(eq(dispensingRequests.partId, input.id)).limit(1),
+        db.select({ id: custodyAssignments.id }).from(custodyAssignments).where(eq(custodyAssignments.partId, input.id)).limit(1),
+        db.select({ id: inventoryTransactions.id }).from(inventoryTransactions).where(eq(inventoryTransactions.partId, input.id)).limit(1),
+        db.select({ id: inventoryCountLines.id }).from(inventoryCountLines).where(eq(inventoryCountLines.partId, input.id)).limit(1),
+        db.select({ id: serialAssets.id }).from(serialAssets).where(eq(serialAssets.partId, input.id)).limit(1),
+        db.select({ id: productComponents.productId }).from(productComponents).where(eq(productComponents.productId, input.id)).limit(1),
+        db.select({ id: productComponents.productId }).from(productComponents).where(eq(productComponents.componentId, input.id)).limit(1),
+        db.select({ id: workOrders.id }).from(workOrders).where(eq(workOrders.targetPartId, input.id)).limit(1),
+        db.select({ id: workOrderLines.id }).from(workOrderLines).where(eq(workOrderLines.sourcePartId, input.id)).limit(1),
+        db.select({ id: disassemblyOrders.id }).from(disassemblyOrders).where(eq(disassemblyOrders.sourcePartId, input.id)).limit(1),
+        db.select({ id: disassemblyLines.id }).from(disassemblyLines).where(eq(disassemblyLines.recoveredPartId, input.id)).limit(1),
+        db.select({ id: purchaseOrderLines.id }).from(purchaseOrderLines).where(eq(purchaseOrderLines.partId, input.id)).limit(1),
+        db.select({ id: assemblyOrderLines.id }).from(assemblyOrderLines).where(eq(assemblyOrderLines.sourcePartId, input.id)).limit(1),
+        db.select({ id: maintenanceCases.id }).from(maintenanceCases).where(eq(maintenanceCases.partId, input.id)).limit(1),
+      ]);
+      const references: string[] = [];
+      if (request.length) references.push("طلبات الصرف");
+      if (custody.length) references.push("العُهد");
+      if (transaction.length) references.push("حركات المخزون");
+      if (countLine.length) references.push("جلسات الجرد");
+      if (serialAsset.length) references.push("الوحدات التسلسلية");
+      if (bomProduct.length || bomComponent.length) references.push("قوائم المواد BOM");
+      if (workOrderTarget.length || workOrderSource.length) references.push("أوامر العمل");
+      if (disassemblySource.length || disassemblyRecovered.length) references.push("سجلات التشليح");
+      if (purchaseLine.length) references.push("أوامر الشراء");
+      if (assemblyLine.length) references.push("أوامر التجميع");
+      if (maintenance.length) references.push("حالات الصيانة");
+      if (references.length) {
+        throw new TRPCError({ code: "CONFLICT", message: `لا يمكن حذف الصنف لأنه مرتبط بسجلات ${references.join("، ")}. استخدم الأرشفة للحفاظ على سجل التدقيق.` });
       }
-      await db.delete(parts).where(eq(parts.id, input.id));
+      try {
+        await db.delete(parts).where(eq(parts.id, input.id));
+      } catch (error) {
+        if (error instanceof Error && /foreign key|constraint|cannot delete/i.test(error.message)) {
+          throw new TRPCError({ code: "CONFLICT", message: "لا يمكن حذف الصنف لوجود سجل مرتبط به. استخدم الأرشفة للحفاظ على سلامة البيانات." });
+        }
+        throw error;
+      }
       return { success: true } as const;
     }),
   }),
