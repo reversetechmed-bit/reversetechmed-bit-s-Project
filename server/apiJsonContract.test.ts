@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiApp } from "./_core/apiApp";
+import { ensureJsonApiResponse } from "../client/src/lib/guardedFetch";
 
 let server: Server;
 let baseUrl: string;
@@ -28,5 +29,14 @@ describe("tRPC JSON error contract", () => {
     expect(response.status).toBe(401);
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(body).toMatchObject({ error: { json: { data: { code: "UNAUTHORIZED", httpStatus: 401 } } } });
+  });
+
+  it("normalizes an unexpected HTML response into the tRPC JSON error shape", async () => {
+    const normalized = await ensureJsonApiResponse(new Response("<html><head></head></html>", { status: 502, headers: { "content-type": "text/html" } }));
+    const body = await normalized.json();
+
+    expect(normalized.headers.get("content-type")).toContain("application/json");
+    expect(normalized.status).toBe(502);
+    expect(body[0]).toMatchObject({ error: { json: { data: { code: "INTERNAL_SERVER_ERROR", httpStatus: 502 } } } });
   });
 });

@@ -246,3 +246,7 @@
 - [x] Add regression coverage for referenced-part deletion and safe archive fallback.
 - [x] Verify the deletion fix with TypeScript, tests, and production build before publishing.
 
+- [x] Diagnose and fix the reported HTML-instead-of-JSON API response error without changing warehouse data.
+- [x] Add regression coverage proving the affected API path returns structured JSON on success and failure.
+- [x] Verify the JSON response fix with TypeScript, tests, and production build before publishing.
+

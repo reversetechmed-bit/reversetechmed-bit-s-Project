@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { supabase } from "./lib/supabase";
+import { ensureJsonApiResponse } from "./lib/guardedFetch";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -44,11 +45,12 @@ const trpcClient = trpc.createClient({
         const { data } = await supabase.auth.getSession();
         return data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {};
       },
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const response = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
+        return ensureJsonApiResponse(response);
       },
     }),
   ],
