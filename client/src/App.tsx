@@ -21,6 +21,7 @@ import Organization from "./pages/Organization";
 import Operations from "./pages/Operations";
 import Requests from "./pages/Requests";
 import Reports from "./pages/Reports";
+import PrintLab from "./pages/PrintLab";
 import Transactions from "./pages/Transactions";
 import Traceability from "./pages/Traceability";
 import Users from "./pages/Users";
@@ -53,6 +54,7 @@ function Router() {
       <Route path={"/operations"} component={() => <WarehouseShell><Operations /></WarehouseShell>} />
       <Route path={"/execution"} component={() => <WarehouseShell><Execution /></WarehouseShell>} />
       <Route path={"/reports"} component={() => <WarehouseShell><Reports /></WarehouseShell>} />
+      <Route path={"/print-lab"} component={() => <WarehouseShell><PrintLab /></WarehouseShell>} />
       <Route path={"/backup"} component={() => <WarehouseShell><BackupRestore /></WarehouseShell>} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

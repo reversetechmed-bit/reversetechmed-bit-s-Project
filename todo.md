@@ -235,3 +235,8 @@
 - [x] Add explicit maintenance/return decisions to return an item to warehouse stock or remove it permanently from warehouse availability.
 - [x] Record a mandatory exit reason and audit trail for permanent warehouse removal without accidental stock increase.
 - [x] Add prominent Arabic UI actions for maintenance return-to-stock and permanent exit-from-warehouse decisions.
+- [x] Create and deliver up to two polished promotional visual mockups for the REVERSE TECH warehouse system.
+- [x] Add an Admin-only standalone 3D Printing Lab navigation section and operational dashboard.
+- [x] Track 3D printers, print orders, filament materials and grams consumed with audit-safe daily in/out movement records.
+- [x] Add an Arabic Excel export for 3D printing orders, printer usage, filament grams, and lab movements.
+- [x] Add tests for Admin-only access and filament gram calculations before publishing the 3D Printing Lab module.

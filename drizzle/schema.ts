@@ -623,6 +623,110 @@ export const assemblyOrderLines = mysqlTable(
   table => [uniqueIndex("assembly_order_lines_unique_idx").on(table.assemblyOrderId, table.sourcePartId)],
 );
 
+export const printLabPrinterStatusValues = ["available", "printing", "maintenance", "offline"] as const;
+export const printLabOrderStatusValues = ["received", "scheduled", "printing", "completed", "delivered", "cancelled"] as const;
+export const printLabMaterialMovementTypeValues = ["inbound", "consumed", "returned", "adjustment_in", "adjustment_out"] as const;
+
+/** Machines operated by the Admin inside the dedicated 3D Printing Lab. */
+export const printLabPrinters = mysqlTable(
+  "printLabPrinters",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 160 }).notNull().unique(),
+    model: varchar("model", { length: 160 }),
+    location: varchar("location", { length: 160 }),
+    status: mysqlEnum("status", printLabPrinterStatusValues).notNull().default("available"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("print_lab_printers_status_idx").on(table.status)],
+);
+
+/** One physical filament spool or a controlled material balance, measured in whole grams. */
+export const printLabMaterials = mysqlTable(
+  "printLabMaterials",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 160 }).notNull(),
+    materialType: varchar("materialType", { length: 80 }).notNull(),
+    color: varchar("color", { length: 80 }),
+    spoolCode: varchar("spoolCode", { length: 80 }).unique(),
+    availableGrams: int("availableGrams").notNull().default(0),
+    minimumGrams: int("minimumGrams").notNull().default(0),
+    isActive: int("isActive").notNull().default(1),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("print_lab_materials_active_idx").on(table.isActive), index("print_lab_materials_stock_idx").on(table.availableGrams, table.minimumGrams)],
+);
+
+/** A printable job tracked from lab intake through handover to its final recipient. */
+export const printLabOrders = mysqlTable(
+  "printLabOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    orderNumber: varchar("orderNumber", { length: 48 }).notNull().unique(),
+    title: varchar("title", { length: 200 }).notNull(),
+    receivedFrom: varchar("receivedFrom", { length: 160 }),
+    deliveredTo: varchar("deliveredTo", { length: 160 }),
+    printerId: int("printerId").references(() => printLabPrinters.id, { onDelete: "set null" }),
+    materialId: int("materialId").references(() => printLabMaterials.id, { onDelete: "set null" }),
+    expectedGrams: int("expectedGrams").notNull().default(0),
+    actualGramsUsed: int("actualGramsUsed").notNull().default(0),
+    status: mysqlEnum("status", printLabOrderStatusValues).notNull().default("received"),
+    startedAt: timestamp("startedAt"),
+    completedAt: timestamp("completedAt"),
+    deliveredAt: timestamp("deliveredAt"),
+    notes: text("notes"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("print_lab_orders_status_idx").on(table.status, table.createdAt), index("print_lab_orders_printer_idx").on(table.printerId, table.status), index("print_lab_orders_material_idx").on(table.materialId)],
+);
+
+/** Immutable entry and exit ledger for filament grams in the 3D Printing Lab. */
+export const printLabMaterialMovements = mysqlTable(
+  "printLabMaterialMovements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    materialId: int("materialId").notNull().references(() => printLabMaterials.id, { onDelete: "restrict" }),
+    orderId: int("orderId").references(() => printLabOrders.id, { onDelete: "set null" }),
+    printerId: int("printerId").references(() => printLabPrinters.id, { onDelete: "set null" }),
+    type: mysqlEnum("type", printLabMaterialMovementTypeValues).notNull(),
+    gramsDelta: int("gramsDelta").notNull(),
+    gramsBefore: int("gramsBefore").notNull(),
+    gramsAfter: int("gramsAfter").notNull(),
+    reason: text("reason").notNull(),
+    occurredAt: timestamp("occurredAt").notNull(),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("print_lab_movements_material_date_idx").on(table.materialId, table.occurredAt), index("print_lab_movements_order_idx").on(table.orderId), index("print_lab_movements_printer_idx").on(table.printerId)],
+);
+
+/** Daily printer log; recording a run consumes the linked filament balance atomically. */
+export const printLabRuns = mysqlTable(
+  "printLabRuns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    printerId: int("printerId").notNull().references(() => printLabPrinters.id, { onDelete: "restrict" }),
+    orderId: int("orderId").references(() => printLabOrders.id, { onDelete: "set null" }),
+    materialId: int("materialId").notNull().references(() => printLabMaterials.id, { onDelete: "restrict" }),
+    gramsUsed: int("gramsUsed").notNull(),
+    startedAt: timestamp("startedAt").notNull(),
+    endedAt: timestamp("endedAt"),
+    notes: text("notes"),
+    loggedById: int("loggedById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("print_lab_runs_printer_date_idx").on(table.printerId, table.startedAt), index("print_lab_runs_order_idx").on(table.orderId), index("print_lab_runs_material_idx").on(table.materialId)],
+);
+
 export const transactionTypeValues = [
   "part_created",
   "part_updated",
