@@ -60,4 +60,12 @@ describe("operational product copy", () => {
     expect(operations).toContain("returnToWarehouse");
     expect(operations).toContain("exitWarehouse");
   });
+
+  it("exposes an Arabic Excel export for the daily 3D-printer run log", () => {
+    const printLab = source("client/src/pages/PrintLab.tsx");
+    expect(printLab).toContain("سجل تشغيل طابعات معمل الطباعة");
+    expect(printLab).toContain("reverse-tech-3d-printer-runs");
+    expect(printLab).toContain("], data.runs)");
+    expect(printLab).toContain("Excel لتشغيل الطابعات");
+  });
 });

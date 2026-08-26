@@ -120,13 +120,13 @@
 - [ ] Verify an Admin can create a new category, assign it to a part, rename it, and archive it in the authenticated UI.
 - [x] Audit and refine user-facing copy across authentication, dashboard, inventory, requests, invoices, notifications, and empty states so all messaging stays operational, precise, and non-promotional.
 - [x] Add a review checklist and regression coverage for key internal-product copy surfaces.
-- [ ] Verify the reviewed wording in authenticated Admin UI states alongside the already-verified User workspace.
+- [x] Verify the reviewed wording in authenticated Admin UI states alongside the already-verified User workspace.
 - [x] Audit and refine copy in Requests, Invoices, notification bell content, and remaining empty or error states; document each reviewed surface.
-- [ ] Record authenticated Admin UI evidence for dashboard, requests, invoices, notifications, and sidebar/header copy when an Admin session is available.
+- [x] Record authenticated Admin UI evidence for dashboard, requests, invoices, notifications, and sidebar/header copy when an Admin session is available.
 - [x] Audit and refine notification-bell copy plus remaining empty and error states, and document accepted or changed wording for each surface.
 - [x] Add regression coverage for notification-bell copy and the empty or error states included in the editorial audit.
 - [x] Complete and document a screen-by-screen audit of empty and error states across authentication, inventory, requests, invoices, notifications, and management directories.
-- [ ] Verify the refined notification and empty or error-state wording in authenticated Admin UI flows and record evidence for the reviewed surfaces.
+- [x] Verify the refined notification and empty or error-state wording in authenticated Admin UI flows and record evidence for the reviewed surfaces.
 - [x] Diagnose and fix the reported API/JSON response failure, then add regression coverage for the affected route or contract.
 - [x] Support unlimited email-and-password registrations for both Users and Admins, without an email-specific allowlist.
 - [x] Add a clear registration method selector and prepare a phone-number registration path subject to configured SMS delivery.
@@ -239,4 +239,6 @@
 - [x] Add an Admin-only standalone 3D Printing Lab navigation section and operational dashboard.
 - [x] Track 3D printers, print orders, filament materials and grams consumed with audit-safe daily in/out movement records.
 - [x] Add an Arabic Excel export for 3D printing orders, printer usage, filament grams, and lab movements.
+- [x] Add an Arabic Excel export for daily printer-run usage with printer, order, filament, grams, start/end timestamps, and notes.
+- [x] Add regression coverage confirming the 3D Printing Lab exposes the daily printer-usage Excel export and its run-log dataset.
 - [x] Add tests for Admin-only access and filament gram calculations before publishing the 3D Printing Lab module.
